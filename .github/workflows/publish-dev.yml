@@ -1,0 +1,213 @@
+name: Publish Dev Build
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled]
+
+jobs:
+  detect-changes:
+    runs-on: ubuntu-latest
+    if: contains(github.event.pull_request.labels.*.name, 'build:dev')
+    outputs:
+      core-changed: ${{ steps.changes.outputs.core }}
+      langchain-changed: ${{ steps.changes.outputs.langchain }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Detect changed packages
+        id: changes
+        run: |
+          # Get list of changed files
+          git diff origin/main...HEAD --name-only > changes.txt
+          echo "Changed files:"
+          cat changes.txt
+
+          # Check if core package changed
+          if grep -qE '^src/uipath_llm_client/' changes.txt; then
+            echo "core=true" >> $GITHUB_OUTPUT
+            echo "Core package has changes"
+          else
+            echo "core=false" >> $GITHUB_OUTPUT
+            echo "Core package has no changes"
+          fi
+
+          # Check if langchain package changed
+          if grep -qE '^packages/uipath_langchain_client/' changes.txt; then
+            echo "langchain=true" >> $GITHUB_OUTPUT
+            echo "Langchain package has changes"
+          else
+            echo "langchain=false" >> $GITHUB_OUTPUT
+            echo "Langchain package has no changes"
+          fi
+
+  publish-dev:
+    needs: detect-changes
+    runs-on: ubuntu-latest
+    if: needs.detect-changes.outputs.core-changed == 'true' || needs.detect-changes.outputs.langchain-changed == 'true'
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          version: "0.9.27"
+          enable-cache: true
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version-file: ".python-version"
+
+      - name: Install dependencies
+        run: uv sync --dev --all-extras
+
+      - name: Set development versions and update PR
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CORE_CHANGED: ${{ needs.detect-changes.outputs.core-changed }}
+          LANGCHAIN_CHANGED: ${{ needs.detect-changes.outputs.langchain-changed }}
+        run: |
+          # Get PR number and run number with proper padding
+          PR_NUM="${{ github.event.pull_request.number }}"
+          PADDED_PR=$(printf "%05d" $PR_NUM)
+          PADDED_RUN=$(printf "%04d" ${{ github.run_number }})
+          NEXT_PR=$((PR_NUM + 1))
+          PADDED_NEXT_PR=$(printf "%05d" $NEXT_PR)
+
+          # Initialize arrays for changed packages
+          PACKAGES_INFO=""
+          DEPENDENCIES_EXACT=""
+          DEPENDENCIES_RANGE=""
+          SOURCES=""
+          OVERRIDES=""
+
+          # Process core package if changed
+          if [ "$CORE_CHANGED" == "true" ]; then
+            # Read current version from __version__.py
+            CORE_VERSION=$(grep -oP '__version__\s*=\s*"\K[^"]+' src/uipath_llm_client/__version__.py)
+            DEV_VERSION="${CORE_VERSION}.dev1${PADDED_PR}${PADDED_RUN}"
+            MIN_VERSION="${CORE_VERSION}.dev1${PADDED_PR}0000"
+            MAX_VERSION="${CORE_VERSION}.dev1${PADDED_NEXT_PR}0000"
+
+            # Update __version__.py
+            sed -i "s/__version__ = \".*\"/__version__ = \"${DEV_VERSION}\"/" src/uipath_llm_client/__version__.py
+            echo "Core package version set to $DEV_VERSION"
+
+            DEPENDENCIES_EXACT="${DEPENDENCIES_EXACT}    \"uipath-llm-client==${DEV_VERSION}\",\n"
+            DEPENDENCIES_RANGE="${DEPENDENCIES_RANGE}    \"uipath-llm-client>=${MIN_VERSION},<${MAX_VERSION}\",\n"
+            SOURCES="${SOURCES}uipath-llm-client = { index = \"testpypi\" }\n"
+            OVERRIDES="${OVERRIDES}    \"uipath-llm-client>=${MIN_VERSION},<${MAX_VERSION}\",\n"
+          fi
+
+          # Process langchain package if changed
+          if [ "$LANGCHAIN_CHANGED" == "true" ]; then
+            # Read current version from __version__.py
+            LC_VERSION=$(grep -oP '__version__\s*=\s*"\K[^"]+' packages/uipath_langchain_client/src/uipath_langchain_client/__version__.py)
+            DEV_VERSION="${LC_VERSION}.dev1${PADDED_PR}${PADDED_RUN}"
+            MIN_VERSION="${LC_VERSION}.dev1${PADDED_PR}0000"
+            MAX_VERSION="${LC_VERSION}.dev1${PADDED_NEXT_PR}0000"
+
+            # Update __version__.py
+            sed -i "s/__version__ = \".*\"/__version__ = \"${DEV_VERSION}\"/" packages/uipath_langchain_client/src/uipath_langchain_client/__version__.py
+            echo "Langchain package version set to $DEV_VERSION"
+
+            DEPENDENCIES_EXACT="${DEPENDENCIES_EXACT}    \"uipath-langchain-client==${DEV_VERSION}\",\n"
+            DEPENDENCIES_RANGE="${DEPENDENCIES_RANGE}    \"uipath-langchain-client>=${MIN_VERSION},<${MAX_VERSION}\",\n"
+            SOURCES="${SOURCES}uipath-langchain-client = { index = \"testpypi\" }\n"
+            OVERRIDES="${OVERRIDES}    \"uipath-langchain-client>=${MIN_VERSION},<${MAX_VERSION}\",\n"
+          fi
+
+          # Build PR description
+          cat > /tmp/pr_update.md << 'HEREDOC_END'
+          <!-- DEV_PACKAGE_START -->
+          ## Development Package
+
+          Add these packages as dependencies in your pyproject.toml:
+
+          ```toml
+          [project]
+          dependencies = [
+            # Exact versions:
+          HEREDOC_END
+
+          echo -e "${DEPENDENCIES_EXACT}" >> /tmp/pr_update.md
+
+          cat >> /tmp/pr_update.md << 'HEREDOC_END'
+            # Or use version ranges for any build from this PR:
+          HEREDOC_END
+
+          echo -e "${DEPENDENCIES_RANGE}" >> /tmp/pr_update.md
+
+          cat >> /tmp/pr_update.md << 'HEREDOC_END'
+          ]
+
+          [[tool.uv.index]]
+          name = "testpypi"
+          url = "https://test.pypi.org/simple/"
+          publish-url = "https://test.pypi.org/legacy/"
+          explicit = true
+
+          [tool.uv.sources]
+          HEREDOC_END
+
+          echo -e "${SOURCES}" >> /tmp/pr_update.md
+
+          cat >> /tmp/pr_update.md << 'HEREDOC_END'
+
+          [tool.uv]
+          override-dependencies = [
+          HEREDOC_END
+
+          echo -e "${OVERRIDES}" >> /tmp/pr_update.md
+
+          cat >> /tmp/pr_update.md << 'HEREDOC_END'
+          ]
+          ```
+          <!-- DEV_PACKAGE_END -->
+          HEREDOC_END
+
+          DEV_MESSAGE=$(cat /tmp/pr_update.md)
+
+          # Update PR description using GitHub API
+          PR_URL="https://api.github.com/repos/${{ github.repository }}/pulls/${PR_NUM}"
+          CURRENT_BODY=$(gh pr view ${PR_NUM} --json body -q '.body' || echo "")
+
+          # Check if markers exist and replace or append
+          if echo "$CURRENT_BODY" | grep -q "<!-- DEV_PACKAGE_START -->"; then
+            # Replace content between markers
+            NEW_BODY=$(echo "$CURRENT_BODY" | sed '/<!-- DEV_PACKAGE_START -->/,/<!-- DEV_PACKAGE_END -->/d')
+            NEW_BODY="${NEW_BODY}
+
+          ${DEV_MESSAGE}"
+          else
+            # Append to end
+            NEW_BODY="${CURRENT_BODY}
+
+          ${DEV_MESSAGE}"
+          fi
+
+          # Update PR
+          gh pr edit ${PR_NUM} --body "$NEW_BODY"
+          echo "Updated PR description with development package information"
+
+      - name: Build core package
+        if: needs.detect-changes.outputs.core-changed == 'true'
+        run: uv build --package uipath-llm-client
+
+      - name: Build langchain package
+        if: needs.detect-changes.outputs.langchain-changed == 'true'
+        run: uv build --package uipath-langchain-client
+
+      - name: Publish core package
+        if: needs.detect-changes.outputs.core-changed == 'true'
+        run: uv publish dist/uipath_llm_client* --index testpypi --token ${{ secrets.UV_PUBLISH_TOKEN_UIPATH_LLM_CLIENT }}
+
+      - name: Publish langchain package
+        if: needs.detect-changes.outputs.langchain-changed == 'true'
+        run: uv publish dist/uipath_langchain_client* --index testpypi --token ${{ secrets.UV_PUBLISH_TOKEN_UIPATH_LANGCHAIN_CLIENT }}

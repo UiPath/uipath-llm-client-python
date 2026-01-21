@@ -1,0 +1,94 @@
+[project]
+name = "uipath-llm-client"
+dynamic = ["version"]
+description = "UiPath LLM Client"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "httpx>=0.28.1",
+    "tenacity>=9.1.2",
+    "pydantic>=2.12.5",
+    "pydantic-settings>=2.12.0",
+    "uipath>=2.5.17",
+]
+
+authors = [
+    {name = "Cosmin Maria", email = "cosmin.maria@uipath.com"},
+    {name = "Dragos Bobolea", email = "dragos.bobolea@uipath.com"},
+]
+
+[project.optional-dependencies]
+openai = [
+    "openai>=2.15.0",
+]
+google = [
+    "google-genai>=1.59.0",
+]
+anthropic = [
+    "anthropic>=0.76.0",
+]
+all = [
+    "uipath-llm-client[openai,google,anthropic]",
+]
+
+[dependency-groups]
+dev = [
+    "langchain-tests>=1.1.2",
+    "pytest>=8.4.2",
+    "pytest-asyncio>=1.3.0",
+    "pytest-recording>=0.13.4",
+    "pyright>=1.1.407",
+    "ruff>=0.14.9",
+    "uipath-llm-client[all]",
+    "uipath_langchain_client[all]",
+]
+
+[tool.uv.workspace]
+members = [
+    "packages/uipath_langchain_client",
+]
+
+[tool.uv.sources]
+uipath-llm-client = { workspace = true }
+uipath-langchain-client = { workspace = true }
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/uipath_llm_client"]
+
+[tool.hatch.version]
+path = "src/uipath_llm_client/__version__.py"
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+
+[tool.ruff.lint]
+extend-select = ["W", "I"]
+fixable = ["ALL"]
+ignore = [
+  # whitespace before ':'
+  # https://github.com/PyCQA/pycodestyle/issues/373
+  "E203",
+  # missing whitespace around parameter equals before ':'
+  # anti-pattern of E251
+  "E252",
+  # Allow use of lambda expression assignments
+  "E731",
+  # Allow similar "I"/"l" variables
+  "E741",
+  # Ignore use of assert
+  "S101",
+]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "lf"
+skip-magic-trailing-comma = false
+
+[tool.pyright]
+reportImportCycles = true

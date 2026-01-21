@@ -1,0 +1,51 @@
+name: Publish uipath-llm-client to PyPI
+
+on:
+  push:
+    tags:
+      # Publish on any tag starting with a `v`, e.g., v1.0.0
+      - v*
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build package
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          version: "0.9.27"
+          enable-cache: true
+
+      - name: "Set up Python"
+        uses: actions/setup-python@v6
+        with:
+          python-version-file: ".python-version"
+      
+      - name: "Install dependencies"
+        run: uv sync --dev --all-extras --locked
+
+      - name: Build package
+        run: uv build --package uipath-llm-client
+
+      - name: Smoke test (wheel with all extras)
+        run: |
+          WHEEL=$(ls dist/*.whl)
+          uv run --isolated --no-project --with "${WHEEL}[all]" tests/core/core_smoke_test.py
+
+      - name: Smoke test (source distribution with all extras)
+        run: |
+          SDIST=$(ls dist/*.tar.gz)
+          uv run --isolated --no-project --with "${SDIST}[all]" tests/core/core_smoke_test.py
+
+      - name: Publish package
+        run: uv publish
+      

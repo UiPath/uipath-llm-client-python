@@ -1,0 +1,43 @@
+[project]
+name = "uipath-langchain-client"
+description = "LangChain-compatible chat models and embeddings for UiPath's LLM services"
+dynamic = ["version"]
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "langchain>=1.2.7",
+    "uipath-llm-client>=1.0.0",
+]
+
+[project.optional-dependencies]
+openai = [
+    "langchain-openai>=1.1.7",
+]
+aws = [
+    "langchain-aws>=1.2.1",
+]
+google = [
+    "langchain-google-genai>=4.2.0",
+]
+anthropic = [
+    "langchain-anthropic>=1.3.1",
+]
+azure = [
+    "langchain-azure-ai>=1.0.0",
+]
+vertexai = [
+    "langchain-google-vertexai>=3.2.1",
+]
+all = [
+    "uipath-langchain-client[openai,aws,google,anthropic,azure,vertexai]"
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/uipath_langchain_client"]
+
+[tool.hatch.version]
+path = "src/uipath_langchain_client/__version__.py"

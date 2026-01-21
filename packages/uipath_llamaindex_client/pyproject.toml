@@ -1,0 +1,22 @@
+[project]
+name = "uipath-llamaindex-client"
+description = "LlamaIndex-compatible LLMs and embeddings for UiPath's LLM services"
+dynamic = ["version"]
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "uipath-llm-client",
+]
+
+[tool.uv.sources]
+uipath_llm_client = { workspace = true }
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/uipath_llamaindex_client"]
+
+[tool.hatch.version]
+path = "src/uipath_llamaindex_client/__version__.py"

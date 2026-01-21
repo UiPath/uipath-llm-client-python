@@ -1,0 +1,88 @@
+name: Validate Version and Changelog
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  validate-version:
+    name: Validate version updates
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Get changed files
+        id: changes
+        run: |
+          git diff origin/main...HEAD --name-only > changes.txt
+          echo "Changed files:"
+          cat changes.txt
+
+      - name: Validate version updates for changed packages
+        run: |
+          VALIDATION_FAILED=0
+
+          # Core package: src/uipath_llm_client/ -> src/uipath_llm_client/__version__.py
+          core_changes=$(grep -E '^src/uipath_llm_client/' changes.txt | grep -v '__version__.py' || true)
+          core_version=$(grep -E '^src/uipath_llm_client/__version__.py' changes.txt || true)
+          if [ -n "$core_changes" ] && [ -z "$core_version" ]; then
+            echo "::error::Core package (src/uipath_llm_client/) changes detected but no version update in src/uipath_llm_client/__version__.py"
+            VALIDATION_FAILED=1
+          fi
+
+          # Langchain package: packages/uipath_langchain_client/ -> packages/uipath_langchain_client/src/uipath_langchain_client/__version__.py
+          langchain_changes=$(grep -E '^packages/uipath_langchain_client/' changes.txt | grep -v '__version__.py' || true)
+          langchain_version=$(grep -E '^packages/uipath_langchain_client/src/uipath_langchain_client/__version__.py' changes.txt || true)
+          if [ -n "$langchain_changes" ] && [ -z "$langchain_version" ]; then
+            echo "::error::Langchain package (packages/uipath_langchain_client/) changes detected but no version update in packages/uipath_langchain_client/src/uipath_langchain_client/__version__.py"
+            VALIDATION_FAILED=1
+          fi
+
+          # LlamaIndex package: packages/uipath_llamaindex_client/ -> packages/uipath_llamaindex_client/src/uipath_llamaindex_client/__version__.py
+          llamaindex_changes=$(grep -E '^packages/uipath_llamaindex_client/' changes.txt | grep -v '__version__.py' || true)
+          llamaindex_version=$(grep -E '^packages/uipath_llamaindex_client/src/uipath_llamaindex_client/__version__.py' changes.txt || true)
+          if [ -n "$llamaindex_changes" ] && [ -z "$llamaindex_version" ]; then
+            echo "::error::LlamaIndex package (packages/uipath_llamaindex_client/) changes detected but no version update in packages/uipath_llamaindex_client/src/uipath_llamaindex_client/__version__.py"
+            VALIDATION_FAILED=1
+          fi
+
+          if [ $VALIDATION_FAILED -eq 1 ]; then
+            exit 1
+          fi
+          echo "✓ All package versions are consistent with changes."
+
+      - name: Validate changelog updates for version changes
+        run: |
+          VALIDATION_FAILED=0
+
+          # Core package: src/uipath_llm_client/__version__.py -> CHANGELOG.md (root)
+          core_version=$(grep -E '^src/uipath_llm_client/__version__.py' changes.txt || true)
+          core_changelog=$(grep -E '^CHANGELOG.md' changes.txt || true)
+          if [ -n "$core_version" ] && [ -z "$core_changelog" ]; then
+            echo "::error::Core package version changed but no changelog update in CHANGELOG.md"
+            VALIDATION_FAILED=1
+          fi
+
+          # Langchain package: packages/uipath_langchain_client/src/uipath_langchain_client/__version__.py -> packages/uipath_langchain_client/CHANGELOG.md
+          langchain_version=$(grep -E '^packages/uipath_langchain_client/src/uipath_langchain_client/__version__.py' changes.txt || true)
+          langchain_changelog=$(grep -E '^packages/uipath_langchain_client/CHANGELOG.md' changes.txt || true)
+          if [ -n "$langchain_version" ] && [ -z "$langchain_changelog" ]; then
+            echo "::error::Langchain package version changed but no changelog update in packages/uipath_langchain_client/CHANGELOG.md"
+            VALIDATION_FAILED=1
+          fi
+
+          # LlamaIndex package: packages/uipath_llamaindex_client/src/uipath_llamaindex_client/__version__.py -> packages/uipath_llamaindex_client/CHANGELOG.md
+          llamaindex_version=$(grep -E '^packages/uipath_llamaindex_client/src/uipath_llamaindex_client/__version__.py' changes.txt || true)
+          llamaindex_changelog=$(grep -E '^packages/uipath_llamaindex_client/CHANGELOG.md' changes.txt || true)
+          if [ -n "$llamaindex_version" ] && [ -z "$llamaindex_changelog" ]; then
+            echo "::error::LlamaIndex package version changed but no changelog update in packages/uipath_llamaindex_client/CHANGELOG.md"
+            VALIDATION_FAILED=1
+          fi
+
+          if [ $VALIDATION_FAILED -eq 1 ]; then
+            exit 1
+          fi
+          echo "✓ All changelogs are consistent with version changes."

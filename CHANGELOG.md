@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_llm_client` (core package) will be documented in this file.
 
+## [1.0.1] - 2025-01-30
+
+### Bug Fixes
+- Map 400 Bad requests on S2S to 401 Unauthorized for better readability
+
 ## [1.0.0] - 2025-01-30
 
 ### Official Release

@@ -506,9 +506,7 @@ class TestAgentHubAuthRefresh:
                 settings = AgentHubSettings()
 
                 # Mock _get_access_token to return a new token on refresh
-                with patch.object(
-                    AgentHubAuth, "_get_access_token", return_value="initial-token"
-                ):
+                with patch.object(AgentHubAuth, "_get_access_token", return_value="initial-token"):
                     auth = AgentHubAuth(settings=settings)
 
                 request = Request("GET", "https://example.com")

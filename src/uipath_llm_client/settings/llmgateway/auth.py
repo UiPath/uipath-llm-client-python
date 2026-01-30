@@ -1,11 +1,11 @@
 from collections.abc import Generator
 
-from httpx import Auth, Client, HTTPStatusError, Request, Response
+from httpx import Auth, Client, Request, Response
 
 from uipath_llm_client.settings.llmgateway.settings import LLMGatewayBaseSettings
 from uipath_llm_client.settings.llmgateway.utils import LLMGatewayEndpoints
 from uipath_llm_client.settings.utils import SingletonMeta
-from uipath_llm_client.utils.exceptions import UiPathAPIError
+from uipath_llm_client.utils.exceptions import UiPathAPIError, UiPathAuthenticationError
 
 
 class LLMGatewayS2SAuth(Auth, metaclass=SingletonMeta):
@@ -39,10 +39,15 @@ class LLMGatewayS2SAuth(Auth, metaclass=SingletonMeta):
         )
         with Client() as http_client:
             response = http_client.post(url_get_token, data=token_credentials)
-            try:
-                response.raise_for_status()
-            except HTTPStatusError as e:
-                raise UiPathAPIError.from_response(e.response)
+            if response.is_client_error:
+                raise UiPathAuthenticationError(
+                    message="Failed to authenticate with LLM Gateway, invalid credentials",
+                    request=response.request,
+                    response=response,
+                    body=response.json(),
+                )
+            elif response.is_error:
+                raise UiPathAPIError.from_response(response)
             llmgw_token_header = response.json().get("access_token")
             return llmgw_token_header
 

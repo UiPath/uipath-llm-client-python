@@ -2,9 +2,10 @@ name: Publish uipath-langchain-client to PyPI
 
 on:
   push:
-    tags:
-      # Publish on any tag starting with `langchain-v`, e.g., langchain-v1.0.0
-      - langchain-v*
+    branches:
+      - main
+    paths:
+      - 'packages/uipath_langchain_client/src/uipath_langchain_client/__version__.py'
   workflow_dispatch:
 
 jobs:

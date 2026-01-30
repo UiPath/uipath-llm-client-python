@@ -2,9 +2,10 @@ name: Publish uipath-llm-client to PyPI
 
 on:
   push:
-    tags:
-      # Publish on any tag starting with a `v`, e.g., v1.0.0
-      - v*
+    branches:
+      - main
+    paths:
+      - 'src/uipath_llm_client/__version__.py'
   workflow_dispatch:
 
 jobs:

@@ -23,6 +23,10 @@ class UiPathChatAnthropicVertex(UiPathBaseLLMClient, ChatAnthropicVertex):  # ty
         freeze_base_url=True,
     )
 
+    # Override fields to avoid errors when instantiating the class
+    project: str | None = "PLACEHOLDER"
+    location: str = "PLACEHOLDER"
+
     @model_validator(mode="after")
     def setup_uipath_client(self) -> Self:
         self.client = AnthropicVertex(

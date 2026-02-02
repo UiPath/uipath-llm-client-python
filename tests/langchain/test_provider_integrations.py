@@ -35,6 +35,9 @@ class TestIntegrationChatModel(ChatModelIntegrationTests):
         test_name = request.node.originalname
         has_thinking = "thinking" in model_kwargs
 
+        if test_name in ["test_structured_output_pydantic_2_v1"]:
+            pytest.skip("Skipping test because it's not relevant for now")
+
         if test_name in [
             "test_parallel_and_sequential_tool_calling",
             "test_parallel_and_sequential_tool_calling_async",

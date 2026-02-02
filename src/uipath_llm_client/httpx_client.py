@@ -35,7 +35,6 @@ from httpx import (
     Response,
 )
 from httpx._types import HeaderTypes
-from uipath._utils._ssl_context import get_httpx_client_kwargs
 
 from uipath_llm_client.settings import (
     UiPathAPIConfig,
@@ -47,6 +46,7 @@ from uipath_llm_client.utils.retry import (
     RetryableHTTPTransport,
     RetryConfig,
 )
+from uipath_llm_client.utils.ssl_config import get_httpx_client_kwargs
 
 
 def build_routing_headers(

@@ -2,7 +2,12 @@
 
 All notable changes to `uipath_langchain_client` will be documented in this file.
 
-## [1.0.0] - 2025-01-30
+## [1.0.1] - 2026-02-02
+
+### Bug Fix
+- Fixed Api Version on OpenAI Embeddings
+
+## [1.0.0] - 2026-01-30
 
 ### Official Release
 - First stable release of the UiPath LangChain Client
@@ -15,7 +20,7 @@ All notable changes to `uipath_langchain_client` will be documented in this file
 - Comprehensive support for chat completions, embeddings, and streaming
 - Seamless integration with both AgentHub and LLMGateway backends
 
-## [0.3.x] - 2025-01-29
+## [0.3.x] - 2026-01-29
 
 ### Release
 - First public release of the UiPath LangChain Client
@@ -39,7 +44,7 @@ All notable changes to `uipath_langchain_client` will be documented in this file
 - Vertex AI
 - Azure AI
 
-## [0.2.x] - 2025-01-15
+## [0.2.x] - 2026-01-15
 
 ### Architecture
 - Extracted from monolithic package into dedicated LangChain integration package
@@ -72,7 +77,7 @@ All notable changes to `uipath_langchain_client` will be documented in this file
 - Package renamed from internal module to `uipath_langchain_client`
 - Import paths changed; update imports accordingly
 
-## [0.1.x] - 2024-12-20
+## [0.1.x] - 2025-12-20
 
 ### Initial Development Release
 - LangChain-compatible chat models wrapping UiPath LLM services

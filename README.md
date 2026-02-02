@@ -565,7 +565,7 @@ byo_embeddings = UiPathAzureOpenAIEmbeddings(
 # Clone and install with dev dependencies
 git clone https://github.com/UiPath/uipath-llm-client.git
 cd uipath-llm-client
-uv sync --dev
+uv sync
 
 # Run tests
 uv run pytest

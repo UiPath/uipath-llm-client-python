@@ -2,7 +2,7 @@ name: Run Tests
 
 on:
   workflow_run:
-    workflows: ["Type Check & Lint"]
+    workflows: [Type Check and Lint]
     types:
       - completed
 

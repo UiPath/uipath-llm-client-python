@@ -2,12 +2,17 @@
 
 All notable changes to `uipath_llm_client` (core package) will be documented in this file.
 
-## [1.0.1] - 2025-01-30
+## [1.0.2] - 2026-02-02
+
+### Bug Fixes
+- Fixed endpoints on AgentHub Settings
+
+## [1.0.1] - 2026-01-30
 
 ### Bug Fixes
 - Map 400 Bad requests on S2S to 401 Unauthorized for better readability
 
-## [1.0.0] - 2025-01-30
+## [1.0.0] - 2026-01-30
 
 ### Official Release
 - First stable release of the UiPath LLM Client
@@ -21,7 +26,7 @@ All notable changes to `uipath_llm_client` (core package) will be documented in 
 - Full async/sync support with streaming capabilities
 - Robust error handling and retry logic
 
-## [0.3.x] - 2025-01-29
+## [0.3.x] - 2026-01-29
 
 ### Release
 - First public release accessible to test.pypi of the UiPath LLM Client
@@ -37,7 +42,7 @@ All notable changes to `uipath_llm_client` (core package) will be documented in 
 - Added `UIPATH_LLM_BACKEND` environment variable for runtime backend switching
 - Improved error handling with `UiPathAPIError` hierarchy for specific HTTP status codes
 
-## [0.2.x] - 2025-01-15
+## [0.2.x] - 2026-01-15
 
 ### Architecture
 - Split monolithic package into two separate packages:
@@ -56,7 +61,7 @@ All notable changes to `uipath_llm_client` (core package) will be documented in 
 - Package structure changed; imports need to be updated from `uipath_llmgw_client` to `uipath_llm_client`
 - Settings classes renamed for consistency
 
-## [0.1.x] - 2024-12-20
+## [0.1.x] - 2025-12-20
 
 ### Initial Development Release
 - Core HTTP client with authentication and request handling

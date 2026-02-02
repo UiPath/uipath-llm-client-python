@@ -22,6 +22,7 @@ class UiPathOpenAIEmbeddings(UiPathBaseLLMClient, OpenAIEmbeddings):
         client_type="passthrough",
         vendor_type="openai",
         freeze_base_url=True,
+        api_version="2025-03-01-preview",
     )
 
     # Override fields to avoid errors when instantiating the class
@@ -53,6 +54,7 @@ class UiPathAzureOpenAIEmbeddings(UiPathBaseLLMClient, AzureOpenAIEmbeddings):
         client_type="passthrough",
         vendor_type="openai",
         freeze_base_url=True,
+        api_version="2025-03-01-preview",
     )
 
     # Override fields to avoid errors when instantiating the class

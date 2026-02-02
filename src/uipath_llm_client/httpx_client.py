@@ -193,7 +193,7 @@ class UiPathHttpxClient(Client):
             Response with patched raise_for_status() that raises UiPath exceptions.
         """
         if self._freeze_base_url:
-            request.url = URL(self.base_url)
+            request.url = URL(str(self.base_url).rstrip("/"))
         request.headers[self._streaming_header] = str(stream).lower()
         response = super().send(request, stream=stream, **kwargs)
         return patch_raise_for_status(response)
@@ -313,7 +313,7 @@ class UiPathHttpxAsyncClient(AsyncClient):
             Response with patched raise_for_status() that raises UiPath exceptions.
         """
         if self._freeze_base_url:
-            request.url = URL(self.base_url)
+            request.url = URL(str(self.base_url).rstrip("/"))
         request.headers[self._streaming_header] = str(stream).lower()
         response = await super().send(request, stream=stream, **kwargs)
         return patch_raise_for_status(response)

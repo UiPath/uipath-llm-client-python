@@ -38,7 +38,7 @@ def vcr_config():
         return None
 
     return {
-        "record_mode": "once",
+        "record_mode": "new_episodes",
         "record_on_exception": False,
         "allow_playback_repeats": False,
         "decode_compressed_response": True,

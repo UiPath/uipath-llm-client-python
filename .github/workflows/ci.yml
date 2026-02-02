@@ -38,6 +38,7 @@ jobs:
     name: Test
     runs-on: ubuntu-latest
     needs: type_check
+    environment: LLMGW_SETTINGS
     env:
       UIPATH_LLM_BACKEND: ${{ secrets.UIPATH_LLM_BACKEND }}
       LLMGW_URL: ${{ secrets.LLMGW_URL }}

@@ -1,7 +1,7 @@
 from typing import Self
 
 from httpx import URL, Request
-from pydantic import Field, SecretStr, model_validator
+from pydantic import Field, model_validator
 from uipath_langchain_client.base_client import UiPathBaseLLMClient
 from uipath_langchain_client.settings import UiPathAPIConfig
 
@@ -29,7 +29,8 @@ class UiPathChatGoogleGenerativeAI(UiPathBaseLLMClient, ChatGoogleGenerativeAI):
 
     # Override fields to avoid errors when instantiating the class
     model: str = Field(default="", alias="model_name")
-    google_api_key: SecretStr | None = Field(default=SecretStr("PLACEHOLDER"))
+    project: str | None = "PLACEHOLDER"
+    location: str | None = "PLACEHOLDER"
 
     @model_validator(mode="after")
     def setup_uipath_client(self) -> Self:

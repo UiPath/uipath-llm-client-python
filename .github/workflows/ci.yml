@@ -38,6 +38,16 @@ jobs:
     name: Test
     runs-on: ubuntu-latest
     needs: type_check
+    env:
+      UIPATH_LLM_BACKEND: ${{ secrets.UIPATH_LLM_BACKEND }}
+      LLMGW_URL: ${{ secrets.LLMGW_URL }}
+      LLMGW_SEMANTIC_ORG_ID: ${{ secrets.LLMGW_SEMANTIC_ORG_ID }}
+      LLMGW_SEMANTIC_TENANT_ID: ${{ secrets.LLMGW_SEMANTIC_TENANT_ID }}
+      LLMGW_REQUESTING_PRODUCT: ${{ secrets.LLMGW_REQUESTING_PRODUCT }}
+      LLMGW_REQUESTING_FEATURE: ${{ secrets.LLMGW_REQUESTING_FEATURE }}
+      LLMGW_ACCESS_TOKEN: ${{ secrets.LLMGW_ACCESS_TOKEN }}
+      LLMGW_CLIENT_ID: ${{ secrets.LLMGW_CLIENT_ID }}
+      LLMGW_CLIENT_SECRET: ${{ secrets.LLMGW_CLIENT_SECRET }}
     steps:
       - uses: actions/checkout@v6
 

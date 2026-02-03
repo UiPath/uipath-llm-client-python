@@ -2,9 +2,14 @@
 
 All notable changes to `uipath_langchain_client` will be documented in this file.
 
+## [1.0.3] - 2026-02-02
+
+### Bug Fix
+- Added better dependencies for langchain-anthropic to include boto and vertex
+
 ## [1.0.2] - 2026-02-02
 
-### Buf Fix
+### Bug Fix
 - Removed old fix on Gemini streaming and updated with a new cleaner one
 
 ## [1.0.1] - 2026-02-02

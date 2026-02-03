@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_llm_client` (core package) will be documented in this file.
 
+## [1.0.4] - 2026-02-03
+
+### Bug Fix
+- Adjusted retry logic, now 0 means no retries, 1 means one retry
+
 ## [1.0.3] - 2026-02-02
 
 ### Refactor

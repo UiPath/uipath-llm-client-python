@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_langchain_client` will be documented in this file.
 
+## [1.0.5] - 2026-02-03
+
+### Bug Fix
+- Fixed retry logic on all clients
+
 ## [1.0.4] - 2026-02-03
 
 ### Bug Fix

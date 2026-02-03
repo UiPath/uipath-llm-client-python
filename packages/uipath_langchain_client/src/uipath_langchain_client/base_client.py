@@ -101,7 +101,7 @@ class UiPathBaseLLMClient(BaseModel):
         description="Client-side request timeout in seconds",
     )
     max_retries: int = Field(
-        default=1,
+        default=0,
         description="Maximum number of retries for failed requests",
     )
     retry_config: RetryConfig | None = Field(

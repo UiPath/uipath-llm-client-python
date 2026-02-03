@@ -108,7 +108,7 @@ def _build_retryer(
     Returns:
         A configured Retrying/AsyncRetrying instance, or None if retries disabled.
     """
-    if max_retries <= 1:
+    if max_retries < 1:
         return None
 
     cfg = retry_config or {}
@@ -152,7 +152,7 @@ class RetryableHTTPTransport(HTTPTransport):
     def __init__(
         self,
         *args: Any,
-        max_retries: int = 1,
+        max_retries: int = 0,
         retry_config: RetryConfig | None = None,
         logger: logging.Logger | None = None,
         **kwargs: Any,
@@ -216,7 +216,7 @@ class RetryableAsyncHTTPTransport(AsyncHTTPTransport):
     def __init__(
         self,
         *args: Any,
-        max_retries: int = 1,
+        max_retries: int = 0,
         retry_config: RetryConfig | None = None,
         logger: logging.Logger | None = None,
         **kwargs: Any,

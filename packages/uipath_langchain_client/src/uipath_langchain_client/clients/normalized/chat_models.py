@@ -18,7 +18,7 @@ Example:
     >>> settings = get_default_client_settings()
     >>> chat = UiPathNormalizedChatModel(
     ...     model="gpt-4o-2024-11-20",
-    ...     client_settings=settings,
+    ...     settings=settings,
     ... )
     >>> response = chat.invoke("Hello!")
 """
@@ -88,7 +88,7 @@ class UiPathNormalizedChatModel(UiPathBaseLLMClient, BaseChatModel):
     Example:
         >>> chat = UiPathNormalizedChatModel(
         ...     model="gpt-4o-2024-11-20",
-        ...     client_settings=settings,
+        ...     settings=settings,
         ...     temperature=0.7,
         ...     max_tokens=1000,
         ... )

@@ -41,7 +41,7 @@ print(response.content)
 
 # Embeddings model
 embeddings = get_embedding_model(
-    model="text-embedding-3-large",
+    model_name="text-embedding-3-large",
     client_settings=settings,
 )
 vectors = embeddings.embed_documents(["Hello world"])
@@ -62,20 +62,20 @@ from uipath_langchain_client.settings import get_default_client_settings
 settings = get_default_client_settings()
 
 # OpenAI/Azure
-openai_chat = UiPathAzureChatOpenAI(model="gpt-4o-2024-11-20", client_settings=settings)
+openai_chat = UiPathAzureChatOpenAI(model="gpt-4o-2024-11-20", settings=settings)
 
 # Google Gemini
-gemini_chat = UiPathChatGoogleGenerativeAI(model="gemini-2.5-flash", client_settings=settings)
+gemini_chat = UiPathChatGoogleGenerativeAI(model="gemini-2.5-flash", settings=settings)
 
 # Anthropic Claude (via AWS Bedrock)
 claude_chat = UiPathChatAnthropic(
     model="anthropic.claude-sonnet-4-5-20250929-v1:0",
-    client_settings=settings,
+    settings=settings,
     vendor_type="awsbedrock",
 )
 
 # Normalized (provider-agnostic)
-normalized_chat = UiPathNormalizedChatModel(model="gpt-4o-2024-11-20", client_settings=settings)
+normalized_chat = UiPathNormalizedChatModel(model="gpt-4o-2024-11-20", settings=settings)
 ```
 
 ## Available Client Types

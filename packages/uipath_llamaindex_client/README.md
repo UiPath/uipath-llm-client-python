@@ -28,14 +28,14 @@ settings = get_default_client_settings()
 
 # Create a LlamaIndex LLM
 llm = get_llm(
-    model_name="gpt-4o-2024-11-20",
-    client_settings=settings,
+    model="gpt-4o-2024-11-20",
+    settings=settings,
 )
 
 # Create embeddings
 embeddings = get_embeddings(
-    model_name="text-embedding-3-large",
-    client_settings=settings,
+    model="text-embedding-3-large",
+    settings=settings,
 )
 
 # Use with LlamaIndex

@@ -248,7 +248,7 @@ response = chat_model.invoke("What is the capital of France?")
 print(response.content)
 
 # Create an embeddings model
-embeddings_model = get_embedding_model(model="text-embedding-3-large", client_settings=settings)
+embeddings_model = get_embedding_model(model_name="text-embedding-3-large", client_settings=settings)
 vectors = embeddings_model.embed_documents(["Hello world", "How are you?"])
 ```
 
@@ -460,7 +460,7 @@ settings = LLMGatewaySettings(
 # Use with OpenAI/Azure chat model
 openai_chat = UiPathAzureChatOpenAI(
     model="gpt-4o-2024-11-20",
-    client_settings=settings,
+    settings=settings,
 )
 response = openai_chat.invoke("Hello!")
 print(response.content)
@@ -468,7 +468,7 @@ print(response.content)
 # Use with Google Gemini
 gemini_chat = UiPathChatGoogleGenerativeAI(
     model="gemini-2.5-flash",
-    client_settings=settings,
+    settings=settings,
 )
 response = gemini_chat.invoke("Hello!")
 print(response.content)
@@ -476,7 +476,7 @@ print(response.content)
 # Use with embeddings
 embeddings = UiPathAzureOpenAIEmbeddings(
     model="text-embedding-3-large",
-    client_settings=settings,
+    settings=settings,
 )
 vectors = embeddings.embed_documents(["Hello world"])
 ```
@@ -517,7 +517,7 @@ print(response.content)
 
 # Embeddings with factory
 embeddings = get_embedding_model(
-    model="text-embedding-3-large",
+    model_name="text-embedding-3-large",
     client_settings=settings,
 )
 vectors = embeddings.embed_documents(["Hello", "World"])

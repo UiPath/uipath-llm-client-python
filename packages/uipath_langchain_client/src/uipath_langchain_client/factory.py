@@ -16,8 +16,8 @@ Example:
     >>> settings = get_default_client_settings()
     >>>
     >>> # Auto-detect vendor from model name
-    >>> chat = get_chat_model("gpt-4o-2024-11-20", settings)
-    >>> embeddings = get_embedding_model("text-embedding-3-large", settings)
+    >>> chat = get_chat_model(model_name="gpt-4o-2024-11-20", client_settings=settings)
+    >>> embeddings = get_embedding_model(model_name="text-embedding-3-large", client_settings=settings)
 """
 
 from typing import Any, Literal
@@ -99,7 +99,7 @@ def get_chat_model(
 
                 return UiPathAzureChatOpenAI(
                     model=model_name,
-                    client_settings=client_settings,
+                    settings=client_settings,
                     **model_kwargs,
                 )
             else:
@@ -112,7 +112,7 @@ def get_chat_model(
 
                 return UiPathChatGoogleGenerativeAI(
                     model=model_name,
-                    client_settings=client_settings,
+                    settings=client_settings,
                     **model_kwargs,
                 )
             elif "claude" in model_name:
@@ -122,7 +122,7 @@ def get_chat_model(
 
                 return UiPathChatAnthropic(
                     model=model_name,
-                    client_settings=client_settings,
+                    settings=client_settings,
                     vendor_type="vertexai",
                     **model_kwargs,
                 )
@@ -136,7 +136,7 @@ def get_chat_model(
 
                 return UiPathChatAnthropic(
                     model=model_name,
-                    client_settings=client_settings,
+                    settings=client_settings,
                     vendor_type="awsbedrock",
                     **model_kwargs,
                 )
@@ -147,7 +147,7 @@ def get_chat_model(
 
 
 def get_embedding_model(
-    model: str,
+    model_name: str,
     byo_connection_id: str | None = None,
     client_settings: UiPathBaseSettings | None = None,
     client_type: Literal["passthrough", "normalized"] = "passthrough",
@@ -172,11 +172,11 @@ def get_embedding_model(
 
     Example:
         >>> settings = get_default_client_settings()
-        >>> embeddings = get_embedding_model("text-embedding-3-large", settings)
+        >>> embeddings = get_embedding_model(model_name="text-embedding-3-large", client_settings=settings)
         >>> vectors = embeddings.embed_documents(["Hello world"])
     """
     client_settings = client_settings or get_default_client_settings()
-    model_info = _get_model_info(model, client_settings, byo_connection_id)
+    model_info = _get_model_info(model_name, client_settings, byo_connection_id)
 
     if client_type == "normalized":
         from uipath_langchain_client.clients.normalized.embeddings import (
@@ -184,7 +184,7 @@ def get_embedding_model(
         )
 
         return UiPathNormalizedEmbeddings(
-            model=model, client_settings=client_settings, **model_kwargs
+            model=model_name, settings=client_settings, **model_kwargs
         )
 
     vendor_type = model_info["vendor"].lower()
@@ -195,7 +195,7 @@ def get_embedding_model(
             )
 
             return UiPathAzureOpenAIEmbeddings(
-                model=model, client_settings=client_settings, **model_kwargs
+                model=model_name, settings=client_settings, **model_kwargs
             )
         case "vertexai":
             from uipath_langchain_client.clients.google.embeddings import (
@@ -203,7 +203,7 @@ def get_embedding_model(
             )
 
             return UiPathGoogleGenerativeAIEmbeddings(
-                model=model, client_settings=client_settings, **model_kwargs
+                model=model_name, settings=client_settings, **model_kwargs
             )
         case "awsbedrock":
             from uipath_langchain_client.clients.bedrock.embeddings import (
@@ -211,7 +211,7 @@ def get_embedding_model(
             )
 
             return UiPathBedrockEmbeddings(
-                model=model, client_settings=client_settings, **model_kwargs
+                model=model_name, settings=client_settings, **model_kwargs
             )
         case _:
             raise ValueError(f"Invalid UiPath Embeddings provider: {vendor_type}")

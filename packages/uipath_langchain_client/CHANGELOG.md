@@ -2,6 +2,12 @@
 
 All notable changes to `uipath_langchain_client` will be documented in this file.
 
+## [1.0.6] - 2026-02-03
+
+### Refactor
+- Updated documentation to include the new aliases for settings
+- New alias for settings and request timeout in BaseLLMClient
+
 ## [1.0.5] - 2026-02-03
 
 ### Bug Fix

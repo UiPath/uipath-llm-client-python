@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_llm_client` (core package) will be documented in this file.
 
+## [1.0.5] - 2026-02-03
+
+### Refactor
+- Updated documentation to include the new aliases for settings
+
 ## [1.0.4] - 2026-02-03
 
 ### Bug Fix

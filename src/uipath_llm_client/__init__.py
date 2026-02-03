@@ -20,7 +20,7 @@ Quick Start:
     ...         client_type="passthrough",
     ...         vendor_type="openai",
     ...     ),
-    ...     client_settings=settings,
+    ...     settings=settings,
     ... )
     >>> response = client.uipath_request(request_body={...})
 """

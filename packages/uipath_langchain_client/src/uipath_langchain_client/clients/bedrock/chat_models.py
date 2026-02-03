@@ -59,5 +59,5 @@ class UiPathChatBedrock(UiPathBaseLLMClient, ChatBedrock):
     def _as_converse(self) -> UiPathChatBedrockConverse:
         return UiPathChatBedrockConverse(
             model=self.model_name,
-            client_settings=self.client_settings,
+            settings=self.client_settings,
         )

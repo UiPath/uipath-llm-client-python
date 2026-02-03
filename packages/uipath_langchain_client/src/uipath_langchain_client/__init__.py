@@ -15,11 +15,11 @@ Quick Start:
     >>> settings = get_default_client_settings()
     >>>
     >>> # Chat model with auto-detected vendor
-    >>> chat = get_chat_model("gpt-4o-2024-11-20", settings)
+    >>> chat = get_chat_model(model_name="gpt-4o-2024-11-20", client_settings=settings)
     >>> response = chat.invoke("Hello!")
     >>>
     >>> # Embeddings model
-    >>> embeddings = get_embedding_model("text-embedding-3-large", settings)
+    >>> embeddings = get_embedding_model(model_name="text-embedding-3-large", client_settings=settings)
     >>> vectors = embeddings.embed_documents(["Hello world"])
 
 Settings:

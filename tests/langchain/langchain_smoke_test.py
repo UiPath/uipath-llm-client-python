@@ -91,7 +91,7 @@ def test_factory_module_imports():
     embed_sig = inspect.signature(get_embedding_model)
 
     assert "model_name" in chat_sig.parameters, "get_chat_model should have model_name parameter"
-    assert "model" in embed_sig.parameters, "get_embedding_model should have model parameter"
+    assert "model_name" in embed_sig.parameters, "get_embedding_model should have model parameter"
     assert "client_settings" in chat_sig.parameters, (
         "get_chat_model should have client_settings parameter"
     )

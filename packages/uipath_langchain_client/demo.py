@@ -167,7 +167,7 @@ def demo_embeddings():
 
     settings = get_default_client_settings()
     embeddings = get_embedding_model(
-        model="text-embedding-3-large",
+        model_name="text-embedding-3-large",
         client_settings=settings,
     )
 
@@ -241,7 +241,7 @@ def demo_direct_client_usage():
     # Use the Azure OpenAI client directly for more control
     chat_model = UiPathAzureChatOpenAI(
         model="gpt-4o-2024-11-20",
-        client_settings=settings,
+        settings=settings,
         temperature=0.7,
     )
 

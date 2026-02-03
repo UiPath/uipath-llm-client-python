@@ -29,7 +29,7 @@ from functools import cached_property
 from typing import Any, Literal
 
 from httpx import URL, Response
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field
 
 from uipath_langchain_client.settings import (
     UiPathAPIConfig,
@@ -85,9 +85,11 @@ class UiPathBaseLLMClient(BaseModel):
         description="Settings for the UiPath API",
     )
     client_settings: UiPathBaseSettings = Field(
+        alias="settings",
         default_factory=get_default_client_settings,
         description="Settings for the UiPath client (defaults based on UIPATH_LLM_BACKEND env var)",
     )
+
     default_headers: Mapping[str, str] | None = Field(
         default={
             "X-UiPath-LLMGateway-TimeoutSeconds": "300",  # server side timeout, default is 10, maximum is 300
@@ -95,8 +97,9 @@ class UiPathBaseLLMClient(BaseModel):
         },
         description="Default request headers to include in requests",
     )
-
     request_timeout: int | None = Field(
+        alias="timeout",
+        validation_alias=AliasChoices("timeout", "request_timeout", "default_request_timeout"),
         default=None,
         description="Client-side request timeout in seconds",
     )

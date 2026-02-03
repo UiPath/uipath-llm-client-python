@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_langchain_client` will be documented in this file.
 
+## [1.0.4] - 2026-02-03
+
+### Bug Fix
+- Fix some timout issues on langchain_openai from llmgw.
+
 ## [1.0.3] - 2026-02-02
 
 ### Bug Fix

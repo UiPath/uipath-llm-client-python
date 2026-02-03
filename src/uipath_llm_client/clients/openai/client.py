@@ -51,7 +51,7 @@ class UiPathOpenAI(OpenAI):
         super().__init__(
             api_key="PLACEHOLDER",
             timeout=None,
-            max_retries=1,
+            max_retries=0,
             http_client=httpx_client,
         )
 
@@ -91,7 +91,7 @@ class UiPathAsyncOpenAI(AsyncOpenAI):
         super().__init__(
             api_key="PLACEHOLDER",
             timeout=None,
-            max_retries=1,
+            max_retries=0,
             http_client=httpx_client,
         )
 
@@ -133,7 +133,7 @@ class UiPathAzureOpenAI(AzureOpenAI):
             api_version="PLACEHOLDER",
             api_key="PLACEHOLDER",
             timeout=None,
-            max_retries=1,
+            max_retries=0,
             http_client=httpx_client,
         )
 
@@ -175,6 +175,6 @@ class UiPathAsyncAzureOpenAI(AsyncAzureOpenAI):
             api_version="PLACEHOLDER",
             api_key="PLACEHOLDER",
             timeout=None,
-            max_retries=1,
+            max_retries=0,
             http_client=httpx_client,
         )

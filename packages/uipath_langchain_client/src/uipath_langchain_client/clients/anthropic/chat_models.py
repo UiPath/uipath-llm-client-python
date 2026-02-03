@@ -62,7 +62,7 @@ class UiPathChatAnthropic(UiPathBaseLLMClient, ChatAnthropic):
                     api_key="PLACEHOLDER",
                     base_url=str(self.uipath_sync_client.base_url),
                     default_headers=dict(self.uipath_sync_client.headers),
-                    max_retries=1,  # handled by the UiPathBaseLLMClient
+                    max_retries=0,  # handled by the UiPathBaseLLMClient
                     timeout=None,  # handled by the UiPathBaseLLMClient
                     http_client=self.uipath_sync_client,
                 )
@@ -74,7 +74,7 @@ class UiPathChatAnthropic(UiPathBaseLLMClient, ChatAnthropic):
                     base_url=str(self.uipath_sync_client.base_url),
                     default_headers=dict(self.uipath_sync_client.headers),
                     timeout=None,  # handled by the UiPathBaseLLMClient
-                    max_retries=1,  # handled by the UiPathBaseLLMClient
+                    max_retries=0,  # handled by the UiPathBaseLLMClient
                     http_client=self.uipath_sync_client,
                 )
             case "awsbedrock":
@@ -85,7 +85,7 @@ class UiPathChatAnthropic(UiPathBaseLLMClient, ChatAnthropic):
                     base_url=str(self.uipath_sync_client.base_url),
                     default_headers=dict(self.uipath_sync_client.headers),
                     timeout=None,  # handled by the UiPathBaseLLMClient
-                    max_retries=1,  # handled by the UiPathBaseLLMClient
+                    max_retries=0,  # handled by the UiPathBaseLLMClient
                     http_client=self.uipath_sync_client,
                 )
             case "anthropic":
@@ -94,7 +94,7 @@ class UiPathChatAnthropic(UiPathBaseLLMClient, ChatAnthropic):
                     base_url=str(self.uipath_sync_client.base_url),
                     default_headers=dict(self.uipath_sync_client.headers),
                     timeout=None,  # handled by the UiPathBaseLLMClient
-                    max_retries=1,  # handled by the UiPathBaseLLMClient
+                    max_retries=0,  # handled by the UiPathBaseLLMClient
                     http_client=self.uipath_sync_client,
                 )
 
@@ -108,7 +108,7 @@ class UiPathChatAnthropic(UiPathBaseLLMClient, ChatAnthropic):
                     api_key="PLACEHOLDER",
                     base_url=str(self.uipath_async_client.base_url),
                     default_headers=dict(self.uipath_async_client.headers),
-                    max_retries=1,  # handled by the UiPathBaseLLMClient
+                    max_retries=0,  # handled by the UiPathBaseLLMClient
                     timeout=None,  # handled by the UiPathBaseLLMClient
                     http_client=self.uipath_async_client,
                 )
@@ -120,7 +120,7 @@ class UiPathChatAnthropic(UiPathBaseLLMClient, ChatAnthropic):
                     base_url=str(self.uipath_async_client.base_url),
                     default_headers=dict(self.uipath_async_client.headers),
                     timeout=None,  # handled by the UiPathBaseLLMClient
-                    max_retries=1,  # handled by the UiPathBaseLLMClient
+                    max_retries=0,  # handled by the UiPathBaseLLMClient
                     http_client=self.uipath_async_client,
                 )
             case "awsbedrock":
@@ -131,7 +131,7 @@ class UiPathChatAnthropic(UiPathBaseLLMClient, ChatAnthropic):
                     base_url=str(self.uipath_async_client.base_url),
                     default_headers=dict(self.uipath_async_client.headers),
                     timeout=None,  # handled by the UiPathBaseLLMClient
-                    max_retries=1,  # handled by the UiPathBaseLLMClient
+                    max_retries=0,  # handled by the UiPathBaseLLMClient
                     http_client=self.uipath_async_client,
                 )
             case _:
@@ -140,7 +140,7 @@ class UiPathChatAnthropic(UiPathBaseLLMClient, ChatAnthropic):
                     base_url=str(self.uipath_async_client.base_url),
                     default_headers=dict(self.uipath_async_client.headers),
                     timeout=None,  # handled by the UiPathBaseLLMClient
-                    max_retries=1,  # handled by the UiPathBaseLLMClient
+                    max_retries=0,  # handled by the UiPathBaseLLMClient
                     http_client=self.uipath_async_client,
                 )
 

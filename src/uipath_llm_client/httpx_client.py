@@ -152,7 +152,7 @@ class UiPathHttpxClient(Client):
         # Setup retry transport if not provided
         if transport is None:
             transport = RetryableHTTPTransport(
-                max_retries=max_retries or 1,
+                max_retries=max_retries or 0,
                 retry_config=retry_config,
                 logger=logger,
             )
@@ -272,7 +272,7 @@ class UiPathHttpxAsyncClient(AsyncClient):
         # Setup retry transport if not provided
         if transport is None:
             transport = RetryableAsyncHTTPTransport(
-                max_retries=max_retries or 1,
+                max_retries=max_retries or 0,
                 retry_config=retry_config,
                 logger=logger,
             )

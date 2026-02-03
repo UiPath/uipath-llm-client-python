@@ -581,10 +581,15 @@ class TestRetryableHTTPTransport:
 
         assert issubclass(RetryableHTTPTransport, HTTPTransport)
 
-    def test_transport_no_retry_when_max_retries_1(self):
-        """Test no retry logic when max_retries is 1."""
-        transport = RetryableHTTPTransport(max_retries=1)
+    def test_transport_no_retry_when_max_retries_0(self):
+        """Test no retry logic when max_retries is 0."""
+        transport = RetryableHTTPTransport(max_retries=0)
         assert transport.retryer is None
+
+    def test_transport_has_retryer_when_max_retries_1(self):
+        """Test retryer is created when max_retries is 1."""
+        transport = RetryableHTTPTransport(max_retries=1)
+        assert transport.retryer is not None
 
     def test_transport_has_retryer_when_max_retries_gt_1(self):
         """Test retryer is created when max_retries > 1."""
@@ -611,10 +616,15 @@ class TestRetryableAsyncHTTPTransport:
 
         assert issubclass(RetryableAsyncHTTPTransport, AsyncHTTPTransport)
 
-    def test_async_transport_no_retry_when_max_retries_1(self):
-        """Test no retry logic when max_retries is 1."""
-        transport = RetryableAsyncHTTPTransport(max_retries=1)
+    def test_async_transport_no_retry_when_max_retries_0(self):
+        """Test no retry logic when max_retries is 0."""
+        transport = RetryableAsyncHTTPTransport(max_retries=0)
         assert transport.retryer is None
+
+    def test_async_transport_has_retryer_when_max_retries_1(self):
+        """Test retryer is created when max_retries is 1."""
+        transport = RetryableAsyncHTTPTransport(max_retries=1)
+        assert transport.retryer is not None
 
     def test_async_transport_has_retryer_when_max_retries_gt_1(self):
         """Test retryer is created when max_retries > 1."""

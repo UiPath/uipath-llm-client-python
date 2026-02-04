@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_langchain_client` will be documented in this file.
 
+## [1.0.9] - 2026-02-04
+
+### Fix
+- Fixed typing in core package, updated dependency
+
 ## [1.0.8] - 2026-02-04
 
 ### Fix

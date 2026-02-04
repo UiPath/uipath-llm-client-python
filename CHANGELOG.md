@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_llm_client` (core package) will be documented in this file.
 
+## [1.0.8] - 2026-02-04
+
+### Bug Fix
+- Fixed a typing issue of Singleton
+
 ## [1.0.7] - 2026-02-04
 
 ### Fix

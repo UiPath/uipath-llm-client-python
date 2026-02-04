@@ -1,14 +1,13 @@
 from typing import Any
 
 
-class SingletonMeta[T](type):
+class SingletonMeta(type):
     """Metaclass for creating singleton classes. Used to keep global configs shared between instances."""
 
-    _instances: dict[Any, Any] = {}
+    _instances: dict[type, Any] = {}
 
-    def __call__(cls: type[T], *args: Any, **kwargs: Any) -> T:
-        instances = SingletonMeta._instances
-        if cls not in instances:
+    def __call__(cls, *args: Any, **kwargs: Any) -> Any:
+        if cls not in SingletonMeta._instances:
             instance = super().__call__(*args, **kwargs)
-            instances[cls] = instance
-        return instances[cls]
+            SingletonMeta._instances[cls] = instance
+        return SingletonMeta._instances[cls]

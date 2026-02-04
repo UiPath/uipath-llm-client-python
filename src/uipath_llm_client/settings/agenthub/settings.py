@@ -2,11 +2,12 @@
 
 import os
 from collections.abc import Mapping
-from typing import Any, Self, override
+from typing import Any, Self
 
 from dotenv import load_dotenv
 from pydantic import Field, SecretStr, model_validator
 from pydantic_settings import SettingsConfigDict
+from typing_extensions import override
 from uipath._cli._auth._auth_service import AuthService
 from uipath.utils import EndpointManager
 

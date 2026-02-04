@@ -1,9 +1,10 @@
 from collections.abc import Mapping
-from typing import Any, Self, override
+from typing import Any, Self
 
 from httpx import Client
 from pydantic import Field, SecretStr, model_validator
 from pydantic_settings import SettingsConfigDict
+from typing_extensions import override
 
 from uipath_llm_client.settings.base import UiPathAPIConfig, UiPathBaseSettings
 from uipath_llm_client.settings.llmgateway.utils import LLMGatewayEndpoints

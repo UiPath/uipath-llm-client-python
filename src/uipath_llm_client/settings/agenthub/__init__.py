@@ -4,9 +4,8 @@ AgentHub Settings Module.
 This module provides configuration and authentication for UiPath AgentHub.
 """
 
-from typing import override
-
 from httpx import Auth
+from typing_extensions import override
 
 from uipath_llm_client.settings.agenthub.auth import AgentHubAuth
 from uipath_llm_client.settings.agenthub.settings import AgentHubBaseSettings

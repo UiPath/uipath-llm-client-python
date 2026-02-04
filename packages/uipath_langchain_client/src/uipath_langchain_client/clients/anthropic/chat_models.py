@@ -1,7 +1,8 @@
 from functools import cached_property
-from typing import Any, Literal, Self, override
+from typing import Any, Literal, Self
 
 from pydantic import Field, model_validator
+from typing_extensions import override
 from uipath_langchain_client.base_client import UiPathBaseLLMClient
 from uipath_langchain_client.settings import UiPathAPIConfig
 

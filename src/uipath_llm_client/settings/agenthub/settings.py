@@ -48,8 +48,10 @@ class AgentHubBaseSettings(UiPathBaseSettings):
     client_secret: SecretStr | None = Field(default=None, validation_alias="UIPATH_CLIENT_SECRET")
     client_scope: str | None = Field(default=None, validation_alias="UIPATH_CLIENT_SCOPE")
 
+    # AgentHub configuration (used for discovery)
+    agenthub_config: str = Field(default="agentsruntime", validation_alias="UIPATH_AGENTHUB_CONFIG")
+
     # Tracing configuration
-    agenthub_config: str | None = Field(default=None, validation_alias="UIPATH_AGENTHUB_CONFIG")
     process_key: str | None = Field(default=None, validation_alias="UIPATH_PROCESS_KEY")
     job_key: str | None = Field(default=None, validation_alias="UIPATH_JOB_KEY")
 

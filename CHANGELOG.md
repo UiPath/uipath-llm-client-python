@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_llm_client` (core package) will be documented in this file.
 
+## [1.0.6]
+
+### Bug Fix
+- Fixed model discovery on AgentHub Settings.
+
 ## [1.0.5] - 2026-02-03
 
 ### Refactor

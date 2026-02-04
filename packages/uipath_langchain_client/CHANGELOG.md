@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_langchain_client` will be documented in this file.
 
+## [1.0.8] - 2026-02-04
+
+### Fix
+- Added py.typed to the package
+
 ## [1.0.7] - 2026-02-04
 
 ### Refactor

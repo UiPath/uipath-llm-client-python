@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_langchain_client` will be documented in this file.
 
+## [1.0.7] - 2026-02-04
+
+### Refactor
+- Refactor factory function to include byom models
+
 ## [1.0.6] - 2026-02-03
 
 ### Refactor

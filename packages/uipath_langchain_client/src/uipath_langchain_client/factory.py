@@ -47,7 +47,14 @@ def _get_model_info(
         ]
 
     if not byo_connection_id and len(matching_models) > 1:
-        matching_models = [m for m in matching_models if m.get("byomDetails") is None]
+        matching_models = [
+            m
+            for m in matching_models
+            if (
+                (m.get("modelSubscriptionType", "") == "UiPathOwned")
+                or (m.get("byomDetails") is None)
+            )
+        ]
 
     if not matching_models:
         raise ValueError(
@@ -87,12 +94,18 @@ def get_chat_model(
             UiPathNormalizedChatModel,
         )
 
-        return UiPathNormalizedChatModel(model=model_name, **model_kwargs)
+        return UiPathNormalizedChatModel(
+            model=model_name,
+            settings=client_settings,
+            byo_connection_id=byo_connection_id,
+            **model_kwargs,
+        )
 
     vendor_type = model_info["vendor"].lower()
+    is_uipath_owned = model_info.get("modelSubscriptionType") == "UiPathOwned"
     match vendor_type:
         case "openai":
-            if "gpt" in model_name:
+            if is_uipath_owned:
                 from uipath_langchain_client.clients.openai.chat_models import (
                     UiPathAzureChatOpenAI,
                 )
@@ -103,9 +116,43 @@ def get_chat_model(
                     **model_kwargs,
                 )
             else:
-                raise ValueError(f"Invalid model name: {model_name} for vendor: {vendor_type}")
+                from uipath_langchain_client.clients.openai.chat_models import (
+                    UiPathChatOpenAI,
+                )
+
+                return UiPathChatOpenAI(
+                    model=model_name,
+                    settings=client_settings,
+                    byo_connection_id=byo_connection_id,
+                    **model_kwargs,
+                )
         case "vertexai":
-            if "gemini" in model_name:
+            if is_uipath_owned:
+                if "claude" in model_name:
+                    from uipath_langchain_client.clients.vertexai.chat_models import (
+                        UiPathChatAnthropicVertex,
+                    )
+
+                    return UiPathChatAnthropicVertex(
+                        model=model_name,
+                        settings=client_settings,
+                        **model_kwargs,
+                    )
+                elif "gemini" in model_name:
+                    from uipath_langchain_client.clients.google.chat_models import (
+                        UiPathChatGoogleGenerativeAI,
+                    )
+
+                    return UiPathChatGoogleGenerativeAI(
+                        model=model_name,
+                        settings=client_settings,
+                        **model_kwargs,
+                    )
+                else:
+                    raise ValueError(
+                        f"We don't have a client that currently supports this model: {model_name} on vendor: {vendor_type}"
+                    )
+            else:
                 from uipath_langchain_client.clients.google.chat_models import (
                     UiPathChatGoogleGenerativeAI,
                 )
@@ -113,37 +160,45 @@ def get_chat_model(
                 return UiPathChatGoogleGenerativeAI(
                     model=model_name,
                     settings=client_settings,
+                    byo_connection_id=byo_connection_id,
                     **model_kwargs,
                 )
-            elif "claude" in model_name:
-                from uipath_langchain_client.clients.anthropic.chat_models import (
-                    UiPathChatAnthropic,
-                )
-
-                return UiPathChatAnthropic(
-                    model=model_name,
-                    settings=client_settings,
-                    vendor_type="vertexai",
-                    **model_kwargs,
-                )
-            else:
-                raise ValueError(f"Invalid model name: {model_name} for vendor: {vendor_type}")
         case "awsbedrock":
-            if "claude" in model_name:
-                from uipath_langchain_client.clients.anthropic.chat_models import (
-                    UiPathChatAnthropic,
+            if is_uipath_owned:
+                if "claude" in model_name:
+                    from uipath_langchain_client.clients.anthropic.chat_models import (
+                        UiPathChatAnthropic,
+                    )
+
+                    return UiPathChatAnthropic(
+                        model=model_name,
+                        settings=client_settings,
+                        **model_kwargs,
+                    )
+                else:
+                    from uipath_langchain_client.clients.bedrock.chat_models import (
+                        UiPathChatBedrock,
+                    )
+
+                    return UiPathChatBedrock(
+                        model=model_name,
+                        settings=client_settings,
+                        **model_kwargs,
+                    )
+            else:
+                from uipath_langchain_client.clients.bedrock.chat_models import (
+                    UiPathChatBedrockConverse,
                 )
 
-                return UiPathChatAnthropic(
+                return UiPathChatBedrockConverse(
                     model=model_name,
                     settings=client_settings,
-                    vendor_type="awsbedrock",
                     **model_kwargs,
                 )
-            else:
-                raise ValueError(f"Invalid model name: {model_name} for vendor: {vendor_type}")
         case _:
-            raise ValueError(f"Invalid UiPath vendor type: {vendor_type}")
+            raise ValueError(
+                f"Invalid vendor type: {vendor_type}, we don't currently have clients that support that api type"
+            )
 
 
 def get_embedding_model(
@@ -184,26 +239,45 @@ def get_embedding_model(
         )
 
         return UiPathNormalizedEmbeddings(
-            model=model_name, settings=client_settings, **model_kwargs
+            model=model_name,
+            settings=client_settings,
+            byo_connection_id=byo_connection_id,
+            **model_kwargs,
         )
 
     vendor_type = model_info["vendor"].lower()
+    is_uipath_owned = model_info.get("modelSubscriptionType") == "UiPathOwned"
     match vendor_type:
         case "openai":
-            from uipath_langchain_client.clients.openai.embeddings import (
-                UiPathAzureOpenAIEmbeddings,
-            )
+            if is_uipath_owned:
+                from uipath_langchain_client.clients.openai.embeddings import (
+                    UiPathAzureOpenAIEmbeddings,
+                )
 
-            return UiPathAzureOpenAIEmbeddings(
-                model=model_name, settings=client_settings, **model_kwargs
-            )
+                return UiPathAzureOpenAIEmbeddings(
+                    model=model_name, settings=client_settings, **model_kwargs
+                )
+            else:
+                from uipath_langchain_client.clients.openai.embeddings import (
+                    UiPathOpenAIEmbeddings,
+                )
+
+                return UiPathOpenAIEmbeddings(
+                    model=model_name,
+                    settings=client_settings,
+                    byo_connection_id=byo_connection_id,
+                    **model_kwargs,
+                )
         case "vertexai":
             from uipath_langchain_client.clients.google.embeddings import (
                 UiPathGoogleGenerativeAIEmbeddings,
             )
 
             return UiPathGoogleGenerativeAIEmbeddings(
-                model=model_name, settings=client_settings, **model_kwargs
+                model=model_name,
+                settings=client_settings,
+                byo_connection_id=byo_connection_id,
+                **model_kwargs,
             )
         case "awsbedrock":
             from uipath_langchain_client.clients.bedrock.embeddings import (
@@ -211,7 +285,12 @@ def get_embedding_model(
             )
 
             return UiPathBedrockEmbeddings(
-                model=model_name, settings=client_settings, **model_kwargs
+                model=model_name,
+                settings=client_settings,
+                byo_connection_id=byo_connection_id,
+                **model_kwargs,
             )
         case _:
-            raise ValueError(f"Invalid UiPath Embeddings provider: {vendor_type}")
+            raise ValueError(
+                f"We don't currently have clients that support this provider: {vendor_type}"
+            )

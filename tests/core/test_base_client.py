@@ -433,13 +433,13 @@ class TestAgentHubSettings:
                 )
                 assert "agenthub_/llm/api/chat/completions" in url
 
-    def test_build_auth_headers_empty_by_default(self, agenthub_env_vars):
-        """Test build_auth_headers returns empty dict by default."""
+    def test_build_auth_headers_has_default_config(self, agenthub_env_vars):
+        """Test build_auth_headers includes default agenthub_config."""
         with patch.dict(os.environ, agenthub_env_vars, clear=True):
             with patch("uipath_llm_client.settings.agenthub.settings.AuthService"):
                 settings = AgentHubSettings()
                 headers = settings.build_auth_headers()
-                assert headers == {}
+                assert headers == {"X-UiPath-AgentHub-Config": "agentsruntime"}
 
     def test_build_auth_headers_with_tracing(self, agenthub_env_vars):
         """Test build_auth_headers includes tracing headers when set."""

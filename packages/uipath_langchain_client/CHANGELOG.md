@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_langchain_client` will be documented in this file.
 
+## [1.0.11] - 2026-02-04
+
+### Type fix
+- Import TypedDict from typing_extension
+
 ## [1.0.10] - 2026-02-04
 
 ### Version Upgrade

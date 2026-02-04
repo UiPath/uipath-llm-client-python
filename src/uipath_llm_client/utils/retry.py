@@ -27,7 +27,7 @@ Example:
 """
 
 import logging
-from typing import Any, Callable, NotRequired, TypedDict
+from typing import Any, Callable, NotRequired
 
 from httpx import AsyncHTTPTransport, HTTPTransport, Request, Response
 from tenacity import (
@@ -38,6 +38,7 @@ from tenacity import (
     stop_after_attempt,
     wait_exponential_jitter,
 )
+from typing_extensions import TypedDict
 
 from uipath_llm_client.utils.exceptions import UiPathAPIError, UiPathRateLimitError
 

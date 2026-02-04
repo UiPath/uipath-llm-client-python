@@ -2,7 +2,10 @@
 
 All notable changes to `uipath_llm_client` (core package) will be documented in this file.
 
-## [1.0.9] - 2026-02-4
+## [1.0.10] - 2026-02-04
+
+### Type fix
+- Import TypedDict from typing_extension
 
 ### Typing Fix
 - import @override from typing_extension

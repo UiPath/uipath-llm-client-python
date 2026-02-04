@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_llm_client` (core package) will be documented in this file.
 
+## [1.0.9] - 2026-02-4
+
+### Typing Fix
+- import @override from typing_extension
+
 ## [1.0.8] - 2026-02-04
 
 ### Bug Fix

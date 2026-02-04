@@ -6,6 +6,12 @@ on:
       - main
     paths:
       - 'packages/uipath_langchain_client/src/uipath_langchain_client/__version__.py'
+  workflow_run:
+    workflows: ["Publish uipath-llm-client to PyPI"]
+    types:
+      - completed
+    branches:
+      - main
   workflow_dispatch:
 
 jobs:
@@ -16,6 +22,11 @@ jobs:
     permissions:
       contents: read
       id-token: write
+    # Only run if triggered by push/dispatch, OR if the upstream workflow succeeded
+    if: >
+      github.event_name == 'push' ||
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
 
     steps:
       - uses: actions/checkout@v6

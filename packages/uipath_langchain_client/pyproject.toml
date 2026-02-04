@@ -6,7 +6,7 @@ readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
     "langchain>=1.2.7",
-    "uipath-llm-client>=1.0.9",
+    "uipath-llm-client>=1.0.10",
 ]
 
 [project.optional-dependencies]

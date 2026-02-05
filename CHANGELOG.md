@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_llm_client` (core package) will be documented in this file.
 
+## [1.0.11] - 2026-02-05
+
+### Feature
+- Added retry handler on 429 to include the retry-after header
+
 ## [1.0.10] - 2026-02-04
 
 ### Type fix
@@ -38,7 +43,7 @@ All notable changes to `uipath_llm_client` (core package) will be documented in 
 ## [1.0.3] - 2026-02-02
 
 ### Refactor
-- moved the logic of get_httpx_client_kwargs from the uipath package to this package; 
+- moved the logic of get_httpx_ssl_client_kwargs from the uipath package to this package; 
 
 ## [1.0.2] - 2026-02-02
 

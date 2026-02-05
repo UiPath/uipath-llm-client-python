@@ -5,6 +5,11 @@ This module provides retry logic for HTTP requests with configurable
 exponential backoff and jitter. It uses tenacity for retry handling
 and integrates with httpx transports.
 
+The retry logic automatically respects the `Retry-After` or `x-retry-after`
+HTTP headers when present in error responses. If the header specifies a wait
+time, that value is used (capped at max_delay). Otherwise, exponential backoff
+with jitter is applied.
+
 Example:
     >>> from uipath_llm_client.utils.retry import RetryableHTTPTransport, RetryConfig
     >>>
@@ -32,12 +37,14 @@ from typing import Any, Callable, NotRequired
 from httpx import AsyncHTTPTransport, HTTPTransport, Request, Response
 from tenacity import (
     AsyncRetrying,
+    RetryCallState,
     Retrying,
     before_sleep_log,
     retry_if_exception_type,
     stop_after_attempt,
     wait_exponential_jitter,
 )
+from tenacity.wait import wait_base
 from typing_extensions import TypedDict
 
 from uipath_llm_client.utils.exceptions import UiPathAPIError, UiPathRateLimitError
@@ -55,6 +62,62 @@ _DEFAULT_INITIAL_DELAY: float = 2.0
 _DEFAULT_MAX_DELAY: float = 60.0
 _DEFAULT_EXP_BASE: float = 2.0
 _DEFAULT_JITTER: float = 1.0
+
+
+class wait_retry_after_with_fallback(wait_base):
+    """Custom wait strategy that uses Retry-After header when available.
+
+    This wait strategy checks if the exception has a retry_after attribute
+    (from the Retry-After or x-retry-after HTTP headers) and uses that value.
+    If not available, falls back to exponential backoff with jitter.
+
+    Attributes:
+        fallback_wait: The fallback wait strategy (exponential backoff with jitter).
+        max_delay: Maximum delay in seconds (caps retry-after values).
+    """
+
+    def __init__(
+        self,
+        *,
+        initial: float,
+        max: float,
+        exp_base: float,
+        jitter: float,
+    ) -> None:
+        """Initialize the wait strategy.
+
+        Args:
+            initial: Initial delay for exponential backoff.
+            max: Maximum delay in seconds (also caps retry-after values).
+            exp_base: Exponential backoff base multiplier.
+            jitter: Random jitter to add to delays.
+        """
+        self.fallback_wait = wait_exponential_jitter(
+            initial=initial,
+            max=max,
+            exp_base=exp_base,
+            jitter=jitter,
+        )
+        self.max_delay = max
+
+    def __call__(self, retry_state: RetryCallState) -> float:
+        """Calculate the wait time for the next retry.
+
+        Args:
+            retry_state: The current retry state from tenacity.
+
+        Returns:
+            The number of seconds to wait before the next retry.
+        """
+        # Check if we have a rate limit exception with retry_after
+        if retry_state.outcome is not None and retry_state.outcome.failed:
+            exception = retry_state.outcome.exception()
+            if isinstance(exception, UiPathRateLimitError) and exception.retry_after is not None:
+                # Use retry-after value, but cap at max_delay
+                return min(exception.retry_after, self.max_delay)
+
+        # Fall back to exponential backoff with jitter
+        return self.fallback_wait(retry_state)
 
 
 class RetryConfig(TypedDict):
@@ -126,7 +189,7 @@ def _build_retryer(
     retryer_class = AsyncRetrying if async_mode else Retrying
     return retryer_class(
         stop=stop_after_attempt(max_retries),
-        wait=wait_exponential_jitter(
+        wait=wait_retry_after_with_fallback(
             initial=initial_delay,
             max=max_delay,
             exp_base=exp_base,

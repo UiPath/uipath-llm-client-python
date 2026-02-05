@@ -842,10 +842,50 @@ class TestExceptions:
         mock_response.reason_phrase = "Too Many Requests"
         mock_response.json.return_value = {"error": "rate limited"}
         mock_response.request = MagicMock(spec=Request)
+        mock_response.headers = {}  # Required for UiPathRateLimitError._parse_retry_after
 
         exc = UiPathAPIError.from_response(mock_response)
         assert isinstance(exc, UiPathRateLimitError)
         assert exc.status_code == 429
+
+    def test_exception_from_response_with_retry_after(self):
+        """Test UiPathRateLimitError parses Retry-After header."""
+        mock_response = MagicMock(spec=Response)
+        mock_response.status_code = 429
+        mock_response.reason_phrase = "Too Many Requests"
+        mock_response.json.return_value = {"error": "rate limited"}
+        mock_response.request = MagicMock(spec=Request)
+        mock_response.headers = {"retry-after": "30"}
+
+        exc = UiPathAPIError.from_response(mock_response)
+        assert isinstance(exc, UiPathRateLimitError)
+        assert exc.retry_after == 30.0
+
+    def test_exception_from_response_with_x_retry_after(self):
+        """Test UiPathRateLimitError parses x-retry-after header."""
+        mock_response = MagicMock(spec=Response)
+        mock_response.status_code = 429
+        mock_response.reason_phrase = "Too Many Requests"
+        mock_response.json.return_value = {"error": "rate limited"}
+        mock_response.request = MagicMock(spec=Request)
+        mock_response.headers = {"x-retry-after": "45"}
+
+        exc = UiPathAPIError.from_response(mock_response)
+        assert isinstance(exc, UiPathRateLimitError)
+        assert exc.retry_after == 45.0
+
+    def test_exception_retry_after_none_when_not_present(self):
+        """Test UiPathRateLimitError.retry_after is None when header missing."""
+        mock_response = MagicMock(spec=Response)
+        mock_response.status_code = 429
+        mock_response.reason_phrase = "Too Many Requests"
+        mock_response.json.return_value = {"error": "rate limited"}
+        mock_response.request = MagicMock(spec=Request)
+        mock_response.headers = {}
+
+        exc = UiPathAPIError.from_response(mock_response)
+        assert isinstance(exc, UiPathRateLimitError)
+        assert exc.retry_after is None
 
 
 # ============================================================================

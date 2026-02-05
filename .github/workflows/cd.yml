@@ -1,4 +1,4 @@
-name: Publish uipath-llm-client to PyPI
+name: cd
 
 on:
   push:

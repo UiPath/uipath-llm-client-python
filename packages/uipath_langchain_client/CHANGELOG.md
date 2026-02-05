@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_langchain_client` will be documented in this file.
 
+## [1.0.12] - 2026-02-05
+
+### Fix
+- Added 295 as default llmgateway timeout to avoid problems on the backend side
+
 ## [1.0.11] - 2026-02-04
 
 ### Type fix

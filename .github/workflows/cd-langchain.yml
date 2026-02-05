@@ -1,4 +1,4 @@
-name: Publish uipath-langchain-client to PyPI
+name: cd-langchain
 
 on:
   push:
@@ -7,26 +7,42 @@ on:
     paths:
       - 'packages/uipath_langchain_client/src/uipath_langchain_client/__version__.py'
   workflow_run:
-    workflows: ["Publish uipath-llm-client to PyPI"]
+    workflows: ["cd"]
     types:
       - completed
-    branches:
-      - main
   workflow_dispatch:
 
 jobs:
   build:
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+
+      (
+        github.event_name == 'push' &&
+        !contains(
+          join(github.event.commits.*.modified, ' '),
+          'src/uipath_llm_client/__version__.py'
+        )
+      ) ||
+
+      (
+        github.event_name == 'workflow_run' &&
+        github.event.workflow_run.conclusion == 'success' &&
+        contains(
+          join(github.event.workflow_run.head_commit.modified, ' '),
+          'packages/uipath_langchain_client/src/uipath_langchain_client/__version__.py'
+        ) &&
+        contains(
+          join(github.event.workflow_run.head_commit.modified, ' '),
+          'src/uipath_llm_client/__version__.py'
+        )
+      )
     name: Build package
     runs-on: ubuntu-latest
     environment: pypi
     permissions:
       contents: read
       id-token: write
-    # Only run if triggered by push/dispatch, OR if the upstream workflow succeeded
-    if: >
-      github.event_name == 'push' ||
-      github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
 
     steps:
       - uses: actions/checkout@v6

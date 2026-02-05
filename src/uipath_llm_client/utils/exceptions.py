@@ -135,9 +135,72 @@ class UiPathUnprocessableEntityError(UiPathAPIError):
 
 
 class UiPathRateLimitError(UiPathAPIError):
-    """HTTP 429 Too Many Requests error."""
+    """HTTP 429 Too Many Requests error.
+
+    Attributes:
+        retry_after: Seconds to wait before retrying (from Retry-After header), or None.
+    """
 
     status_code: int = 429
+
+    def __init__(
+        self,
+        message: str,
+        *,
+        request: Request,
+        response: Response,
+        body: str | dict | None = None,
+    ):
+        super().__init__(message, request=request, response=response, body=body)
+        self._retry_after = self._parse_retry_after(response)
+
+    @property
+    def retry_after(self) -> float | None:
+        """Get the retry-after value in seconds, if available."""
+        return self._retry_after
+
+    @staticmethod
+    def _parse_retry_after(response: Response) -> float | None:
+        """Parse the Retry-After or x-retry-after header from the response.
+
+        The Retry-After header can be either:
+        - A number of seconds (e.g., "120")
+        - An HTTP-date (e.g., "Wed, 21 Oct 2015 07:28:00 GMT")
+
+        Args:
+            response: The httpx Response object.
+
+        Returns:
+            The number of seconds to wait, or None if not present/parseable.
+        """
+        import time
+        from datetime import datetime, timezone
+
+        # Check both header variants (case-insensitive in httpx)
+        retry_after_value = response.headers.get("retry-after") or response.headers.get(
+            "x-retry-after"
+        )
+
+        if retry_after_value is None:
+            return None
+
+        # Try parsing as integer (seconds)
+        try:
+            return float(retry_after_value)
+        except ValueError:
+            pass
+
+        # Try parsing as HTTP-date (RFC 7231 IMF-fixdate format)
+        # Example: "Wed, 21 Oct 2015 07:28:00 GMT"
+        try:
+            retry_date = datetime.strptime(retry_after_value, "%a, %d %b %Y %H:%M:%S GMT")
+            retry_date = retry_date.replace(tzinfo=timezone.utc)
+            delay = retry_date.timestamp() - time.time()
+            return max(0.0, delay)  # Don't return negative delays
+        except ValueError:
+            pass
+
+        return None
 
 
 class UiPathInternalServerError(UiPathAPIError):

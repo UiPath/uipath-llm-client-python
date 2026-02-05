@@ -43,7 +43,7 @@ All notable changes to `uipath_llm_client` (core package) will be documented in 
 ## [1.0.3] - 2026-02-02
 
 ### Refactor
-- moved the logic of get_httpx_client_kwargs from the uipath package to this package; 
+- moved the logic of get_httpx_ssl_client_kwargs from the uipath package to this package; 
 
 ## [1.0.2] - 2026-02-02
 

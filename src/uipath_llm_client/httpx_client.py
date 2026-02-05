@@ -46,7 +46,7 @@ from uipath_llm_client.utils.retry import (
     RetryableHTTPTransport,
     RetryConfig,
 )
-from uipath_llm_client.utils.ssl_config import get_httpx_client_kwargs
+from uipath_llm_client.utils.ssl_config import get_httpx_ssl_client_kwargs
 
 
 def build_routing_headers(
@@ -99,7 +99,7 @@ class UiPathHttpxClient(Client):
 
     _streaming_header: str = "X-UiPath-Streaming-Enabled"
     _default_headers: Mapping[str, str] = {
-        "X-UiPath-LLMGateway-TimeoutSeconds": "30",  # server side timeout, default is 10, maximum is 300
+        "X-UiPath-LLMGateway-TimeoutSeconds": "300",  # server side timeout, default is 10, maximum is 300
         "X-UiPath-LLMGateway-AllowFull4xxResponse": "true",  # allow full 4xx responses (default is false)
     }
 
@@ -173,7 +173,7 @@ class UiPathHttpxClient(Client):
         event_hooks["response"].append(logging_config.log_error)
 
         # setup ssl context
-        kwargs.update(get_httpx_client_kwargs())
+        kwargs.update(get_httpx_ssl_client_kwargs())
 
         super().__init__(
             headers=merged_headers, transport=transport, event_hooks=event_hooks, **kwargs
@@ -293,7 +293,7 @@ class UiPathHttpxAsyncClient(AsyncClient):
         event_hooks["response"].append(logging_config.alog_error)
 
         # setup ssl context
-        kwargs.update(get_httpx_client_kwargs())
+        kwargs.update(get_httpx_ssl_client_kwargs())
 
         super().__init__(
             headers=merged_headers, transport=transport, event_hooks=event_hooks, **kwargs

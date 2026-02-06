@@ -42,9 +42,18 @@ class LLMGatewayBaseSettings(UiPathBaseSettings):
     requesting_product: str = Field(default=..., validation_alias="LLMGW_REQUESTING_PRODUCT")
     requesting_feature: str = Field(default=..., validation_alias="LLMGW_REQUESTING_FEATURE")
 
-    # Optional fields - used for tracking and billing
-    user_id: str | None = Field(default=None, validation_alias="LLMGW_SEMANTIC_USER_ID")
-    action_id: str | None = Field(default=None, validation_alias="LLMGW_ACTION_ID")
+    # Optional fields - situational usecase
+    user_id: str | None = Field(
+        default=None, validation_alias="LLMGW_SEMANTIC_USER_ID"
+    )  # used to apply governance rules
+    action_id: str | None = Field(
+        default=None, validation_alias="LLMGW_ACTION_ID"
+    )  # used to track the action
+    operation_code: str | None = Field(
+        default=None, validation_alias="LLMGW_OPERATION_CODE"
+    )  # used to correctly identify byo models
+
+    # additional headers for the request (e.g. X-UiPath-LlmGateway-Telemetry-SessionId)
     additional_headers: Mapping[str, str] = Field(
         default_factory=dict, validation_alias="LLMGW_ADDITIONAL_HEADERS"
     )
@@ -82,11 +91,15 @@ class LLMGatewayBaseSettings(UiPathBaseSettings):
         headers = {
             "X-UiPath-LlmGateway-RequestingProduct": self.requesting_product,
             "X-UiPath-LlmGateway-RequestingFeature": self.requesting_feature,
+            "X-UiPath-Internal-AccountId": self.org_id,
+            "X-UiPath-Internal-TenantId": self.tenant_id,
         }
         if self.user_id:
             headers["X-UiPath-LlmGateway-UserId"] = self.user_id
         if self.action_id:
             headers["X-UiPath-LlmGateway-ActionId"] = self.action_id
+        if self.operation_code:
+            headers["X-UiPath-LlmGateway-OperationCode"] = self.operation_code
         if self.additional_headers:
             headers.update(self.additional_headers)
         return headers

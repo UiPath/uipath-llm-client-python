@@ -35,10 +35,10 @@ class AgentHubBaseSettings(UiPathBaseSettings):
 
     model_config = SettingsConfigDict(validate_by_alias=True)
 
-    # Environment configuration
+    # Environment configuration: alpha, staging, cloud
     environment: str | None = Field(default=None, validation_alias="UIPATH_ENVIRONMENT")
 
-    # Authentication fields
+    # Authentication fields - retrieved from uipath auth as well
     access_token: SecretStr | None = Field(default=None, validation_alias="UIPATH_ACCESS_TOKEN")
     base_url: str | None = Field(default=None, validation_alias="UIPATH_URL")
     tenant_id: str | None = Field(default=None, validation_alias="UIPATH_TENANT_ID")

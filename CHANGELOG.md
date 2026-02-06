@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_llm_client` (core package) will be documented in this file.
 
+## [1.0.13] - 2026-02-05
+
+### Fix
+- Fixed headers on llmgw settings
+
 ## [1.0.12] - 2026-02-05
 
 ### Fix

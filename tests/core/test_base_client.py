@@ -714,8 +714,8 @@ class TestUiPathHttpxClient:
             base_url="https://example.com",
             byo_connection_id="test-connection-id",
         )
-        assert "X-UiPath-LlmGateway-ByoConnectionId" in client.headers
-        assert client.headers["X-UiPath-LlmGateway-ByoConnectionId"] == "test-connection-id"
+        assert "X-UiPath-LlmGateway-ByoIsConnectionId" in client.headers
+        assert client.headers["X-UiPath-LlmGateway-ByoIsConnectionId"] == "test-connection-id"
         client.close()
 
 

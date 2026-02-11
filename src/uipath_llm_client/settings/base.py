@@ -72,7 +72,11 @@ class UiPathBaseSettings(BaseSettings, ABC):
     with validation aliases allowing flexible naming conventions.
     """
 
-    model_config = SettingsConfigDict(validate_by_alias=True)
+    model_config = SettingsConfigDict(
+        validate_by_alias=True,
+        populate_by_name=True,
+        extra="allow",
+    )
 
     @abstractmethod
     def build_base_url(

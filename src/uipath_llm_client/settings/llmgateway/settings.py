@@ -3,7 +3,6 @@ from typing import Any, Self
 
 from httpx import Client
 from pydantic import Field, SecretStr, model_validator
-from pydantic_settings import SettingsConfigDict
 from typing_extensions import override
 
 from uipath_llm_client.settings.base import UiPathAPIConfig, UiPathBaseSettings
@@ -25,8 +24,6 @@ class LLMGatewayBaseSettings(UiPathBaseSettings):
         action_id: Action ID for tracking (optional)
         additional_headers: Additional custom headers to include in requests (optional)
     """
-
-    model_config = SettingsConfigDict(validate_by_alias=True)
 
     # Required to work, but if it's not set will be retrieved using S2S authentication
     access_token: SecretStr | None = Field(default=None, validation_alias="LLMGW_ACCESS_TOKEN")

@@ -793,15 +793,6 @@ class TestBuildRoutingHeaders:
         assert headers["X-UiPath-LlmGateway-ApiFlavor"] == "chat-completions"
         assert headers["X-UiPath-LlmGateway-ApiVersion"] == "2025-03-01"
 
-    def test_byo_connection_id_header(self):
-        """Test BYO connection ID header is added."""
-        from uipath_llm_client.httpx_client import build_routing_headers
-
-        headers = build_routing_headers(
-            byo_connection_id="test-connection-id",
-        )
-        assert headers["X-UiPath-LlmGateway-ByoConnectionId"] == "test-connection-id"
-
 
 # ============================================================================
 # Test Exceptions

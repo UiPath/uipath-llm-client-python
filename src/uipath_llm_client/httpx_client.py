@@ -52,7 +52,6 @@ from uipath_llm_client.utils.ssl_config import get_httpx_ssl_client_kwargs
 def build_routing_headers(
     *,
     model_name: str | None = None,
-    byo_connection_id: str | None = None,
     api_config: UiPathAPIConfig | None = None,
 ) -> Mapping[str, str]:
     """Build UiPath LLM Gateway routing headers based on configuration.
@@ -74,8 +73,6 @@ def build_routing_headers(
                 headers["X-UiPath-LlmGateway-ApiFlavor"] = api_config.api_flavor
             if api_config.api_version is not None:
                 headers["X-UiPath-LlmGateway-ApiVersion"] = api_config.api_version
-    if byo_connection_id is not None:
-        headers["X-UiPath-LlmGateway-ByoConnectionId"] = byo_connection_id
     return headers
 
 
@@ -139,11 +136,7 @@ class UiPathHttpxClient(Client):
 
         # Merge headers: default -> api_config -> user provided
         merged_headers = Headers(self._default_headers)
-        merged_headers.update(
-            build_routing_headers(
-                api_config=api_config, model_name=model_name, byo_connection_id=byo_connection_id
-            )
-        )
+        merged_headers.update(build_routing_headers(model_name=model_name, api_config=api_config))
         if headers is not None:
             merged_headers.update(headers)
 
@@ -259,11 +252,7 @@ class UiPathHttpxAsyncClient(AsyncClient):
 
         # Merge headers: default -> api_config -> user provided
         merged_headers = Headers(self._default_headers)
-        merged_headers.update(
-            build_routing_headers(
-                api_config=api_config, model_name=model_name, byo_connection_id=byo_connection_id
-            )
-        )
+        merged_headers.update(build_routing_headers(model_name=model_name, api_config=api_config))
         if headers is not None:
             merged_headers.update(headers)
 

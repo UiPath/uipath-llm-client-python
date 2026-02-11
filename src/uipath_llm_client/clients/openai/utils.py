@@ -29,7 +29,6 @@ class OpenAIRequestHandler:
             request.headers.update(
                 build_routing_headers(
                     model_name=self.model_name,
-                    byo_connection_id=self.byo_connection_id,
                     api_config=api_config,
                 )
             )
@@ -45,7 +44,6 @@ class OpenAIRequestHandler:
             request.headers.update(
                 build_routing_headers(
                     model_name=self.model_name,
-                    byo_connection_id=self.byo_connection_id,
                     api_config=api_config,
                 )
             )
@@ -59,7 +57,6 @@ class OpenAIRequestHandler:
             request.headers.update(
                 build_routing_headers(
                     model_name=self.model_name,
-                    byo_connection_id=self.byo_connection_id,
                     api_config=api_config,
                 )
             )

@@ -74,8 +74,8 @@ def build_routing_headers(
                 headers["X-UiPath-LlmGateway-ApiFlavor"] = api_config.api_flavor
             if api_config.api_version is not None:
                 headers["X-UiPath-LlmGateway-ApiVersion"] = api_config.api_version
-        if byo_connection_id is not None:
-            headers["X-UiPath-LlmGateway-ByoIsConnectionId"] = byo_connection_id
+    if byo_connection_id is not None:
+        headers["X-UiPath-LlmGateway-ByoIsConnectionId"] = byo_connection_id
     return headers
 
 

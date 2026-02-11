@@ -19,6 +19,9 @@ class UiPathChatFireworks(UiPathBaseLLMClient, ChatFireworks):  # type: ignore[o
     api_config: UiPathAPIConfig = UiPathAPIConfig(
         api_type="completions",
         client_type="passthrough",
+        vendor_type="openai",
+        api_flavor="chat-completions",
+        api_version="2025-03-01-preview",
         freeze_base_url=True,
     )
 
@@ -34,5 +37,5 @@ class UiPathChatFireworks(UiPathBaseLLMClient, ChatFireworks):  # type: ignore[o
         )
         fireworks_client_v1._client = self.uipath_sync_client
         fireworks_client_v1._async_client = self.uipath_async_client
-        self.client._client_v1 = fireworks_client_v1
+        self.client._client = fireworks_client_v1
         return self

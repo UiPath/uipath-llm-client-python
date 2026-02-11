@@ -142,3 +142,7 @@ class UiPathBaseSettings(BaseSettings, ABC):
             A list of dictionaries containing model information.
         """
         ...
+
+    def validate_byo_model(self, model_info: dict[str, Any]) -> None:
+        """Validate that the model is a BYOM model."""
+        raise NotImplementedError("For BYOM models you must implement this method")

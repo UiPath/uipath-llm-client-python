@@ -1,3 +1,4 @@
+import logging
 from collections.abc import Mapping
 from typing import Any, Self
 
@@ -107,3 +108,20 @@ class LLMGatewayBaseSettings(UiPathBaseSettings):
         with Client(auth=self.build_auth_pipeline(), headers=self.build_auth_headers()) as client:
             response = client.get(discovery_url)
             return response.json()
+
+    @override
+    def validate_byo_model(self, model_info: dict[str, Any]) -> None:
+        byom_details = model_info.get("byomDetails", {})
+        operaion_codes = byom_details.get("operationCodes", [])
+        if self.operation_code and self.operation_code not in operaion_codes:
+            raise ValueError(
+                f"The operation code {self.operation_code} is not allowed for the model {model_info['modelName']}"
+            )
+        if not self.operation_code and len(operaion_codes) > 0:
+            if len(operaion_codes) > 1:
+                logging.warning(
+                    "Multiple operation codes are allowed for the model %s, but no operation code was provided, picking the first one available: %s",
+                    model_info["modelName"],
+                    operaion_codes[0],
+                )
+            self.operation_code = operaion_codes[0]

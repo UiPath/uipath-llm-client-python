@@ -136,3 +136,7 @@ class AgentHubBaseSettings(UiPathBaseSettings):
             headers=dict(self.build_auth_headers()),
         )
         return [model.model_dump(by_alias=True) for model in models]
+
+    @override
+    def validate_byo_model(self, model_info: dict[str, Any]) -> None:
+        raise ValueError("BYOM models are not supported for AgentHub")

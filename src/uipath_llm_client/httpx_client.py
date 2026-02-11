@@ -75,7 +75,7 @@ def build_routing_headers(
             if api_config.api_version is not None:
                 headers["X-UiPath-LlmGateway-ApiVersion"] = api_config.api_version
     if byo_connection_id is not None:
-        headers["X-UiPath-LlmGateway-ByoConnectionId"] = byo_connection_id
+        headers["X-UiPath-LlmGateway-ByoIsConnectionId"] = byo_connection_id
     return headers
 
 
@@ -141,7 +141,7 @@ class UiPathHttpxClient(Client):
         merged_headers = Headers(self._default_headers)
         merged_headers.update(
             build_routing_headers(
-                api_config=api_config, model_name=model_name, byo_connection_id=byo_connection_id
+                model_name=model_name, byo_connection_id=byo_connection_id, api_config=api_config
             )
         )
         if headers is not None:
@@ -261,7 +261,7 @@ class UiPathHttpxAsyncClient(AsyncClient):
         merged_headers = Headers(self._default_headers)
         merged_headers.update(
             build_routing_headers(
-                api_config=api_config, model_name=model_name, byo_connection_id=byo_connection_id
+                model_name=model_name, byo_connection_id=byo_connection_id, api_config=api_config
             )
         )
         if headers is not None:

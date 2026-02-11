@@ -6,7 +6,7 @@ readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
     "langchain>=1.2.7",
-    "uipath-llm-client>=1.0.13",
+    "uipath-llm-client>=1.1.0",
 ]
 
 [project.optional-dependencies]
@@ -29,8 +29,11 @@ azure = [
 vertexai = [
     "langchain-google-vertexai>=3.2.1",
 ]
+fireworks = [
+    "langchain-fireworks>=1.1.0",
+]
 all = [
-    "uipath-langchain-client[openai,aws,google,anthropic,azure,vertexai]"
+    "uipath-langchain-client[openai,aws,google,anthropic,azure,vertexai,fireworks]"
 ]
 
 [build-system]

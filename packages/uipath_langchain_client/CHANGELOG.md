@@ -2,6 +2,15 @@
 
 All notable changes to `uipath_langchain_client` will be documented in this file.
 
+## [1.1.0] - 2026-02-11
+
+### Features
+- Added langchain fireworks client and tested with GLM
+
+### Stable release
+- Fixed BYO on passthrough
+- Stable release
+
 ## [1.0.13] - 2026-02-05
 
 ### Fix

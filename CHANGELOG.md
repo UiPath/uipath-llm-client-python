@@ -2,6 +2,12 @@
 
 All notable changes to `uipath_llm_client` (core package) will be documented in this file.
 
+## [1.1.0] - 2026-02-11
+
+### Stable release
+- Adeed BYOM validation for settings
+- Stable release
+
 ## [1.0.13] - 2026-02-05
 
 ### Fix

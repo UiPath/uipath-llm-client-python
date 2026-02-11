@@ -6,7 +6,6 @@ from typing import Any, Self
 
 from dotenv import load_dotenv
 from pydantic import Field, SecretStr, model_validator
-from pydantic_settings import SettingsConfigDict
 from typing_extensions import override
 from uipath._cli._auth._auth_service import AuthService
 from uipath.utils import EndpointManager
@@ -32,8 +31,6 @@ class AgentHubBaseSettings(UiPathBaseSettings):
         process_key: Process key for tracing.
         job_key: Job key for tracing.
     """
-
-    model_config = SettingsConfigDict(validate_by_alias=True)
 
     # Environment configuration: alpha, staging, cloud
     environment: str | None = Field(default=None, validation_alias="UIPATH_ENVIRONMENT")
@@ -139,3 +136,7 @@ class AgentHubBaseSettings(UiPathBaseSettings):
             headers=dict(self.build_auth_headers()),
         )
         return [model.model_dump(by_alias=True) for model in models]
+
+    @override
+    def validate_byo_model(self, model_info: dict[str, Any]) -> None:
+        return

@@ -87,9 +87,10 @@ def get_chat_model(
         ValueError: If the model is not found in available models or vendor is not supported
     """
     client_settings = client_settings or get_default_client_settings()
-    model_info = _get_model_info(model_name, client_settings, byo_connection_id)
-    is_uipath_owned = model_info.get("modelSubscriptionType") == "UiPathOwned"
 
+    model_info = _get_model_info(model_name, client_settings, byo_connection_id)
+
+    is_uipath_owned = model_info.get("modelSubscriptionType") == "UiPathOwned"
     if not is_uipath_owned:
         client_settings.validate_byo_model(model_info)
 

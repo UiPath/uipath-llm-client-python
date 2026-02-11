@@ -88,6 +88,10 @@ def get_chat_model(
     """
     client_settings = client_settings or get_default_client_settings()
     model_info = _get_model_info(model_name, client_settings, byo_connection_id)
+    is_uipath_owned = model_info.get("modelSubscriptionType") == "UiPathOwned"
+
+    if not is_uipath_owned:
+        client_settings.validate_byo_model(model_info)
 
     if client_type == "normalized":
         from uipath_langchain_client.clients.normalized.chat_models import (
@@ -102,7 +106,6 @@ def get_chat_model(
         )
 
     vendor_type = model_info["vendor"].lower()
-    is_uipath_owned = model_info.get("modelSubscriptionType") == "UiPathOwned"
     match vendor_type:
         case "openai":
             if is_uipath_owned:

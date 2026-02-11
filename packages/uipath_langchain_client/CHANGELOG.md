@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_langchain_client` will be documented in this file.
 
+## [1.1.1] - 2026-02-11
+
+### Fixes
+- Fix langchain fireworks client for async usage
+
 ## [1.1.0] - 2026-02-11
 
 ### Features

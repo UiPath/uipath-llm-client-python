@@ -25,6 +25,7 @@ from typing import Any, Literal
 from langchain_core.embeddings import Embeddings
 from langchain_core.language_models.chat_models import BaseChatModel
 
+from uipath_langchain_client.base_client import UiPathBaseLLMClient
 from uipath_langchain_client.settings import UiPathBaseSettings, get_default_client_settings
 
 
@@ -70,7 +71,7 @@ def get_chat_model(
     client_settings: UiPathBaseSettings | None = None,
     client_type: Literal["passthrough", "normalized"] = "passthrough",
     **model_kwargs: Any,
-) -> BaseChatModel:
+) -> BaseChatModel | UiPathBaseLLMClient:
     """Factory function to create the appropriate LangChain chat model for a given model name.
 
     Automatically detects the model vendor and returns the correct LangChain model class.
@@ -212,7 +213,7 @@ def get_embedding_model(
     client_settings: UiPathBaseSettings | None = None,
     client_type: Literal["passthrough", "normalized"] = "passthrough",
     **model_kwargs: Any,
-) -> Embeddings:
+) -> Embeddings | UiPathBaseLLMClient:
     """Factory function to create the appropriate LangChain embeddings model.
 
     Automatically detects the model vendor and returns the correct LangChain embeddings class.

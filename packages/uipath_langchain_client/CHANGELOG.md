@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_langchain_client` will be documented in this file.
 
+## [1.1.6] - 2026-02-12
+
+### Fixes
+- Added proper type hints for factory method
+
 ## [1.1.5] - 2026-02-12
 
 ### Fixes

@@ -33,10 +33,11 @@ class UiPathChatAnthropic(UiPathBaseLLMClient, ChatAnthropic):
         vendor_type="anthropic",
         freeze_base_url=True,
     )
-    vendor_type: Literal["anthropic", "azure", "vertexai", "awsbedrock"] = "awsbedrock"
+    vendor_type: Literal["anthropic", "azure", "vertexai", "awsbedrock"] = "anthropic"
 
     @model_validator(mode="after")
     def setup_api_flavor_and_version(self) -> Self:
+        self.api_config.vendor_type = self.vendor_type
         match self.vendor_type:
             case "vertexai":
                 self.api_config.api_flavor = "anthropic-claude"
@@ -44,8 +45,9 @@ class UiPathChatAnthropic(UiPathBaseLLMClient, ChatAnthropic):
             case "awsbedrock":
                 self.api_config.api_flavor = "invoke"
             case _:
-                raise ValueError("Those vendors are currently not supported")
-        self.api_config.vendor_type = self.vendor_type
+                raise ValueError(
+                    "anthropic and azure vendors are currently not supported by UiPath"
+                )
         return self
 
     # Override fields to avoid typing issues and fix stuff

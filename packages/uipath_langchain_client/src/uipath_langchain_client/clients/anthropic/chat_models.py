@@ -30,10 +30,10 @@ class UiPathChatAnthropic(UiPathBaseLLMClient, ChatAnthropic):
     api_config: UiPathAPIConfig = UiPathAPIConfig(
         api_type="completions",
         client_type="passthrough",
-        vendor_type="anthropic",
+        vendor_type="awsbedrock",
         freeze_base_url=True,
     )
-    vendor_type: Literal["anthropic", "azure", "vertexai", "awsbedrock"] = "anthropic"
+    vendor_type: Literal["anthropic", "azure", "vertexai", "awsbedrock"] = "awsbedrock"
 
     @model_validator(mode="after")
     def setup_api_flavor_and_version(self) -> Self:

@@ -12,7 +12,7 @@ from uipath_langchain_client.clients.bedrock.chat_models import (
 from uipath_langchain_client.clients.bedrock.embeddings import UiPathBedrockEmbeddings
 from uipath_langchain_client.clients.google.chat_models import UiPathChatGoogleGenerativeAI
 from uipath_langchain_client.clients.google.embeddings import UiPathGoogleGenerativeAIEmbeddings
-from uipath_langchain_client.clients.normalized.chat_models import UiPathNormalizedChatModel
+from uipath_langchain_client.clients.normalized.chat_models import UiPathChat
 from uipath_langchain_client.clients.openai.chat_models import (
     UiPathAzureChatOpenAI,
     UiPathChatOpenAI,
@@ -28,7 +28,7 @@ from uipath_llm_client.settings import UiPathBaseSettings
 GPT_MODELS_NON_REASONING_CONFIGS = [
     {"model_class": UiPathAzureChatOpenAI},
     {"model_class": UiPathAzureChatOpenAI, "model_kwargs": {"use_responses_api": True}},
-    # {"model_class": UiPathNormalizedChatModel},
+    # {"model_class": UiPathChat},
 ]
 
 GPT_MODELS_WITH_REASONING_CONFIGS = [
@@ -43,7 +43,7 @@ GPT_MODELS_WITH_REASONING_CONFIGS = [
             "verbosity": "low",
         },
     },
-    # {"model_class": UiPathNormalizedChatModel, "model_kwargs": {"reasoning_effort": "low"}},
+    # {"model_class": UiPathChat, "model_kwargs": {"reasoning_effort": "low"}},
 ]
 
 GEMINI_2_5_CONFIGS = [
@@ -56,7 +56,7 @@ GEMINI_2_5_CONFIGS = [
         "model_kwargs": {"thinking_budget": 128, "include_thoughts": True},
     },
     # {
-    #     "model_class": UiPathNormalizedChatModel,
+    #     "model_class": UiPathChat,
     #     "model_kwargs": {"thinking_budget": 128, "include_thoughts": True},
     # },
 ]
@@ -71,7 +71,7 @@ GEMINI_3_CONFIGS = [
         "model_kwargs": {"thinking_level": "low", "include_thoughts": True},
     },
     # {
-    #     "model_class": UiPathNormalizedChatModel,
+    #     "model_class": UiPathChat,
     #     "model_kwargs": {"thinking_level": "low", "include_thoughts": True},
     # },
 ]
@@ -101,7 +101,7 @@ CLAUDE_MODELS_VERTEXAI_CONFIGS = [
             "thinking": {"type": "enabled", "budget_tokens": 1024},
         },
     },
-    # {"model_class": UiPathNormalizedChatModel},
+    # {"model_class": UiPathChat},
 ]
 
 CLAUDE_MODELS_AWSBEDROCK_CONFIGS = [
@@ -139,7 +139,7 @@ CLAUDE_MODELS_AWSBEDROCK_CONFIGS = [
             "thinking": {"type": "enabled", "budget_tokens": 1024},
         },
     },
-    # {"model_class": UiPathNormalizedChatModel},
+    # {"model_class": UiPathChat},
 ]
 
 COMPLETIONS_MODELS_WITH_CONFIGS = {
@@ -164,7 +164,7 @@ COMPLETION_MODEL_NAMES = list(COMPLETIONS_MODELS_WITH_CONFIGS.keys())
 
 
 COMPLETION_CLIENTS_CLASSES = [
-    UiPathNormalizedChatModel,
+    UiPathChat,
     UiPathChatOpenAI,
     UiPathAzureChatOpenAI,
     # UiPathAzureAIChatCompletionsModel,
@@ -175,7 +175,7 @@ COMPLETION_CLIENTS_CLASSES = [
     # UiPathChatBedrockConverse,
 ]
 EMBEDDINGS_CLIENTS_CLASSES = [
-    # UiPathNormalizedEmbeddings,
+    # UiPathEmbeddings,
     UiPathOpenAIEmbeddings,
     UiPathAzureOpenAIEmbeddings,
     # UiPathAzureAIEmbeddingsModel,
@@ -214,11 +214,11 @@ def completions_config(
 EMBEDDINGS_MODELS_WITH_CONFIGS = {
     "text-embedding-3-large": [
         {"model_class": UiPathAzureOpenAIEmbeddings},
-        # {"model_class": UiPathNormalizedEmbeddings},
+        # {"model_class": UiPathEmbeddings},
     ],
     "gemini-embedding-001": [
         {"model_class": UiPathGoogleGenerativeAIEmbeddings},
-        # {"model_class": UiPathNormalizedEmbeddings},
+        # {"model_class": UiPathEmbeddings},
     ],
 }
 

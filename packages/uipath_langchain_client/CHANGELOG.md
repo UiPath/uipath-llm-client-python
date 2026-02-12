@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_langchain_client` will be documented in this file.
 
+## [1.1.2] - 2026-02-12
+
+### Refactor
+- Rename normalized client for better comaptibility with other packages
+
 ## [1.1.1] - 2026-02-11
 
 ### Fixes
@@ -135,7 +140,7 @@ All notable changes to `uipath_langchain_client` will be documented in this file
 - `UiPathChatBedrock` - AWS Bedrock models
 - `UiPathChatBedrockConverse` - AWS Bedrock Converse API
 - `UiPathAzureAIChatCompletionsModel` - Azure AI models (non-OpenAI)
-- `UiPathNormalizedChatModel` - Provider-agnostic normalized API
+- `UiPathChat` - Provider-agnostic normalized API
 
 ### Embeddings Classes
 - `UiPathOpenAIEmbeddings` - OpenAI embeddings via direct API
@@ -143,7 +148,7 @@ All notable changes to `uipath_langchain_client` will be documented in this file
 - `UiPathGoogleGenerativeAIEmbeddings` - Google embeddings
 - `UiPathBedrockEmbeddings` - AWS Bedrock embeddings
 - `UiPathAzureAIEmbeddingsModel` - Azure AI embeddings
-- `UiPathNormalizedEmbeddings` - Provider-agnostic normalized API
+- `UiPathEmbeddings` - Provider-agnostic normalized API
 
 ### Features
 - Support for BYO (Bring Your Own) model connections

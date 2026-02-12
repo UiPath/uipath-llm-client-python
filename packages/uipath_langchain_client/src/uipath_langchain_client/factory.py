@@ -96,10 +96,10 @@ def get_chat_model(
 
     if client_type == "normalized":
         from uipath_langchain_client.clients.normalized.chat_models import (
-            UiPathNormalizedChatModel,
+            UiPathChat,
         )
 
-        return UiPathNormalizedChatModel(
+        return UiPathChat(
             model=model_name,
             settings=client_settings,
             byo_connection_id=byo_connection_id,
@@ -239,10 +239,10 @@ def get_embedding_model(
 
     if client_type == "normalized":
         from uipath_langchain_client.clients.normalized.embeddings import (
-            UiPathNormalizedEmbeddings,
+            UiPathEmbeddings,
         )
 
-        return UiPathNormalizedEmbeddings(
+        return UiPathEmbeddings(
             model=model_name,
             settings=client_settings,
             byo_connection_id=byo_connection_id,

@@ -222,16 +222,12 @@ def test_normalized_client_imports():
     print("Testing Normalized client imports...")
 
     from uipath_langchain_client.clients.normalized import (
-        UiPathNormalizedChatModel,
-        UiPathNormalizedEmbeddings,
+        UiPathChat,
+        UiPathEmbeddings,
     )
 
-    assert isinstance(UiPathNormalizedChatModel, type), (
-        "UiPathNormalizedChatModel should be a class"
-    )
-    assert isinstance(UiPathNormalizedEmbeddings, type), (
-        "UiPathNormalizedEmbeddings should be a class"
-    )
+    assert isinstance(UiPathChat, type), "UiPathChat should be a class"
+    assert isinstance(UiPathEmbeddings, type), "UiPathEmbeddings should be a class"
 
     print("  Normalized client imports OK")
 
@@ -411,21 +407,19 @@ def test_inheritance_normalized():
     from langchain_core.language_models.chat_models import BaseChatModel
     from uipath_langchain_client.base_client import UiPathBaseLLMClient
     from uipath_langchain_client.clients.normalized import (
-        UiPathNormalizedChatModel,
-        UiPathNormalizedEmbeddings,
+        UiPathChat,
+        UiPathEmbeddings,
     )
 
-    assert issubclass(UiPathNormalizedChatModel, BaseChatModel), (
-        "UiPathNormalizedChatModel should inherit from BaseChatModel"
+    assert issubclass(UiPathChat, BaseChatModel), "UiPathChat should inherit from BaseChatModel"
+    assert issubclass(UiPathChat, UiPathBaseLLMClient), (
+        "UiPathChat should inherit from UiPathBaseLLMClient"
     )
-    assert issubclass(UiPathNormalizedChatModel, UiPathBaseLLMClient), (
-        "UiPathNormalizedChatModel should inherit from UiPathBaseLLMClient"
+    assert issubclass(UiPathEmbeddings, Embeddings), (
+        "UiPathEmbeddings should inherit from Embeddings"
     )
-    assert issubclass(UiPathNormalizedEmbeddings, Embeddings), (
-        "UiPathNormalizedEmbeddings should inherit from Embeddings"
-    )
-    assert issubclass(UiPathNormalizedEmbeddings, UiPathBaseLLMClient), (
-        "UiPathNormalizedEmbeddings should inherit from UiPathBaseLLMClient"
+    assert issubclass(UiPathEmbeddings, UiPathBaseLLMClient), (
+        "UiPathEmbeddings should inherit from UiPathBaseLLMClient"
     )
 
     print("  Normalized inheritance OK")

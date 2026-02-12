@@ -3,7 +3,7 @@ from uipath_langchain_client.base_client import UiPathBaseLLMClient
 from uipath_langchain_client.settings import UiPathAPIConfig
 
 
-class UiPathNormalizedEmbeddings(UiPathBaseLLMClient, Embeddings):
+class UiPathEmbeddings(UiPathBaseLLMClient, Embeddings):
     """LangChain embeddings using the UiPath's normalized embeddings API.
 
     Provides a consistent interface for generating text embeddings across all

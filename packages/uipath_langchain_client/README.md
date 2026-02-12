@@ -56,7 +56,7 @@ For more control, instantiate provider-specific classes directly:
 from uipath_langchain_client.openai.chat_models import UiPathAzureChatOpenAI
 from uipath_langchain_client.google.chat_models import UiPathChatGoogleGenerativeAI
 from uipath_langchain_client.anthropic.chat_models import UiPathChatAnthropic
-from uipath_langchain_client.normalized.chat_models import UiPathNormalizedChatModel
+from uipath_langchain_client.normalized.chat_models import UiPathChat
 from uipath_langchain_client.settings import get_default_client_settings
 
 settings = get_default_client_settings()
@@ -75,7 +75,7 @@ claude_chat = UiPathChatAnthropic(
 )
 
 # Normalized (provider-agnostic)
-normalized_chat = UiPathNormalizedChatModel(model="gpt-4o-2024-11-20", settings=settings)
+normalized_chat = UiPathChat(model="gpt-4o-2024-11-20", settings=settings)
 ```
 
 ## Available Client Types
@@ -99,8 +99,8 @@ Uses UiPath's normalized API for a consistent interface across all providers.
 
 | Class | Description |
 |-------|-------------|
-| `UiPathNormalizedChatModel` | Provider-agnostic chat completions |
-| `UiPathNormalizedEmbeddings` | Provider-agnostic embeddings |
+| `UiPathChat` | Provider-agnostic chat completions |
+| `UiPathEmbeddings` | Provider-agnostic embeddings |
 
 ## Features
 

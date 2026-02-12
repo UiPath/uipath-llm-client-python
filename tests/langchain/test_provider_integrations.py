@@ -11,7 +11,7 @@ from uipath_langchain_client.clients.bedrock.chat_models import (
     UiPathChatBedrockConverse,
 )
 from uipath_langchain_client.clients.google.chat_models import UiPathChatGoogleGenerativeAI
-from uipath_langchain_client.clients.normalized.chat_models import UiPathNormalizedChatModel
+from uipath_langchain_client.clients.normalized.chat_models import UiPathChat
 from uipath_langchain_client.clients.vertexai.chat_models import UiPathChatAnthropicVertex
 
 from tests.langchain.utils import search_accommodation, search_attractions, search_flights
@@ -160,7 +160,7 @@ class TestIntegrationChatModel(ChatModelIntegrationTests):
                 )
 
         if "gemini" in model_name.lower():
-            if model_class == UiPathNormalizedChatModel and test_name in [
+            if model_class == UiPathChat and test_name in [
                 "test_tool_calling",
                 "test_tool_calling_async",
                 "test_tool_choice",
@@ -169,9 +169,7 @@ class TestIntegrationChatModel(ChatModelIntegrationTests):
                 pytest.skip(
                     f"Skipping test {test_name} because it is not supported for Gemini models on normalized"
                 )
-            if (
-                "gemini-3" in model_name.lower() or model_class == UiPathNormalizedChatModel
-            ) and test_name in [
+            if ("gemini-3" in model_name.lower() or model_class == UiPathChat) and test_name in [
                 "test_tool_message_error_status",
                 "test_tool_message_histories_list_content",
                 "test_tool_message_histories_string_content",
@@ -181,7 +179,7 @@ class TestIntegrationChatModel(ChatModelIntegrationTests):
                 )
         if (
             "gemini-3" in model_name.lower()
-            and model_class == UiPathNormalizedChatModel
+            and model_class == UiPathChat
             and test_name in ["test_agent_loop"]
         ):
             pytest.skip(

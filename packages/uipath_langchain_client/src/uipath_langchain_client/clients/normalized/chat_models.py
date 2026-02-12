@@ -12,11 +12,11 @@ The normalized API supports:
 - Extended thinking/reasoning parameters for supported models
 
 Example:
-    >>> from uipath_langchain_client.normalized.chat_models import UiPathNormalizedChatModel
+    >>> from uipath_langchain_client.normalized.chat_models import UiPathChat
     >>> from uipath_langchain_client.settings import get_default_client_settings
     >>>
     >>> settings = get_default_client_settings()
-    >>> chat = UiPathNormalizedChatModel(
+    >>> chat = UiPathChat(
     ...     model="gpt-4o-2024-11-20",
     ...     settings=settings,
     ... )
@@ -60,7 +60,7 @@ from uipath_langchain_client.base_client import UiPathBaseLLMClient
 from uipath_langchain_client.settings import UiPathAPIConfig
 
 
-class UiPathNormalizedChatModel(UiPathBaseLLMClient, BaseChatModel):
+class UiPathChat(UiPathBaseLLMClient, BaseChatModel):
     """LangChain chat model using UiPath's normalized (provider-agnostic) API.
 
     This model provides a consistent interface across all LLM providers supported
@@ -86,7 +86,7 @@ class UiPathNormalizedChatModel(UiPathBaseLLMClient, BaseChatModel):
         include_thoughts: Whether to include thinking in Gemini responses.
 
     Example:
-        >>> chat = UiPathNormalizedChatModel(
+        >>> chat = UiPathChat(
         ...     model="gpt-4o-2024-11-20",
         ...     settings=settings,
         ...     temperature=0.7,

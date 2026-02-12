@@ -1,4 +1,4 @@
-from uipath_langchain_client.clients.normalized.chat_models import UiPathNormalizedChatModel
-from uipath_langchain_client.clients.normalized.embeddings import UiPathNormalizedEmbeddings
+from uipath_langchain_client.clients.normalized.chat_models import UiPathChat
+from uipath_langchain_client.clients.normalized.embeddings import UiPathEmbeddings
 
-__all__ = ["UiPathNormalizedChatModel", "UiPathNormalizedEmbeddings"]
+__all__ = ["UiPathChat", "UiPathEmbeddings"]

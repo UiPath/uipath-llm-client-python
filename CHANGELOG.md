@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_llm_client` (core package) will be documented in this file.
 
+## [1.1.1] - 2026-02-12
+
+### Fix
+- Small fixes on openai client
+
 ## [1.1.0] - 2026-02-11
 
 ### Stable release

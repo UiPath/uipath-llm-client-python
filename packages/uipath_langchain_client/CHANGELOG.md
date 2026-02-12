@@ -2,6 +2,12 @@
 
 All notable changes to `uipath_langchain_client` will be documented in this file.
 
+## [1.1.3] - 2026-02-12
+
+### Fixes
+- Fixes on openai langchain client on resposes_api
+- Allow the flavor to be set up at requst time, not just when instantiating the llm
+
 ## [1.1.2] - 2026-02-12
 
 ### Refactor

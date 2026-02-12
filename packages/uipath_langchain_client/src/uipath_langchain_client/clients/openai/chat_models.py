@@ -1,7 +1,7 @@
 from collections.abc import Awaitable, Callable
 from typing import Self
 
-from httpx import Request
+from httpx import URL, Request
 from pydantic import Field, SecretStr, model_validator
 from uipath_langchain_client.base_client import UiPathBaseLLMClient
 from uipath_langchain_client.settings import UiPathAPIConfig
@@ -33,21 +33,23 @@ class UiPathChatOpenAI(UiPathBaseLLMClient, ChatOpenAI):  # type: ignore[overrid
 
     @model_validator(mode="after")
     def setup_uipath_client(self) -> Self:
+        base_url = str(self.uipath_sync_client.base_url).rstrip("/")
+
         def fix_url_and_api_flavor_header(request: Request):
-            url_suffix = str(request.url).split(str(self.uipath_sync_client.base_url))[-1]
+            url_suffix = str(request.url).split(base_url)[-1]
             if "responses" in url_suffix:
                 request.headers["X-UiPath-LlmGateway-ApiFlavor"] = "responses"
             else:
                 request.headers["X-UiPath-LlmGateway-ApiFlavor"] = "chat-completions"
-            request.url = self.uipath_sync_client.base_url
+            request.url = URL(base_url)
 
         async def fix_url_and_api_flavor_header_async(request: Request):
-            url_suffix = str(request.url).split(str(self.uipath_async_client.base_url))[-1]
+            url_suffix = str(request.url).split(base_url)[-1]
             if "responses" in url_suffix:
                 request.headers["X-UiPath-LlmGateway-ApiFlavor"] = "responses"
             else:
                 request.headers["X-UiPath-LlmGateway-ApiFlavor"] = "chat-completions"
-            request.url = self.uipath_async_client.base_url
+            request.url = URL(base_url)
 
         self.uipath_sync_client.event_hooks["request"].append(fix_url_and_api_flavor_header)
         self.uipath_async_client.event_hooks["request"].append(fix_url_and_api_flavor_header_async)
@@ -85,21 +87,23 @@ class UiPathAzureChatOpenAI(UiPathBaseLLMClient, AzureChatOpenAI):  # type: igno
 
     @model_validator(mode="after")
     def setup_uipath_client(self) -> Self:
+        base_url = str(self.uipath_sync_client.base_url).rstrip("/")
+
         def fix_url_and_api_flavor_header(request: Request):
-            url_suffix = str(request.url).split(str(self.uipath_sync_client.base_url))[-1]
+            url_suffix = str(request.url).split(base_url)[-1]
             if "responses" in url_suffix:
                 request.headers["X-UiPath-LlmGateway-ApiFlavor"] = "responses"
             else:
                 request.headers["X-UiPath-LlmGateway-ApiFlavor"] = "chat-completions"
-            request.url = self.uipath_sync_client.base_url
+            request.url = URL(base_url)
 
         async def fix_url_and_api_flavor_header_async(request: Request):
-            url_suffix = str(request.url).split(str(self.uipath_async_client.base_url))[-1]
+            url_suffix = str(request.url).split(base_url)[-1]
             if "responses" in url_suffix:
                 request.headers["X-UiPath-LlmGateway-ApiFlavor"] = "responses"
             else:
                 request.headers["X-UiPath-LlmGateway-ApiFlavor"] = "chat-completions"
-            request.url = self.uipath_async_client.base_url
+            request.url = URL(base_url)
 
         self.uipath_sync_client.event_hooks["request"].append(fix_url_and_api_flavor_header)
         self.uipath_async_client.event_hooks["request"].append(fix_url_and_api_flavor_header_async)

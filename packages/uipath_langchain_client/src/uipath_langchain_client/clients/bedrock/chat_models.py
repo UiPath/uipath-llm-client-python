@@ -57,7 +57,4 @@ class UiPathChatBedrock(UiPathBaseLLMClient, ChatBedrock):
 
     @property
     def _as_converse(self) -> UiPathChatBedrockConverse:
-        return UiPathChatBedrockConverse(
-            model=self.model_name,
-            settings=self.client_settings,
-        )
+        raise NotImplementedError("You must instantiate the converse client directly")

@@ -47,6 +47,10 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
+      - name: Wait for package indexing
+        if: github.event_name == 'workflow_run'
+        run: sleep 60
+
       - name: Setup uv
         uses: astral-sh/setup-uv@v7
         with:

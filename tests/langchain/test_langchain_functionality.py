@@ -16,6 +16,7 @@ class TestCoreChatModel(ChatModelUnitTests):
         self._completions_kwargs = {
             "model": "anthropic.claude-3-5-sonnet-20240620-v1:0",
             "client_settings": client_settings,
+            "vendor_type": "awsbedrock",
         }
 
     @property

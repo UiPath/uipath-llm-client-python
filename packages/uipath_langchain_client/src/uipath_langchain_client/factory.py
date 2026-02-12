@@ -177,6 +177,7 @@ def get_chat_model(
                     return UiPathChatAnthropic(
                         model=model_name,
                         settings=client_settings,
+                        vendor_type=vendor_type,
                         **model_kwargs,
                     )
                 else:

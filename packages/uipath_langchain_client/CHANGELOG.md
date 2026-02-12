@@ -7,6 +7,7 @@ All notable changes to `uipath_langchain_client` will be documented in this file
 ### Fixes
 - Fixes on openai langchain client on resposes_api
 - Allow the flavor to be set up at requst time, not just when instantiating the llm
+- Some fixes for the anthropic client
 
 ## [1.1.2] - 2026-02-12
 

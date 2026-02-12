@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_langchain_client` will be documented in this file.
 
+## [1.1.4] - 2026-02-12
+
+### Fixes
+- Fixed anthropic default vendor
+
 ## [1.1.3] - 2026-02-12
 
 ### Fixes

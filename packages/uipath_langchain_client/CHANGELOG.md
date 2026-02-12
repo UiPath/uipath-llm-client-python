@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_langchain_client` will be documented in this file.
 
+## [1.1.5] - 2026-02-12
+
+### Fixes
+- Fixed bedrock converse api
+
 ## [1.1.4] - 2026-02-12
 
 ### Fixes

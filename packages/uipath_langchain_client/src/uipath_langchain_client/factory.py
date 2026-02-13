@@ -143,15 +143,16 @@ def get_chat_model(
         case "vertexai":
             if is_uipath_owned:
                 if "claude" in model_name:
-                    from uipath_langchain_client.clients.vertexai.chat_models import (
-                        UiPathChatAnthropicVertex,
+                    from uipath_langchain_client.clients.anthropic.chat_models import (
+                        UiPathChatAnthropic,
                     )
 
                     return cast(
                         UiPathBaseChatModel,
-                        UiPathChatAnthropicVertex(
+                        UiPathChatAnthropic(
                             model=model_name,
                             settings=client_settings,
+                            vendor_type=vendor_type,
                             **model_kwargs,
                         ),
                     )

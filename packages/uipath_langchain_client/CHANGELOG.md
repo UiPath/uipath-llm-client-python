@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_langchain_client` will be documented in this file.
 
+## [1.1.8] - 2026-02-13
+
+### Refactor
+- Adjust Anthropic factory method to use ChatAnthropic instead of ChatAnthropicVertex
+
 ## [1.1.7] - 2026-02-13
 
 ### Refactor

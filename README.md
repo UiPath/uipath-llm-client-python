@@ -26,7 +26,9 @@ The client supports two UiPath backends:
 | OpenAI/Azure | GPT-4o, GPT-4, etc. | text-embedding-3-large/small | `openai` |
 | Google | Gemini 2.5, Gemini 2.0, etc. | text-embedding-004 | `vertexai` |
 | Anthropic | Claude Sonnet 4.5, etc. | - | `awsbedrock`, `vertexai` |
-| AWS Bedrock | Claude models | None currently available | `awsbedrock` |
+| AWS Bedrock | Claude, Titan, etc. | Titan Embeddings, etc. | `awsbedrock` |
+| Fireworks AI | Various open-source models | Various | `openai` |
+| Azure AI | Various Azure AI models | Various | `azure` |
 
 ## Installation
 
@@ -40,9 +42,13 @@ pip install uipath-llm-client
 pip install uipath-langchain-client
 
 # With specific provider extras for passthrough mode
-pip install "uipath-langchain-client[openai]"      # OpenAI/Azure models
+pip install "uipath-langchain-client[openai]"      # OpenAI/Azure OpenAI models
 pip install "uipath-langchain-client[google]"      # Google Gemini models
 pip install "uipath-langchain-client[anthropic]"   # Anthropic Claude models
+pip install "uipath-langchain-client[aws]"         # AWS Bedrock models
+pip install "uipath-langchain-client[azure]"       # Azure AI models
+pip install "uipath-langchain-client[vertexai]"    # Google Vertex AI (Anthropic on Vertex)
+pip install "uipath-langchain-client[fireworks]"   # Fireworks AI models
 pip install "uipath-langchain-client[all]"         # All providers
 ```
 
@@ -143,7 +149,7 @@ settings = AgentHubSettings(
 | `client_id` | `UIPATH_CLIENT_ID` | `SecretStr \| None` | `None` | Client ID for OAuth/S2S authentication |
 | `client_secret` | `UIPATH_CLIENT_SECRET` | `SecretStr \| None` | `None` | Client secret for OAuth/S2S authentication |
 | `client_scope` | `UIPATH_CLIENT_SCOPE` | `str \| None` | `None` | Custom OAuth scope for authentication |
-| `agenthub_config` | `UIPATH_AGENTHUB_CONFIG` | `str \| None` | `None` | AgentHub configuration for tracing |
+| `agenthub_config` | `UIPATH_AGENTHUB_CONFIG` | `str` | `"agentsruntime"` | AgentHub configuration for tracing |
 | `process_key` | `UIPATH_PROCESS_KEY` | `str \| None` | `None` | Process key for tracing |
 | `job_key` | `UIPATH_JOB_KEY` | `str \| None` | `None` | Job key for tracing |
 
@@ -182,6 +188,7 @@ settings = LLMGatewaySettings(
 | `client_secret` | `LLMGW_CLIENT_SECRET` | `SecretStr \| None` | Conditional | Client secret for S2S authentication |
 | `user_id` | `LLMGW_SEMANTIC_USER_ID` | `str \| None` | No | User ID for tracking and billing |
 | `action_id` | `LLMGW_ACTION_ID` | `str \| None` | No | Action ID for tracking |
+| `operation_code` | `LLMGW_OPERATION_CODE` | `str \| None` | No | Operation code to identify BYO models |
 | `additional_headers` | `LLMGW_ADDITIONAL_HEADERS` | `Mapping[str, str]` | No | Additional custom headers to include in requests |
 
 **Authentication behavior:**
@@ -195,7 +202,7 @@ settings = LLMGatewaySettings(
 The simplest way to get started - settings are automatically loaded from environment variables:
 
 ```python
-from uipath_langchain_client.openai.chat_models import UiPathAzureChatOpenAI
+from uipath_langchain_client.clients.openai.chat_models import UiPathAzureChatOpenAI
 
 # No settings needed - uses defaults from environment (AgentHub backend)
 chat = UiPathAzureChatOpenAI(model="gpt-4o-2024-11-20")
@@ -206,10 +213,10 @@ print(response.content)
 ### Using Different Providers
 
 ```python
-from uipath_langchain_client.openai.chat_models import UiPathAzureChatOpenAI
-from uipath_langchain_client.google.chat_models import UiPathChatGoogleGenerativeAI
-from uipath_langchain_client.anthropic.chat_models import UiPathChatAnthropic
-from uipath_langchain_client.openai.embeddings import UiPathAzureOpenAIEmbeddings
+from uipath_langchain_client.clients.openai.chat_models import UiPathAzureChatOpenAI
+from uipath_langchain_client.clients.google.chat_models import UiPathChatGoogleGenerativeAI
+from uipath_langchain_client.clients.anthropic.chat_models import UiPathChatAnthropic
+from uipath_langchain_client.clients.openai.embeddings import UiPathAzureOpenAIEmbeddings
 
 # OpenAI/Azure models
 openai_chat = UiPathAzureChatOpenAI(model="gpt-4o-2024-11-20")
@@ -279,7 +286,7 @@ print(response.content)
 All chat models support streaming for real-time output:
 
 ```python
-from uipath_langchain_client.openai.chat_models import UiPathAzureChatOpenAI
+from uipath_langchain_client.clients.openai.chat_models import UiPathAzureChatOpenAI
 
 chat_model = UiPathAzureChatOpenAI(model="gpt-4o-2024-11-20")
 
@@ -294,7 +301,7 @@ For async/await support:
 
 ```python
 import asyncio
-from uipath_langchain_client.openai.chat_models import UiPathAzureChatOpenAI
+from uipath_langchain_client.clients.openai.chat_models import UiPathAzureChatOpenAI
 
 async def main():
     chat_model = UiPathAzureChatOpenAI(model="gpt-4o-2024-11-20")
@@ -316,7 +323,7 @@ asyncio.run(main())
 Use tools with LangChain's standard interface:
 
 ```python
-from uipath_langchain_client.openai.chat_models import UiPathAzureChatOpenAI
+from uipath_langchain_client.clients.openai.chat_models import UiPathAzureChatOpenAI
 from langchain_core.tools import tool
 
 @tool
@@ -344,7 +351,7 @@ print(response.tool_calls)
 Integrate with LangChain's agent framework:
 
 ```python
-from uipath_langchain_client.openai.chat_models import UiPathAzureChatOpenAI
+from uipath_langchain_client.clients.openai.chat_models import UiPathAzureChatOpenAI
 from langchain_core.tools import tool
 from langgraph.prebuilt import create_react_agent
 
@@ -361,31 +368,97 @@ result = agent.invoke({"messages": [("user", "Search for Python tutorials")]})
 print(result["messages"][-1].content)
 ```
 
-### Low-Level HTTP Client
+### Native SDK Wrappers (Without LangChain)
 
-For advanced use cases, use the low-level client directly:
+The core `uipath_llm_client` package provides thin wrappers around native vendor SDKs. These are drop-in replacements that route requests through UiPath's infrastructure while preserving the original SDK's interface:
 
 ```python
-from uipath_llm_client import UiPathBaseLLMClient, UiPathAPIConfig
+from uipath_llm_client.clients.openai import UiPathOpenAI, UiPathAzureOpenAI
 
-# Create a low-level client (settings auto-loaded from environment)
-client = UiPathBaseLLMClient(
+# Drop-in replacement for openai.OpenAI — routes through UiPath
+client = UiPathOpenAI(model_name="gpt-4o-2024-11-20")
+response = client.chat.completions.create(
     model="gpt-4o-2024-11-20",
+    messages=[{"role": "user", "content": "Hello!"}],
+)
+print(response.choices[0].message.content)
+
+# Azure OpenAI variant
+azure_client = UiPathAzureOpenAI(model_name="gpt-4o-2024-11-20")
+```
+
+```python
+from uipath_llm_client.clients.anthropic import UiPathAnthropic
+
+# Drop-in replacement for anthropic.Anthropic
+client = UiPathAnthropic(model_name="anthropic.claude-sonnet-4-5-20250929-v1:0")
+response = client.messages.create(
+    model="anthropic.claude-sonnet-4-5-20250929-v1:0",
+    max_tokens=1024,
+    messages=[{"role": "user", "content": "Hello!"}],
+)
+print(response.content[0].text)
+```
+
+```python
+from uipath_llm_client.clients.google import UiPathGoogle
+
+# Drop-in replacement for google.genai.Client
+client = UiPathGoogle(model_name="gemini-2.5-flash")
+response = client.models.generate_content(
+    model="gemini-2.5-flash",
+    contents="Hello!",
+)
+print(response.text)
+```
+
+All native SDK wrappers are available in sync and async variants:
+
+| Class | SDK | Description |
+|-------|-----|-------------|
+| `UiPathOpenAI` / `UiPathAsyncOpenAI` | `openai.OpenAI` | OpenAI models (BYO) |
+| `UiPathAzureOpenAI` / `UiPathAsyncAzureOpenAI` | `openai.AzureOpenAI` | Azure OpenAI models |
+| `UiPathAnthropic` / `UiPathAsyncAnthropic` | `anthropic.Anthropic` | Anthropic models |
+| `UiPathAnthropicBedrock` / `UiPathAsyncAnthropicBedrock` | `anthropic.AnthropicBedrock` | Anthropic via AWS Bedrock |
+| `UiPathAnthropicVertex` / `UiPathAsyncAnthropicVertex` | `anthropic.AnthropicVertex` | Anthropic via Vertex AI |
+| `UiPathAnthropicFoundry` / `UiPathAsyncAnthropicFoundry` | `anthropic.AnthropicFoundry` | Anthropic via Azure Foundry |
+| `UiPathGoogle` | `google.genai.Client` | Google Gemini models |
+
+### Low-Level HTTP Client
+
+For completely custom HTTP requests, use the low-level HTTPX client directly:
+
+```python
+from uipath_llm_client import UiPathHttpxClient
+from uipath_llm_client.settings import UiPathAPIConfig, get_default_client_settings
+
+settings = get_default_client_settings()
+
+# Create a low-level HTTP client with UiPath auth and routing
+client = UiPathHttpxClient(
+    base_url=settings.build_base_url(model_name="gpt-4o-2024-11-20"),
+    auth=settings.build_auth_pipeline(),
+    headers=settings.build_auth_headers(model_name="gpt-4o-2024-11-20"),
+    model_name="gpt-4o-2024-11-20",
     api_config=UiPathAPIConfig(
         api_type="completions",
         client_type="passthrough",
         vendor_type="openai",
+        api_flavor="chat-completions",
     ),
+    max_retries=2,
 )
 
-# Make a raw request
-response = client.uipath_request(
-    request_body={
+# Make a raw HTTP request
+response = client.post(
+    "/chat/completions",
+    json={
         "model": "gpt-4o-2024-11-20",
         "messages": [{"role": "user", "content": "Hello!"}],
         "max_tokens": 100,
-    }
+    },
 )
+response.raise_for_status()
 print(response.json())
 ```
 
@@ -394,7 +467,7 @@ print(response.json())
 Pass custom settings when you need more control:
 
 ```python
-from uipath_langchain_client.openai.chat_models import UiPathAzureChatOpenAI
+from uipath_langchain_client.clients.openai.chat_models import UiPathAzureChatOpenAI
 from uipath_llm_client.settings import AgentHubSettings
 from uipath_llm_client.utils.retry import RetryConfig
 
@@ -420,7 +493,7 @@ chat_model = UiPathAzureChatOpenAI(
 ### Switching Between Backends
 
 ```python
-from uipath_langchain_client.openai.chat_models import UiPathAzureChatOpenAI
+from uipath_langchain_client.clients.openai.chat_models import UiPathAzureChatOpenAI
 from uipath_llm_client.settings import get_default_client_settings
 
 # Explicitly specify the backend
@@ -440,9 +513,9 @@ You can instantiate `LLMGatewaySettings` directly for full control over configur
 **With Direct Client Classes:**
 
 ```python
-from uipath_langchain_client.openai.chat_models import UiPathAzureChatOpenAI
-from uipath_langchain_client.google.chat_models import UiPathChatGoogleGenerativeAI
-from uipath_langchain_client.openai.embeddings import UiPathAzureOpenAIEmbeddings
+from uipath_langchain_client.clients.openai.chat_models import UiPathAzureChatOpenAI
+from uipath_langchain_client.clients.google.chat_models import UiPathChatGoogleGenerativeAI
+from uipath_langchain_client.clients.openai.embeddings import UiPathAzureOpenAIEmbeddings
 from uipath_llm_client.settings import LLMGatewaySettings
 
 # Create LLMGatewaySettings with explicit configuration
@@ -528,7 +601,7 @@ vectors = embeddings.embed_documents(["Hello", "World"])
 If you have enrolled your own model deployment into UiPath's LLMGateway, you can use it by providing your BYO connection ID. This allows you to route requests through LLMGateway to your custom-enrolled models.
 
 ```python
-from uipath_langchain_client.openai.chat_models import UiPathAzureChatOpenAI
+from uipath_langchain_client.clients.openai.chat_models import UiPathAzureChatOpenAI
 
 # Use your BYO connection ID from LLMGateway enrollment
 chat = UiPathAzureChatOpenAI(
@@ -543,8 +616,8 @@ print(response.content)
 This works with any client class:
 
 ```python
-from uipath_langchain_client.google.chat_models import UiPathChatGoogleGenerativeAI
-from uipath_langchain_client.openai.embeddings import UiPathAzureOpenAIEmbeddings
+from uipath_langchain_client.clients.google.chat_models import UiPathChatGoogleGenerativeAI
+from uipath_langchain_client.clients.openai.embeddings import UiPathAzureOpenAIEmbeddings
 
 # BYO chat model
 byo_chat = UiPathChatGoogleGenerativeAI(
@@ -558,6 +631,128 @@ byo_embeddings = UiPathAzureOpenAIEmbeddings(
     byo_connection_id="a2e38c51-1d8a-5e02-9cd5-ge2c8e029b98",
 )
 ```
+
+## Error Handling
+
+The client provides a hierarchy of typed exceptions for handling API errors. All exceptions extend `UiPathAPIError` (which extends `httpx.HTTPStatusError`):
+
+```python
+from uipath_llm_client import (
+    UiPathAPIError,
+    UiPathAuthenticationError,
+    UiPathRateLimitError,
+    UiPathNotFoundError,
+)
+from uipath_langchain_client.clients.openai.chat_models import UiPathAzureChatOpenAI
+
+chat = UiPathAzureChatOpenAI(model="gpt-4o-2024-11-20")
+
+try:
+    response = chat.invoke("Hello!")
+except UiPathRateLimitError as e:
+    print(f"Rate limited. Retry after: {e.retry_after} seconds")
+except UiPathAuthenticationError:
+    print("Authentication failed — check your credentials")
+except UiPathAPIError as e:
+    print(f"API error {e.status_code}: {e.message}")
+```
+
+### Exception Reference
+
+| Exception | HTTP Status | Description |
+|-----------|-------------|-------------|
+| `UiPathAPIError` | Any | Base exception for all UiPath API errors |
+| `UiPathBadRequestError` | 400 | Invalid request parameters |
+| `UiPathAuthenticationError` | 401 | Invalid or expired credentials |
+| `UiPathPermissionDeniedError` | 403 | Insufficient permissions |
+| `UiPathNotFoundError` | 404 | Model or resource not found |
+| `UiPathConflictError` | 409 | Request conflicts with current state |
+| `UiPathRequestTooLargeError` | 413 | Request payload too large |
+| `UiPathUnprocessableEntityError` | 422 | Request is well-formed but semantically invalid |
+| `UiPathRateLimitError` | 429 | Rate limit exceeded (has `retry_after` property) |
+| `UiPathInternalServerError` | 500 | Server-side error |
+| `UiPathServiceUnavailableError` | 503 | Service temporarily unavailable |
+| `UiPathGatewayTimeoutError` | 504 | Gateway timeout |
+| `UiPathTooManyRequestsError` | 529 | Anthropic overload (too many requests) |
+
+## UiPathAPIConfig Reference
+
+The `UiPathAPIConfig` class controls how requests are routed through UiPath's infrastructure:
+
+```python
+from uipath_llm_client.settings import UiPathAPIConfig
+
+config = UiPathAPIConfig(
+    api_type="completions",
+    client_type="passthrough",
+    vendor_type="openai",
+    api_flavor="chat-completions",
+    api_version="2025-03-01-preview",
+)
+```
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `api_type` | `"completions"` \| `"embeddings"` \| `None` | `None` | Type of API call |
+| `client_type` | `"passthrough"` \| `"normalized"` \| `None` | `None` | `"passthrough"` uses vendor-native APIs; `"normalized"` uses UiPath's unified API |
+| `vendor_type` | `str \| None` | `None` | LLM vendor identifier: `"openai"`, `"vertexai"`, `"awsbedrock"`, `"anthropic"`, `"azure"` |
+| `api_flavor` | `str \| None` | `None` | Vendor-specific API flavor (e.g., `"chat-completions"`, `"responses"`, `"generate-content"`, `"converse"`, `"invoke"`, `"anthropic-claude"`) |
+| `api_version` | `str \| None` | `None` | Vendor-specific API version (e.g., `"2025-03-01-preview"`, `"v1beta1"`) |
+| `freeze_base_url` | `bool` | `False` | Prevents httpx from modifying the base URL (required for some vendor SDKs) |
+
+## Advanced Configuration
+
+### SSL Configuration
+
+The client supports custom SSL/TLS configuration through environment variables:
+
+| Environment Variable | Description |
+|---------------------|-------------|
+| `UIPATH_DISABLE_SSL_VERIFY` | Set to `"1"`, `"true"`, `"yes"`, or `"on"` to disable SSL verification (not recommended for production) |
+| `SSL_CERT_FILE` | Path to a custom SSL certificate file |
+| `REQUESTS_CA_BUNDLE` | Path to a custom CA bundle file |
+| `SSL_CERT_DIR` | Path to a directory containing SSL certificate files |
+
+By default, the client uses [truststore](https://pypi.org/project/truststore/) (if available) or falls back to [certifi](https://pypi.org/project/certifi/) for SSL certificate verification.
+
+### Logging
+
+Enable request/response logging by passing a logger instance:
+
+```python
+import logging
+from uipath_langchain_client.clients.openai.chat_models import UiPathAzureChatOpenAI
+
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger("uipath_llm")
+
+chat = UiPathAzureChatOpenAI(
+    model="gpt-4o-2024-11-20",
+    logger=logger,  # Enables request/response logging with timing
+)
+response = chat.invoke("Hello!")
+```
+
+The logger will record:
+- Request start time and URL
+- Response duration (in milliseconds)
+- Error responses with status codes and body content
+
+### Default Headers
+
+All requests automatically include the following default headers:
+
+| Header | Value | Description |
+|--------|-------|-------------|
+| `X-UiPath-LLMGateway-TimeoutSeconds` | `295` | Server-side timeout for LLM Gateway |
+| `X-UiPath-LLMGateway-AllowFull4xxResponse` | `true` | Returns full error response bodies for 4xx errors |
+
+### Authentication Auto-Refresh
+
+Both AgentHub and LLMGateway authentication pipelines automatically handle token expiry:
+- When a request receives a **401 Unauthorized** response, the auth pipeline refreshes the token and retries the request
+- Token refresh is handled transparently — no user intervention required
+- Auth instances use the **singleton pattern** to reuse tokens across multiple client instances
 
 ## Development
 
@@ -612,23 +807,37 @@ When adding new tests or modifying existing ones that require new API interactio
 
 ```
 uipath-llm-client/
-├── src/uipath_llm_client/          # Core HTTP client
-│   ├── client.py                   # UiPathBaseLLMClient base class
-│   ├── settings/                   # Backend-specific settings
-│   │   ├── agenthub/              # AgentHub authentication
-│   │   └── llmgateway/            # LLMGateway authentication
-│   └── utils/                      # Error handling, retry, logging
+├── src/uipath_llm_client/              # Core package
+│   ├── httpx_client.py                 # UiPathHttpxClient / UiPathHttpxAsyncClient
+│   ├── clients/                        # Native SDK wrappers
+│   │   ├── openai/                     # UiPathOpenAI, UiPathAzureOpenAI, etc.
+│   │   ├── anthropic/                  # UiPathAnthropic, UiPathAnthropicBedrock, etc.
+│   │   └── google/                     # UiPathGoogle
+│   ├── settings/                       # Backend-specific settings & auth
+│   │   ├── base.py                     # UiPathBaseSettings, UiPathAPIConfig
+│   │   ├── agenthub/                   # AgentHubSettings, AgentHubAuth
+│   │   └── llmgateway/                 # LLMGatewaySettings, LLMGatewayS2SAuth
+│   └── utils/                          # Exceptions, retry, logging, SSL
+│       ├── exceptions.py               # UiPathAPIError hierarchy (12 classes)
+│       ├── retry.py                    # RetryConfig, RetryableHTTPTransport
+│       ├── logging.py                  # LoggingConfig
+│       └── ssl_config.py              # SSL/TLS configuration
 ├── packages/
-│   ├── uipath_langchain_client/   # LangChain integration
+│   ├── uipath_langchain_client/        # LangChain integration
 │   │   └── src/uipath_langchain_client/
-│   │       ├── factory.py         # Auto-detection factory functions
-│   │       ├── normalized/        # Provider-agnostic API
-│   │       ├── openai/            # OpenAI/Azure passthrough
-│   │       ├── google/            # Google Gemini passthrough
-│   │       ├── anthropic/         # Anthropic passthrough
-│   │       └── ...
-│   └── uipath_llamaindex_client/  # LlamaIndex integration
-└── tests/                          # Test suite with VCR cassettes
+│   │       ├── base_client.py          # UiPathBaseLLMClient mixin
+│   │       ├── factory.py              # get_chat_model(), get_embedding_model()
+│   │       └── clients/
+│   │           ├── normalized/         # UiPathChat, UiPathEmbeddings
+│   │           ├── openai/             # UiPathAzureChatOpenAI, UiPathChatOpenAI, etc.
+│   │           ├── google/             # UiPathChatGoogleGenerativeAI, etc.
+│   │           ├── anthropic/          # UiPathChatAnthropic
+│   │           ├── vertexai/           # UiPathChatAnthropicVertex
+│   │           ├── bedrock/            # UiPathChatBedrock, UiPathChatBedrockConverse
+│   │           ├── fireworks/          # UiPathChatFireworks, UiPathFireworksEmbeddings
+│   │           └── azure/              # UiPathAzureAIChatCompletionsModel
+│   └── uipath_llamaindex_client/       # LlamaIndex integration (planned)
+└── tests/                              # Test suite with VCR cassettes
 ```
 
 ## License

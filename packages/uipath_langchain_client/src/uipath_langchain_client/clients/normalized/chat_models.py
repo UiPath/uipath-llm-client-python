@@ -12,7 +12,7 @@ The normalized API supports:
 - Extended thinking/reasoning parameters for supported models
 
 Example:
-    >>> from uipath_langchain_client.normalized.chat_models import UiPathChat
+    >>> from uipath_langchain_client.clients.normalized.chat_models import UiPathChat
     >>> from uipath_langchain_client.settings import get_default_client_settings
     >>>
     >>> settings = get_default_client_settings()

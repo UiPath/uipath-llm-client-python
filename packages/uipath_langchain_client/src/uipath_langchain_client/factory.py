@@ -20,11 +20,12 @@ Example:
     >>> embeddings = get_embedding_model(model_name="text-embedding-3-large", client_settings=settings)
 """
 
-from typing import Any, Literal
+from typing import Any, Literal, cast
 
-from langchain_core.embeddings import Embeddings
-from langchain_core.language_models.chat_models import BaseChatModel
-
+from uipath_langchain_client.base_client import (
+    UiPathBaseChatModel,
+    UiPathBaseEmbeddings,
+)
 from uipath_langchain_client.settings import UiPathBaseSettings, get_default_client_settings
 
 
@@ -70,7 +71,7 @@ def get_chat_model(
     client_settings: UiPathBaseSettings | None = None,
     client_type: Literal["passthrough", "normalized"] = "passthrough",
     **model_kwargs: Any,
-) -> BaseChatModel:
+) -> UiPathBaseChatModel:
     """Factory function to create the appropriate LangChain chat model for a given model name.
 
     Automatically detects the model vendor and returns the correct LangChain model class.
@@ -99,11 +100,14 @@ def get_chat_model(
             UiPathChat,
         )
 
-        return UiPathChat(
-            model=model_name,
-            settings=client_settings,
-            byo_connection_id=byo_connection_id,
-            **model_kwargs,
+        return cast(
+            UiPathBaseChatModel,
+            UiPathChat(
+                model=model_name,
+                settings=client_settings,
+                byo_connection_id=byo_connection_id,
+                **model_kwargs,
+            ),
         )
 
     vendor_type = model_info["vendor"].lower()
@@ -114,21 +118,27 @@ def get_chat_model(
                     UiPathAzureChatOpenAI,
                 )
 
-                return UiPathAzureChatOpenAI(
-                    model=model_name,
-                    settings=client_settings,
-                    **model_kwargs,
+                return cast(
+                    UiPathBaseChatModel,
+                    UiPathAzureChatOpenAI(
+                        model=model_name,
+                        settings=client_settings,
+                        **model_kwargs,
+                    ),
                 )
             else:
                 from uipath_langchain_client.clients.openai.chat_models import (
                     UiPathChatOpenAI,
                 )
 
-                return UiPathChatOpenAI(
-                    model=model_name,
-                    settings=client_settings,
-                    byo_connection_id=byo_connection_id,
-                    **model_kwargs,
+                return cast(
+                    UiPathBaseChatModel,
+                    UiPathChatOpenAI(
+                        model=model_name,
+                        settings=client_settings,
+                        byo_connection_id=byo_connection_id,
+                        **model_kwargs,
+                    ),
                 )
         case "vertexai":
             if is_uipath_owned:
@@ -137,20 +147,26 @@ def get_chat_model(
                         UiPathChatAnthropicVertex,
                     )
 
-                    return UiPathChatAnthropicVertex(
-                        model=model_name,
-                        settings=client_settings,
-                        **model_kwargs,
+                    return cast(
+                        UiPathBaseChatModel,
+                        UiPathChatAnthropicVertex(
+                            model=model_name,
+                            settings=client_settings,
+                            **model_kwargs,
+                        ),
                     )
                 elif "gemini" in model_name:
                     from uipath_langchain_client.clients.google.chat_models import (
                         UiPathChatGoogleGenerativeAI,
                     )
 
-                    return UiPathChatGoogleGenerativeAI(
-                        model=model_name,
-                        settings=client_settings,
-                        **model_kwargs,
+                    return cast(
+                        UiPathBaseChatModel,
+                        UiPathChatGoogleGenerativeAI(
+                            model=model_name,
+                            settings=client_settings,
+                            **model_kwargs,
+                        ),
                     )
                 else:
                     raise ValueError(
@@ -161,11 +177,14 @@ def get_chat_model(
                     UiPathChatGoogleGenerativeAI,
                 )
 
-                return UiPathChatGoogleGenerativeAI(
-                    model=model_name,
-                    settings=client_settings,
-                    byo_connection_id=byo_connection_id,
-                    **model_kwargs,
+                return cast(
+                    UiPathBaseChatModel,
+                    UiPathChatGoogleGenerativeAI(
+                        model=model_name,
+                        settings=client_settings,
+                        byo_connection_id=byo_connection_id,
+                        **model_kwargs,
+                    ),
                 )
         case "awsbedrock":
             if is_uipath_owned:
@@ -174,31 +193,40 @@ def get_chat_model(
                         UiPathChatAnthropic,
                     )
 
-                    return UiPathChatAnthropic(
-                        model=model_name,
-                        settings=client_settings,
-                        vendor_type=vendor_type,
-                        **model_kwargs,
+                    return cast(
+                        UiPathBaseChatModel,
+                        UiPathChatAnthropic(
+                            model=model_name,
+                            settings=client_settings,
+                            vendor_type=vendor_type,
+                            **model_kwargs,
+                        ),
                     )
                 else:
                     from uipath_langchain_client.clients.bedrock.chat_models import (
                         UiPathChatBedrock,
                     )
 
-                    return UiPathChatBedrock(
-                        model=model_name,
-                        settings=client_settings,
-                        **model_kwargs,
+                    return cast(
+                        UiPathBaseChatModel,
+                        UiPathChatBedrock(
+                            model=model_name,
+                            settings=client_settings,
+                            **model_kwargs,
+                        ),
                     )
             else:
                 from uipath_langchain_client.clients.bedrock.chat_models import (
                     UiPathChatBedrockConverse,
                 )
 
-                return UiPathChatBedrockConverse(
-                    model=model_name,
-                    settings=client_settings,
-                    **model_kwargs,
+                return cast(
+                    UiPathBaseChatModel,
+                    UiPathChatBedrockConverse(
+                        model=model_name,
+                        settings=client_settings,
+                        **model_kwargs,
+                    ),
                 )
         case _:
             raise ValueError(
@@ -212,7 +240,7 @@ def get_embedding_model(
     client_settings: UiPathBaseSettings | None = None,
     client_type: Literal["passthrough", "normalized"] = "passthrough",
     **model_kwargs: Any,
-) -> Embeddings:
+) -> UiPathBaseEmbeddings:
     """Factory function to create the appropriate LangChain embeddings model.
 
     Automatically detects the model vendor and returns the correct LangChain embeddings class.
@@ -243,11 +271,14 @@ def get_embedding_model(
             UiPathEmbeddings,
         )
 
-        return UiPathEmbeddings(
-            model=model_name,
-            settings=client_settings,
-            byo_connection_id=byo_connection_id,
-            **model_kwargs,
+        return cast(
+            UiPathBaseEmbeddings,
+            UiPathEmbeddings(
+                model=model_name,
+                settings=client_settings,
+                byo_connection_id=byo_connection_id,
+                **model_kwargs,
+            ),
         )
 
     vendor_type = model_info["vendor"].lower()
@@ -259,41 +290,53 @@ def get_embedding_model(
                     UiPathAzureOpenAIEmbeddings,
                 )
 
-                return UiPathAzureOpenAIEmbeddings(
-                    model=model_name, settings=client_settings, **model_kwargs
+                return cast(
+                    UiPathBaseEmbeddings,
+                    UiPathAzureOpenAIEmbeddings(
+                        model=model_name, settings=client_settings, **model_kwargs
+                    ),
                 )
             else:
                 from uipath_langchain_client.clients.openai.embeddings import (
                     UiPathOpenAIEmbeddings,
                 )
 
-                return UiPathOpenAIEmbeddings(
-                    model=model_name,
-                    settings=client_settings,
-                    byo_connection_id=byo_connection_id,
-                    **model_kwargs,
+                return cast(
+                    UiPathBaseEmbeddings,
+                    UiPathOpenAIEmbeddings(
+                        model=model_name,
+                        settings=client_settings,
+                        byo_connection_id=byo_connection_id,
+                        **model_kwargs,
+                    ),
                 )
         case "vertexai":
             from uipath_langchain_client.clients.google.embeddings import (
                 UiPathGoogleGenerativeAIEmbeddings,
             )
 
-            return UiPathGoogleGenerativeAIEmbeddings(
-                model=model_name,
-                settings=client_settings,
-                byo_connection_id=byo_connection_id,
-                **model_kwargs,
+            return cast(
+                UiPathBaseEmbeddings,
+                UiPathGoogleGenerativeAIEmbeddings(
+                    model=model_name,
+                    settings=client_settings,
+                    byo_connection_id=byo_connection_id,
+                    **model_kwargs,
+                ),
             )
         case "awsbedrock":
             from uipath_langchain_client.clients.bedrock.embeddings import (
                 UiPathBedrockEmbeddings,
             )
 
-            return UiPathBedrockEmbeddings(
-                model=model_name,
-                settings=client_settings,
-                byo_connection_id=byo_connection_id,
-                **model_kwargs,
+            return cast(
+                UiPathBaseEmbeddings,
+                UiPathBedrockEmbeddings(
+                    model=model_name,
+                    settings=client_settings,
+                    byo_connection_id=byo_connection_id,
+                    **model_kwargs,
+                ),
             )
         case _:
             raise ValueError(

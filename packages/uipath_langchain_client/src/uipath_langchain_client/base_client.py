@@ -24,11 +24,14 @@ Example:
 """
 
 import logging
+from abc import ABC
 from collections.abc import AsyncIterator, Iterator, Mapping
 from functools import cached_property
 from typing import Any, Literal
 
 from httpx import URL, Response
+from langchain_core.embeddings import Embeddings
+from langchain_core.language_models.chat_models import BaseChatModel
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field
 
 from uipath_langchain_client.settings import (
@@ -40,7 +43,7 @@ from uipath_llm_client.httpx_client import UiPathHttpxAsyncClient, UiPathHttpxCl
 from uipath_llm_client.utils.retry import RetryConfig
 
 
-class UiPathBaseLLMClient(BaseModel):
+class UiPathBaseLLMClient(BaseModel, ABC):
     """Base HTTP client for interacting with UiPath's LLM services.
 
     Provides the underlying HTTP transport layer with support for:
@@ -50,7 +53,6 @@ class UiPathBaseLLMClient(BaseModel):
         - Request/response logging
 
     This class is typically used as a mixin with framework-specific chat models
-    (e.g., LangChain, LlamaIndex) to provide UiPath connectivity.
 
     Attributes:
         model_name: Name of the LLM model to use (aliased as "model")
@@ -278,3 +280,11 @@ class UiPathBaseLLMClient(BaseModel):
                 case "raw":
                     async for chunk in response.aiter_raw():
                         yield chunk
+
+
+class UiPathBaseChatModel(UiPathBaseLLMClient, BaseChatModel):
+    pass
+
+
+class UiPathBaseEmbeddings(UiPathBaseLLMClient, Embeddings):
+    pass

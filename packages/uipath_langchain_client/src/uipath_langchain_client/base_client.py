@@ -8,8 +8,8 @@ The UiPathBaseLLMClient class is designed to be used as a mixin with framework-s
 chat models (e.g., LangChain, LlamaIndex) to provide UiPath connectivity.
 
 Example:
-    >>> from uipath_llm_client import UiPathBaseLLMClient, UiPathAPIConfig
-    >>> from uipath_langchain_client.settings import get_default_client_settings
+    >>> from uipath_langchain_client.base_client import UiPathBaseLLMClient
+    >>> from uipath_langchain_client.settings import UiPathAPIConfig, get_default_client_settings
     >>>
     >>> client = UiPathBaseLLMClient(
     ...     model="gpt-4o-2024-11-20",

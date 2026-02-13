@@ -15,6 +15,7 @@ pip install "uipath-langchain-client[anthropic]"   # Anthropic Claude models
 pip install "uipath-langchain-client[azure]"       # Azure AI models
 pip install "uipath-langchain-client[aws]"         # AWS Bedrock models
 pip install "uipath-langchain-client[vertexai]"    # Google VertexAI models
+pip install "uipath-langchain-client[fireworks]"   # Fireworks AI models
 pip install "uipath-langchain-client[all]"         # All providers
 ```
 
@@ -53,10 +54,10 @@ print(f"Embedding dimension: {len(vectors[0])}")
 For more control, instantiate provider-specific classes directly:
 
 ```python
-from uipath_langchain_client.openai.chat_models import UiPathAzureChatOpenAI
-from uipath_langchain_client.google.chat_models import UiPathChatGoogleGenerativeAI
-from uipath_langchain_client.anthropic.chat_models import UiPathChatAnthropic
-from uipath_langchain_client.normalized.chat_models import UiPathChat
+from uipath_langchain_client.clients.openai.chat_models import UiPathAzureChatOpenAI
+from uipath_langchain_client.clients.google.chat_models import UiPathChatGoogleGenerativeAI
+from uipath_langchain_client.clients.anthropic.chat_models import UiPathChatAnthropic
+from uipath_langchain_client.clients.normalized.chat_models import UiPathChat
 from uipath_langchain_client.settings import get_default_client_settings
 
 settings = get_default_client_settings()
@@ -84,23 +85,39 @@ normalized_chat = UiPathChat(model="gpt-4o-2024-11-20", settings=settings)
 
 Uses vendor-specific APIs through UiPath's gateway. Full feature parity with native SDKs.
 
-| Class | Provider | Models |
-|-------|----------|--------|
-| `UiPathAzureChatOpenAI` | OpenAI/Azure | GPT-4o, GPT-4, GPT-3.5 |
-| `UiPathChatOpenAI` | OpenAI | GPT-4o, GPT-4, GPT-3.5 |
-| `UiPathChatGoogleGenerativeAI` | Google | Gemini 2.5, 2.0, 1.5 |
-| `UiPathChatAnthropic` | Anthropic | Claude Sonnet 4.5, Opus, etc. |
-| `UiPathChatAnthropicVertex` | Anthropic (via VertexAI) | Claude models |
-| `UiPathAzureAIChatCompletionsModel` | Azure AI | Various |
+**Chat Models:**
+
+| Class | Provider | Extra | Models |
+|-------|----------|-------|--------|
+| `UiPathAzureChatOpenAI` | OpenAI/Azure (UiPath-owned) | `[openai]` | GPT-4o, GPT-4, o1, o3, etc. |
+| `UiPathChatOpenAI` | OpenAI (BYO) | `[openai]` | GPT-4o, GPT-4, etc. |
+| `UiPathChatGoogleGenerativeAI` | Google | `[google]` | Gemini 2.5, 2.0, 1.5 |
+| `UiPathChatAnthropic` | Anthropic (via Bedrock) | `[anthropic]` | Claude Sonnet 4.5, Opus, etc. |
+| `UiPathChatAnthropicVertex` | Anthropic (via VertexAI) | `[vertexai]` | Claude models |
+| `UiPathChatBedrock` | AWS Bedrock (invoke API) | `[aws]` | Bedrock-hosted models |
+| `UiPathChatBedrockConverse` | AWS Bedrock (Converse API) | `[aws]` | Bedrock-hosted models |
+| `UiPathChatFireworks` | Fireworks AI | `[fireworks]` | Various open-source models |
+| `UiPathAzureAIChatCompletionsModel` | Azure AI | `[azure]` | Various Azure AI models |
+
+**Embeddings:**
+
+| Class | Provider | Extra | Models |
+|-------|----------|-------|--------|
+| `UiPathAzureOpenAIEmbeddings` | OpenAI/Azure (UiPath-owned) | `[openai]` | text-embedding-3-large/small |
+| `UiPathOpenAIEmbeddings` | OpenAI (BYO) | `[openai]` | text-embedding-3-large/small |
+| `UiPathGoogleGenerativeAIEmbeddings` | Google | `[google]` | text-embedding-004 |
+| `UiPathBedrockEmbeddings` | AWS Bedrock | `[aws]` | Titan Embeddings, etc. |
+| `UiPathFireworksEmbeddings` | Fireworks AI | `[fireworks]` | Various |
+| `UiPathAzureAIEmbeddingsModel` | Azure AI | `[azure]` | Various Azure AI models |
 
 ### Normalized Mode
 
-Uses UiPath's normalized API for a consistent interface across all providers.
+Uses UiPath's normalized API for a consistent interface across all providers. No extra dependencies required.
 
-| Class | Description |
-|-------|-------------|
-| `UiPathChat` | Provider-agnostic chat completions |
-| `UiPathEmbeddings` | Provider-agnostic embeddings |
+| Class | Type | Description |
+|-------|------|-------------|
+| `UiPathChat` | Chat | Provider-agnostic chat completions |
+| `UiPathEmbeddings` | Embeddings | Provider-agnostic embeddings |
 
 ## Features
 
@@ -220,27 +237,92 @@ chat_model = get_chat_model(
 
 ### `get_chat_model()`
 
-Factory function to create a chat model.
+Factory function to create a chat model. Automatically detects the model vendor by querying UiPath's discovery endpoint and returns the appropriate LangChain model class.
 
 **Parameters:**
 - `model_name` (str): Name of the model (e.g., "gpt-4o-2024-11-20")
-- `client_settings` (UiPathBaseSettings): Client settings for authentication
+- `byo_connection_id` (str | None): Optional BYO connection ID for custom-enrolled models (default: None)
+- `client_settings` (UiPathBaseSettings | None): Client settings for authentication (default: auto-detected)
 - `client_type` (Literal["passthrough", "normalized"]): API mode (default: "passthrough")
-- `**model_kwargs`: Additional arguments passed to the model constructor
+- `**model_kwargs`: Additional arguments passed to the model constructor (e.g., `max_retries`, `retry_config`, `request_timeout`)
 
-**Returns:** `BaseChatModel` - A LangChain-compatible chat model
+**Returns:** `UiPathBaseChatModel` - A LangChain-compatible chat model
+
+**Raises:** `ValueError` - If the model is not found in available models or vendor is not supported
 
 ### `get_embedding_model()`
 
-Factory function to create an embeddings model.
+Factory function to create an embeddings model. Automatically detects the model vendor by querying UiPath's discovery endpoint and returns the appropriate LangChain embeddings class.
 
 **Parameters:**
-- `model` (str): Name of the model (e.g., "text-embedding-3-large")
-- `client_settings` (UiPathBaseSettings): Client settings for authentication
+- `model_name` (str): Name of the embeddings model (e.g., "text-embedding-3-large")
+- `byo_connection_id` (str | None): Optional BYO connection ID for custom-enrolled models (default: None)
+- `client_settings` (UiPathBaseSettings | None): Client settings for authentication (default: auto-detected)
 - `client_type` (Literal["passthrough", "normalized"]): API mode (default: "passthrough")
-- `**model_kwargs`: Additional arguments passed to the model constructor
+- `**model_kwargs`: Additional arguments passed to the embeddings constructor (e.g., `max_retries`, `retry_config`, `request_timeout`)
 
-**Returns:** `Embeddings` - A LangChain-compatible embeddings model
+**Returns:** `UiPathBaseEmbeddings` - A LangChain-compatible embeddings model
+
+**Raises:** `ValueError` - If the model is not found or the vendor is not supported
+
+## UiPathChat Parameter Reference
+
+The normalized `UiPathChat` model supports the following parameters:
+
+### Standard Parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `model` (alias: `model_name`) | `str` | Required | Model identifier (e.g., `"gpt-4o-2024-11-20"`, `"gemini-2.5-flash"`) |
+| `max_tokens` | `int \| None` | `None` | Maximum number of tokens in the response |
+| `temperature` | `float \| None` | `None` | Sampling temperature (0.0 to 2.0) |
+| `stop` (alias: `stop_sequences`) | `list[str] \| str \| None` | `None` | Stop sequences to end generation |
+| `n` | `int \| None` | `None` | Number of completions to generate |
+| `top_p` | `float \| None` | `None` | Nucleus sampling probability mass |
+| `presence_penalty` | `float \| None` | `None` | Penalty for repeated tokens (-2.0 to 2.0) |
+| `frequency_penalty` | `float \| None` | `None` | Frequency-based repetition penalty (-2.0 to 2.0) |
+| `verbosity` | `str \| None` | `None` | Response verbosity: `"low"`, `"medium"`, or `"high"` |
+| `model_kwargs` | `dict[str, Any]` | `{}` | Additional model-specific parameters |
+| `disabled_params` | `dict[str, Any] \| None` | `None` | Parameters to exclude from requests |
+
+### Extended Thinking Parameters
+
+| Parameter | Provider | Type | Description |
+|-----------|----------|------|-------------|
+| `reasoning` | OpenAI (o1/o3) | `dict[str, Any] \| None` | Reasoning config, e.g., `{"effort": "medium", "summary": "auto"}` |
+| `reasoning_effort` | OpenAI (o1/o3) | `str \| None` | Shorthand: `"minimal"`, `"low"`, `"medium"`, or `"high"` |
+| `thinking` | Anthropic Claude | `dict[str, Any] \| None` | Thinking config, e.g., `{"type": "enabled", "budget_tokens": 10000}` |
+| `thinking_level` | Google Gemini | `str \| None` | Thinking depth level |
+| `thinking_budget` | Google Gemini | `int \| None` | Token budget for thinking |
+| `include_thoughts` | Google Gemini | `bool \| None` | Whether to include thinking in responses |
+
+### Base Client Parameters (All Models)
+
+All LangChain model classes (`UiPathChat`, `UiPathAzureChatOpenAI`, etc.) inherit these from `UiPathBaseLLMClient`:
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `model` (alias: `model_name`) | `str` | Required | Model identifier |
+| `settings` (alias: `client_settings`) | `UiPathBaseSettings` | Auto-detected | Client settings for auth and routing |
+| `byo_connection_id` | `str \| None` | `None` | BYO connection ID for custom-enrolled models |
+| `request_timeout` (aliases: `timeout`, `default_request_timeout`) | `int \| None` | `None` | Client-side request timeout in seconds |
+| `max_retries` | `int` | `0` | Maximum number of retries for failed requests |
+| `retry_config` | `RetryConfig \| None` | `None` | Retry configuration for failed requests |
+| `logger` | `logging.Logger \| None` | `None` | Logger instance for request/response logging |
+| `default_headers` | `Mapping[str, str] \| None` | See note | Additional request headers (see [Default Headers](../../README.md#default-headers)) |
+
+### Low-Level Methods
+
+`UiPathBaseLLMClient` also exposes these methods for advanced use cases:
+
+| Method | Description |
+|--------|-------------|
+| `uipath_request(method, url, *, request_body, **kwargs)` | Synchronous HTTP request, returns `httpx.Response` |
+| `uipath_arequest(method, url, *, request_body, **kwargs)` | Asynchronous HTTP request, returns `httpx.Response` |
+| `uipath_stream(method, url, *, request_body, stream_type, **kwargs)` | Synchronous streaming, yields `str \| bytes` |
+| `uipath_astream(method, url, *, request_body, stream_type, **kwargs)` | Asynchronous streaming, yields `str \| bytes` |
+
+The `stream_type` parameter controls iteration: `"lines"` (default, best for SSE), `"text"`, `"bytes"`, or `"raw"`.
 
 ## See Also
 

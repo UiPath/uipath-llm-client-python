@@ -1,11 +1,13 @@
 from typing import Any, Self
 
 from pydantic import model_validator
+
 from uipath_langchain_client.base_client import UiPathBaseLLMClient
 from uipath_langchain_client.settings import UiPathAPIConfig
 
 try:
     from langchain_aws.chat_models import ChatBedrock, ChatBedrockConverse
+
     from uipath_langchain_client.clients.bedrock.utils import WrappedBotoClient
 except ImportError as e:
     raise ImportError(

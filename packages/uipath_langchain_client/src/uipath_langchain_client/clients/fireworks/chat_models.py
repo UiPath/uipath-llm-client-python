@@ -1,13 +1,13 @@
 from typing import Self
 
 from pydantic import Field, SecretStr, model_validator
+
 from uipath_langchain_client.base_client import UiPathBaseLLMClient
 from uipath_langchain_client.settings import UiPathAPIConfig
 
 try:
-    from langchain_fireworks.chat_models import ChatFireworks
-
     from fireworks.client.api_client import FireworksClient as FireworksClientV1
+    from langchain_fireworks.chat_models import ChatFireworks
 except ImportError as e:
     raise ImportError(
         "The 'fireworks' extra is required to use UiPathChatFireworks. "

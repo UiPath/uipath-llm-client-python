@@ -1,4 +1,5 @@
 from langchain_core.embeddings import Embeddings
+
 from uipath_langchain_client.base_client import UiPathBaseLLMClient
 from uipath_langchain_client.settings import UiPathAPIConfig
 

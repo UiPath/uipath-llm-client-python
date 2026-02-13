@@ -1,15 +1,15 @@
 from typing import Self
 
 from pydantic import model_validator
+
 from uipath_langchain_client.base_client import UiPathBaseLLMClient
 from uipath_langchain_client.settings import UiPathAPIConfig
 
 try:
-    from langchain_azure_ai.chat_models import AzureAIChatCompletionsModel
-
     from azure.ai.inference import ChatCompletionsClient
     from azure.ai.inference.aio import ChatCompletionsClient as ChatCompletionsClientAsync
     from azure.core.credentials import AzureKeyCredential
+    from langchain_azure_ai.chat_models import AzureAIChatCompletionsModel
 except ImportError as e:
     raise ImportError(
         "The 'azure' extra is required to use UiPathAzureAIChatCompletionsModel. "

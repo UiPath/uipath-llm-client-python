@@ -3,12 +3,11 @@ from typing import Any, Literal, Self
 
 from pydantic import Field, model_validator
 from typing_extensions import override
+
 from uipath_langchain_client.base_client import UiPathBaseLLMClient
 from uipath_langchain_client.settings import UiPathAPIConfig
 
 try:
-    from langchain_anthropic.chat_models import ChatAnthropic
-
     from anthropic import (
         Anthropic,
         AnthropicBedrock,
@@ -19,6 +18,7 @@ try:
         AsyncAnthropicFoundry,
         AsyncAnthropicVertex,
     )
+    from langchain_anthropic.chat_models import ChatAnthropic
 except ImportError as e:
     raise ImportError(
         "The 'anthropic' extra is required to use UiPathChatAnthropic. "

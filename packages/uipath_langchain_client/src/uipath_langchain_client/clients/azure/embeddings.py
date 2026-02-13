@@ -1,14 +1,14 @@
 from typing import Self
 
 from pydantic import model_validator
+
 from uipath_langchain_client.base_client import UiPathBaseLLMClient
 from uipath_langchain_client.settings import UiPathAPIConfig
 
 try:
-    from langchain_azure_ai.embeddings import AzureAIEmbeddingsModel
-
     from azure.ai.inference import EmbeddingsClient
     from azure.ai.inference.aio import EmbeddingsClient as EmbeddingsClientAsync
+    from langchain_azure_ai.embeddings import AzureAIEmbeddingsModel
 except ImportError as e:
     raise ImportError(
         "The 'azure' extra is required to use UiPathAzureAIEmbeddingsModel. "

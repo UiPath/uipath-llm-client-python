@@ -1,14 +1,14 @@
 from typing import Self
 
 from pydantic import Field, SecretStr, model_validator
+
 from uipath_langchain_client.base_client import UiPathBaseLLMClient
 from uipath_langchain_client.settings import UiPathAPIConfig
 
 try:
-    from langchain_google_genai.embeddings import GoogleGenerativeAIEmbeddings
-
     from google.genai.client import Client
     from google.genai.types import HttpOptions
+    from langchain_google_genai.embeddings import GoogleGenerativeAIEmbeddings
 except ImportError as e:
     raise ImportError(
         "The 'google' extra is required to use UiPathGoogleGenerativeAIEmbeddings. "

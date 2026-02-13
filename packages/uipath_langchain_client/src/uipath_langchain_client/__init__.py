@@ -33,6 +33,7 @@ Factory Functions:
 """
 
 from uipath_langchain_client.__version__ import __version__
+from uipath_langchain_client.clients import UiPathChat, UiPathEmbeddings
 from uipath_langchain_client.factory import get_chat_model, get_embedding_model
 from uipath_langchain_client.settings import (
     AgentHubSettings,
@@ -44,6 +45,8 @@ __all__ = [
     "__version__",
     "get_chat_model",
     "get_embedding_model",
+    "UiPathChat",
+    "UiPathEmbeddings",
     "get_default_client_settings",
     "LLMGatewaySettings",
     "AgentHubSettings",

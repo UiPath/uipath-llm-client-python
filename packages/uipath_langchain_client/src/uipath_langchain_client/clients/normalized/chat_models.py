@@ -56,6 +56,7 @@ from langchain_core.utils.function_calling import (
     convert_to_openai_function,
 )
 from pydantic import Field
+
 from uipath_langchain_client.base_client import UiPathBaseLLMClient
 from uipath_langchain_client.settings import UiPathAPIConfig
 

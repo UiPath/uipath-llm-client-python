@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_langchain_client` will be documented in this file.
 
+## [1.1.7] - 2026-02-13
+
+### Refactor
+- Re-export UiPathChat and UiPathEmbeddings at module level
+
 ## [1.1.6] - 2026-02-12
 
 ### Fixes

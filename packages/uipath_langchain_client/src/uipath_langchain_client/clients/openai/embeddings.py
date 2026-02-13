@@ -2,12 +2,12 @@ from collections.abc import Awaitable, Callable
 from typing import Self
 
 from pydantic import Field, SecretStr, model_validator
+
 from uipath_langchain_client.base_client import UiPathBaseLLMClient
 from uipath_langchain_client.settings import UiPathAPIConfig
 
 try:
     from langchain_openai.embeddings import AzureOpenAIEmbeddings, OpenAIEmbeddings
-
     from openai import AsyncAzureOpenAI, AsyncOpenAI, AzureOpenAI, OpenAI
 except ImportError as e:
     raise ImportError(

@@ -36,7 +36,7 @@ def create_ssl_context():
 
 def get_httpx_ssl_client_kwargs() -> dict[str, Any]:
     """Get standardized httpx client configuration."""
-    client_kwargs: dict[str, Any] = {"follow_redirects": True, "timeout": 30.0}
+    client_kwargs: dict[str, Any] = {"follow_redirects": True}
 
     # Check environment variable to disable SSL verification
     disable_ssl_env = os.environ.get("UIPATH_DISABLE_SSL_VERIFY", "").lower()

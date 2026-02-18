@@ -35,13 +35,11 @@ class UiPathOpenAIEmbeddings(UiPathBaseLLMClient, OpenAIEmbeddings):
     def setup_uipath_client(self) -> Self:
         self.client = OpenAI(
             api_key="PLACEHOLDER",
-            timeout=None,  # handled by the UiPath client
             max_retries=0,  # handled by the UiPath client
             http_client=self.uipath_sync_client,
         ).embeddings
         self.async_client = AsyncOpenAI(
             api_key="PLACEHOLDER",
-            timeout=None,  # handled by the UiPath client
             max_retries=0,  # handled by the UiPath client
             http_client=self.uipath_async_client,
         ).embeddings
@@ -69,7 +67,6 @@ class UiPathAzureOpenAIEmbeddings(UiPathBaseLLMClient, AzureOpenAIEmbeddings):
             azure_endpoint="PLACEHOLDER",
             api_version="PLACEHOLDER",
             api_key="PLACEHOLDER",
-            timeout=None,  # handled by the UiPath client
             max_retries=0,  # handled by the UiPath client
             http_client=self.uipath_sync_client,
         ).embeddings
@@ -77,7 +74,6 @@ class UiPathAzureOpenAIEmbeddings(UiPathBaseLLMClient, AzureOpenAIEmbeddings):
             azure_endpoint="PLACEHOLDER",
             api_version="PLACEHOLDER",
             api_key="PLACEHOLDER",
-            timeout=None,  # handled by the UiPath client
             max_retries=0,  # handled by the UiPath client
             http_client=self.uipath_async_client,
         ).embeddings

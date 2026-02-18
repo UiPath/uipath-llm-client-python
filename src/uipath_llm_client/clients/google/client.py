@@ -74,7 +74,6 @@ class UiPathGoogle(Client):
             http_options=HttpOptions(
                 base_url=str(httpx_client.base_url),
                 headers=dict(httpx_client.headers),
-                timeout=None,  # handled by the UiPath client
                 retry_options=None,  # handled by the UiPath client
                 httpx_client=httpx_client,
                 httpx_async_client=httpx_async_client,

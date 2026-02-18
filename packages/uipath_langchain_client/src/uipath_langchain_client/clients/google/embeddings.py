@@ -34,7 +34,6 @@ class UiPathGoogleGenerativeAIEmbeddings(UiPathBaseLLMClient, GoogleGenerativeAI
             vertexai=True,
             api_key="PLACEHOLDER",
             http_options=HttpOptions(
-                timeout=None,  # handled by the UiPath client
                 retry_options=None,  # handled by the UiPath client
                 base_url=str(self.uipath_sync_client.base_url),
                 headers=dict(self.uipath_sync_client.headers),

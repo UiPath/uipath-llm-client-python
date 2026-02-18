@@ -59,7 +59,7 @@ class AgentHubBaseSettings(UiPathBaseSettings):
         self.authenticate()
         return self
 
-    def check_credentials(self) -> bool:
+    def credentials_available(self) -> bool:
         """Check if all required credentials are present."""
         return (
             self.access_token is not None
@@ -68,28 +68,29 @@ class AgentHubBaseSettings(UiPathBaseSettings):
             and self.organization_id is not None
         )
 
-    def authenticate(self) -> None:
+    def load_credentials(self) -> None:
+        """Load credentials from environment variables."""
+        load_dotenv(override=True)
+        self.access_token = SecretStr(os.getenv("UIPATH_ACCESS_TOKEN", ""))
+        self.base_url = os.getenv("UIPATH_URL")
+        self.tenant_id = os.getenv("UIPATH_TENANT_ID")
+        self.organization_id = os.getenv("UIPATH_ORGANIZATION_ID")
+
+    def authenticate(self, force: bool = False) -> None:
         """Authenticate with UiPath using the configured credentials."""
-        if not self.check_credentials():
-            auth_service = AuthService(
-                environment=self.environment,
-                force=True,
-                client_id=self.client_id.get_secret_value() if self.client_id is not None else None,
-                client_secret=self.client_secret.get_secret_value()
-                if self.client_secret is not None
-                else None,
-                base_url=self.base_url,
-                tenant=self.tenant_id,
-                scope=self.client_scope,
-            )
-            auth_service.authenticate()
-            load_dotenv(override=True)
-            self.access_token = SecretStr(os.getenv("UIPATH_ACCESS_TOKEN", ""))
-            self.base_url = os.getenv("UIPATH_URL")
-            self.tenant_id = os.getenv("UIPATH_TENANT_ID")
-            self.organization_id = os.getenv("UIPATH_ORGANIZATION_ID")
-            if not self.check_credentials():
-                raise ValueError("Could not authenticate with UiPath")
+        auth_service = AuthService(
+            environment=self.environment,
+            force=force or not self.credentials_available(),
+            client_id=self.client_id.get_secret_value() if self.client_id is not None else None,
+            client_secret=self.client_secret.get_secret_value()
+            if self.client_secret is not None
+            else None,
+            base_url=self.base_url,
+            tenant=self.tenant_id,
+            scope=self.client_scope,
+        )
+        auth_service.authenticate()
+        self.load_credentials()
 
     @override
     def build_base_url(

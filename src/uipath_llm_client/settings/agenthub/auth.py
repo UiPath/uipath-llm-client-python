@@ -25,19 +25,18 @@ class AgentHubAuth(Auth, metaclass=SingletonMeta):
             settings: AgentHub settings containing authentication credentials.
         """
         self.settings = settings
-        self.access_token = self._get_access_token()
 
-    def _get_access_token(self) -> str:
+    def get_access_token(self, refresh: bool = False) -> str:
         """Retrieve or refresh the access token."""
-        self.settings.authenticate()
         assert self.settings.access_token is not None
+        if refresh:
+            self.settings.authenticate(force=True)
         return self.settings.access_token.get_secret_value()
 
     def auth_flow(self, request: Request) -> Generator[Request, Response, None]:
         """HTTPX auth flow that handles token refresh on authentication failures."""
-        request.headers["Authorization"] = f"Bearer {self.access_token}"
+        request.headers["Authorization"] = f"Bearer {self.get_access_token()}"
         response = yield request
         if response.status_code == 401:
-            self.access_token = self._get_access_token()
-            request.headers["Authorization"] = f"Bearer {self.access_token}"
+            request.headers["Authorization"] = f"Bearer {self.get_access_token(refresh=True)}"
             yield request

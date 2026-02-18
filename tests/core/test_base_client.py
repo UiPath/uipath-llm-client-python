@@ -467,12 +467,12 @@ class TestAgentHubSettings:
                 auth = settings.build_auth_pipeline()
                 assert isinstance(auth, Auth)
 
-    def test_check_credentials(self, agenthub_env_vars):
-        """Test check_credentials returns True when all credentials present."""
+    def test_credentials_available(self, agenthub_env_vars):
+        """Test credentials_available returns True when all credentials present."""
         with patch.dict(os.environ, agenthub_env_vars, clear=True):
             with patch("uipath_llm_client.settings.agenthub.settings.AuthService"):
                 settings = AgentHubSettings()
-                assert settings.check_credentials() is True
+                assert settings.credentials_available() is True
 
 
 # ============================================================================

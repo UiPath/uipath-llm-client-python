@@ -467,12 +467,12 @@ class TestAgentHubSettings:
                 auth = settings.build_auth_pipeline()
                 assert isinstance(auth, Auth)
 
-    def test_check_credentials(self, agenthub_env_vars):
-        """Test check_credentials returns True when all credentials present."""
+    def test_credentials_available(self, agenthub_env_vars):
+        """Test credentials_available returns True when all credentials present."""
         with patch.dict(os.environ, agenthub_env_vars, clear=True):
             with patch("uipath_llm_client.settings.agenthub.settings.AuthService"):
                 settings = AgentHubSettings()
-                assert settings.check_credentials() is True
+                assert settings.credentials_available() is True
 
 
 # ============================================================================
@@ -505,8 +505,8 @@ class TestAgentHubAuthRefresh:
             with patch("uipath_llm_client.settings.agenthub.settings.AuthService"):
                 settings = AgentHubSettings()
 
-                # Mock _get_access_token to return a new token on refresh
-                with patch.object(AgentHubAuth, "_get_access_token", return_value="initial-token"):
+                # Mock get_access_token to return a new token on refresh
+                with patch.object(AgentHubAuth, "get_access_token", return_value="initial-token"):
                     auth = AgentHubAuth(settings=settings)
 
                 request = Request("GET", "https://example.com")
@@ -520,10 +520,8 @@ class TestAgentHubAuthRefresh:
                 mock_response = MagicMock(spec=Response)
                 mock_response.status_code = 401
 
-                # Mock the _get_access_token method to return a new token
-                with patch.object(
-                    AgentHubAuth, "_get_access_token", return_value="refreshed-token"
-                ):
+                # Mock the get_access_token method to return a new token
+                with patch.object(AgentHubAuth, "get_access_token", return_value="refreshed-token"):
                     try:
                         retry_request = flow.send(mock_response)
                         assert retry_request.headers["Authorization"] == "Bearer refreshed-token"

@@ -2,6 +2,13 @@
 
 All notable changes to `uipath_llm_client` (core package) will be documented in this file.
 
+## [1.2.0] - 2026-02-18
+
+### Stable release
+
+### Fix
+- Fixed agenhub auth when token already exists
+
 ## [1.1.1] - 2026-02-12
 
 ### Fix

@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_langchain_client` will be documented in this file.
 
+## [1.2.1] - 2026-02-18
+
+### Fix
+- fix typing of request timeout from int to float
+
 ## [1.2.0] - 2026-02-18
 
 ### Stable release

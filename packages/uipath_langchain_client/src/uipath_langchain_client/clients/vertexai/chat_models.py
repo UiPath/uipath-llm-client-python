@@ -36,7 +36,6 @@ class UiPathChatAnthropicVertex(UiPathBaseLLMClient, ChatAnthropicVertex):  # ty
             access_token="PLACEHOLDER",
             base_url=str(self.uipath_sync_client.base_url),
             default_headers=self.uipath_sync_client.headers,
-            timeout=None,  # handled by the UiPath client
             max_retries=0,  # handled by the UiPath client
             http_client=self.uipath_sync_client,
         )
@@ -46,7 +45,6 @@ class UiPathChatAnthropicVertex(UiPathBaseLLMClient, ChatAnthropicVertex):  # ty
             access_token="PLACEHOLDER",
             base_url=str(self.uipath_async_client.base_url),
             default_headers=self.uipath_async_client.headers,
-            timeout=None,  # handled by the UiPath client
             max_retries=0,  # handled by the UiPath client
             http_client=self.uipath_async_client,
         )

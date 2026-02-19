@@ -97,7 +97,6 @@ class UiPathAnthropic(Anthropic):
         )
         super().__init__(
             api_key="PLACEHOLDER",
-            timeout=None,
             max_retries=0,
             http_client=httpx_client,
             **kwargs,
@@ -148,7 +147,6 @@ class UiPathAsyncAnthropic(AsyncAnthropic):
         )
         super().__init__(
             api_key="PLACEHOLDER",
-            timeout=None,
             max_retries=0,
             http_client=httpx_client,
             **kwargs,
@@ -201,7 +199,6 @@ class UiPathAnthropicBedrock(AnthropicBedrock):
             aws_access_key="PLACEHOLDER",
             aws_secret_key="PLACEHOLDER",
             aws_region="PLACEHOLDER",
-            timeout=None,
             max_retries=0,
             http_client=httpx_client,
             **kwargs,
@@ -254,7 +251,6 @@ class UiPathAsyncAnthropicBedrock(AsyncAnthropicBedrock):
             aws_access_key="PLACEHOLDER",
             aws_secret_key="PLACEHOLDER",
             aws_region="PLACEHOLDER",
-            timeout=None,
             max_retries=0,
             http_client=httpx_client,
             **kwargs,
@@ -307,7 +303,6 @@ class UiPathAnthropicVertex(AnthropicVertex):
             region="PLACEHOLDER",
             project_id="PLACEHOLDER",
             access_token="PLACEHOLDER",
-            timeout=None,
             max_retries=0,
             http_client=httpx_client,
             **kwargs,
@@ -360,7 +355,6 @@ class UiPathAsyncAnthropicVertex(AsyncAnthropicVertex):
             region="PLACEHOLDER",
             project_id="PLACEHOLDER",
             access_token="PLACEHOLDER",
-            timeout=None,
             max_retries=0,
             http_client=httpx_client,
             **kwargs,
@@ -411,7 +405,6 @@ class UiPathAnthropicFoundry(AnthropicFoundry):
         )
         super().__init__(
             api_key="PLACEHOLDER",
-            timeout=None,
             max_retries=0,
             http_client=httpx_client,
             **kwargs,
@@ -462,7 +455,6 @@ class UiPathAsyncAnthropicFoundry(AsyncAnthropicFoundry):
         )
         super().__init__(
             api_key="PLACEHOLDER",
-            timeout=None,
             max_retries=0,
             http_client=httpx_client,
             **kwargs,

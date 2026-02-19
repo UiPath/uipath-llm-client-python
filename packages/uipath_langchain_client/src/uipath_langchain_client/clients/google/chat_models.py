@@ -51,7 +51,6 @@ class UiPathChatGoogleGenerativeAI(UiPathBaseLLMClient, ChatGoogleGenerativeAI):
             http_options=HttpOptions(
                 base_url=str(self.uipath_sync_client.base_url),
                 headers=dict(self.uipath_sync_client.headers),
-                timeout=None,  # handled by the UiPath client
                 retry_options=None,  # handled by the UiPath client
                 httpx_client=self.uipath_sync_client,
                 httpx_async_client=self.uipath_async_client,

@@ -99,7 +99,7 @@ class UiPathBaseLLMClient(BaseModel, ABC):
         },
         description="Default request headers to include in requests",
     )
-    request_timeout: int | None = Field(
+    request_timeout: float | None = Field(
         alias="timeout",
         validation_alias=AliasChoices("timeout", "request_timeout", "default_request_timeout"),
         default=None,

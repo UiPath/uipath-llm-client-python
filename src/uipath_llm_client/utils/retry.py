@@ -57,7 +57,7 @@ __all__ = [
 
 
 # Default retry configuration values
-_DEFAULT_RETRY_ON_EXCEPTIONS: tuple[type[UiPathAPIError], ...] = (UiPathRateLimitError,)
+_DEFAULT_RETRY_ON_EXCEPTIONS: tuple[type[Exception], ...] = (UiPathRateLimitError,)
 _DEFAULT_INITIAL_DELAY: float = 2.0
 _DEFAULT_MAX_DELAY: float = 60.0
 _DEFAULT_EXP_BASE: float = 2.0

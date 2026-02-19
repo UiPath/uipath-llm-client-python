@@ -5,7 +5,7 @@ All notable changes to `uipath_langchain_client` will be documented in this file
 ## [1.2.1] - 2026-02-18
 
 ### Fix
-- fix typing of request timeout from int to float
+- TImeout fixes, remove timeout=None from all clients -> caused overriding the default timeout set up on the UiPathHttpxClient
 
 ## [1.2.0] - 2026-02-18
 

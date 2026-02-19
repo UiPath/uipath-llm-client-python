@@ -34,7 +34,7 @@ Example:
 import logging
 from typing import Any, Callable, NotRequired
 
-from httpx import AsyncHTTPTransport, HTTPTransport, Request, Response
+from httpx import AsyncHTTPTransport, HTTPTransport, Request, Response, TimeoutException
 from tenacity import (
     AsyncRetrying,
     RetryCallState,
@@ -57,7 +57,10 @@ __all__ = [
 
 
 # Default retry configuration values
-_DEFAULT_RETRY_ON_EXCEPTIONS: tuple[type[UiPathAPIError], ...] = (UiPathRateLimitError,)
+_DEFAULT_RETRY_ON_EXCEPTIONS: tuple[type[Exception], ...] = (
+    UiPathRateLimitError,
+    TimeoutException,
+)
 _DEFAULT_INITIAL_DELAY: float = 2.0
 _DEFAULT_MAX_DELAY: float = 60.0
 _DEFAULT_EXP_BASE: float = 2.0

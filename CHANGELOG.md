@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_llm_client` (core package) will be documented in this file.
 
+## [1.2.2] - 2026-02-23
+
+### Fix
+- Fixes to discovery endpoint on LLMGW
+
 ## [1.2.1] - 2026-02-18
 
 ### Fix

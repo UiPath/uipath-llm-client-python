@@ -38,19 +38,14 @@ The client supports two UiPath backends:
 # Base installation (core client only)
 pip install uipath-llm-client
 
-# With LangChain support
-pip install uipath-langchain-client
-
-# With specific provider extras for passthrough mode
-pip install "uipath-langchain-client[openai]"      # OpenAI/Azure OpenAI models
-pip install "uipath-langchain-client[google]"      # Google Gemini models
-pip install "uipath-langchain-client[anthropic]"   # Anthropic Claude models
-pip install "uipath-langchain-client[aws]"         # AWS Bedrock models
-pip install "uipath-langchain-client[azure]"       # Azure AI models
-pip install "uipath-langchain-client[vertexai]"    # Google Vertex AI (Anthropic on Vertex)
-pip install "uipath-langchain-client[fireworks]"   # Fireworks AI models
-pip install "uipath-langchain-client[all]"         # All providers
+# With optional provider extras for passthrough mode
+pip install "uipath-llm-client[openai]"      # OpenAI/Azure OpenAI models
+pip install "uipath-llm-client[google]"      # Google Gemini models
+pip install "uipath-llm-client[anthropic]"   # Anthropic Claude models
+pip install "uipath-llm-client[all]"         # All of the above
 ```
+
+For LangChain support, use the separate package: `pip install uipath-langchain-client`.
 
 ### Using `uv`
 

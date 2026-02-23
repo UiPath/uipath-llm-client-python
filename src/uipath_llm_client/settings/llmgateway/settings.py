@@ -8,6 +8,7 @@ from typing_extensions import override
 
 from uipath_llm_client.settings.base import UiPathAPIConfig, UiPathBaseSettings
 from uipath_llm_client.settings.llmgateway.utils import LLMGatewayEndpoints
+from uipath_llm_client.utils.exceptions import UiPathAPIError
 
 
 class LLMGatewayBaseSettings(UiPathBaseSettings):
@@ -107,7 +108,8 @@ class LLMGatewayBaseSettings(UiPathBaseSettings):
         discovery_url = f"{self.base_url}/{self.org_id}/{self.tenant_id}/{LLMGatewayEndpoints.DISCOVERY_ENDPOINT.value}"
         with Client(auth=self.build_auth_pipeline(), headers=self.build_auth_headers()) as client:
             response = client.get(discovery_url)
-            response.raise_for_status()
+            if response.is_error:
+                raise UiPathAPIError.from_response(response)
             return response.json()
 
     @override

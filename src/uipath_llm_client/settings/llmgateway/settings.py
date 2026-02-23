@@ -107,6 +107,7 @@ class LLMGatewayBaseSettings(UiPathBaseSettings):
         discovery_url = f"{self.base_url}/{self.org_id}/{self.tenant_id}/{LLMGatewayEndpoints.DISCOVERY_ENDPOINT.value}"
         with Client(auth=self.build_auth_pipeline(), headers=self.build_auth_headers()) as client:
             response = client.get(discovery_url)
+            response.raise_for_status()
             return response.json()
 
     @override

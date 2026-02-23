@@ -318,12 +318,12 @@ class TestLLMGatewaySettings:
                 LLMGatewaySettings()
 
     def test_get_available_models(self, llmgw_env_vars):
-        """Test get_available_models returns a list of models."""
+        """Test get_available_models returns a list of models on success."""
         with patch.dict(os.environ, llmgw_env_vars, clear=True):
             settings = LLMGatewaySettings()
 
-            # Mock the HTTP request since this is a unit test
             mock_response = MagicMock()
+            mock_response.is_error = False
             mock_response.json.return_value = [
                 {"modelName": "gpt-4o", "vendor": "openai"},
                 {"modelName": "claude-3-opus", "vendor": "anthropic"},
@@ -333,6 +333,42 @@ class TestLLMGatewaySettings:
                 models = settings.get_available_models()
                 assert isinstance(models, list)
                 assert len(models) == 2
+
+    def test_get_available_models_raises_on_http_error(self, llmgw_env_vars):
+        """Test get_available_models raises UiPathAPIError on bad request / server error."""
+        with patch.dict(os.environ, llmgw_env_vars, clear=True):
+            settings = LLMGatewaySettings()
+
+            mock_response = MagicMock()
+            mock_response.is_error = True
+            mock_response.status_code = 500
+            mock_response.reason_phrase = "Internal Server Error"
+            mock_response.json.return_value = {"error": "Something went wrong"}
+            mock_response.request = MagicMock()
+            mock_response.text = ""
+
+            with patch.object(Client, "get", return_value=mock_response):
+                with pytest.raises(UiPathAPIError) as exc_info:
+                    settings.get_available_models()
+                assert exc_info.value.status_code == 500
+
+    def test_get_available_models_raises_on_unauthorized(self, llmgw_env_vars):
+        """Test get_available_models raises UiPathAuthenticationError on 401."""
+        with patch.dict(os.environ, llmgw_env_vars, clear=True):
+            settings = LLMGatewaySettings()
+
+            mock_response = MagicMock()
+            mock_response.is_error = True
+            mock_response.status_code = 401
+            mock_response.reason_phrase = "Unauthorized"
+            mock_response.json.return_value = {}
+            mock_response.request = MagicMock()
+            mock_response.text = ""
+
+            with patch.object(Client, "get", return_value=mock_response):
+                with pytest.raises(UiPathAuthenticationError) as exc_info:
+                    settings.get_available_models()
+                assert exc_info.value.status_code == 401
 
 
 # ============================================================================

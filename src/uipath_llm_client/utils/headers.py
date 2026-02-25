@@ -11,18 +11,22 @@ _CAPTURED_RESPONSE_HEADERS: contextvars.ContextVar[dict[str, str]] = contextvars
 
 
 def get_captured_response_headers() -> dict[str, str]:
-    """Get response headers captured from the most recent request in this context."""
-    return dict(_CAPTURED_RESPONSE_HEADERS.get({}))
+    """Get response headers captured from the most recent request in this context.
+
+    Returns an empty dict if no headers have been captured or if called
+    outside a capture scope.
+    """
+    return dict(_CAPTURED_RESPONSE_HEADERS.get())
 
 
-def set_captured_response_headers(headers: dict[str, str]) -> None:
+def set_captured_response_headers(headers: dict[str, str]) -> contextvars.Token[dict[str, str]]:
     """Set captured response headers for the current context."""
-    _CAPTURED_RESPONSE_HEADERS.set(headers)
+    return _CAPTURED_RESPONSE_HEADERS.set(headers)
 
 
-def clear_captured_response_headers() -> None:
-    """Clear captured response headers for the current context."""
-    _CAPTURED_RESPONSE_HEADERS.set({})
+def reset_captured_response_headers(token: contextvars.Token[dict[str, str]]) -> None:
+    """End a header capture scope by resetting the ContextVar to its previous state."""
+    _CAPTURED_RESPONSE_HEADERS.reset(token)
 
 
 def extract_matching_headers(

@@ -51,9 +51,9 @@ from uipath_llm_client.utils.exceptions import (
     UiPathUnprocessableEntityError,
 )
 from uipath_llm_client.utils.headers import (
-    clear_captured_response_headers,
     extract_matching_headers,
     get_captured_response_headers,
+    reset_captured_response_headers,
     set_captured_response_headers,
 )
 from uipath_llm_client.utils.retry import RetryConfig
@@ -68,9 +68,9 @@ __all__ = [
     "UiPathHttpxClient",
     "UiPathHttpxAsyncClient",
     # Header capture
-    "clear_captured_response_headers",
     "extract_matching_headers",
     "get_captured_response_headers",
+    "reset_captured_response_headers",
     "set_captured_response_headers",
     # Retry
     "RetryConfig",

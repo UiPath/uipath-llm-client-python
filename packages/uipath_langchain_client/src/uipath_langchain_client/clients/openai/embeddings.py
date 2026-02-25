@@ -3,7 +3,7 @@ from typing import Self
 
 from pydantic import Field, SecretStr, model_validator
 
-from uipath_langchain_client.base_client import UiPathBaseLLMClient
+from uipath_langchain_client.base_client import UiPathBaseEmbeddings
 from uipath_langchain_client.settings import UiPathAPIConfig
 
 try:
@@ -16,7 +16,7 @@ except ImportError as e:
     ) from e
 
 
-class UiPathOpenAIEmbeddings(UiPathBaseLLMClient, OpenAIEmbeddings):
+class UiPathOpenAIEmbeddings(UiPathBaseEmbeddings, OpenAIEmbeddings):
     api_config: UiPathAPIConfig = UiPathAPIConfig(
         api_type="embeddings",
         client_type="passthrough",
@@ -46,7 +46,7 @@ class UiPathOpenAIEmbeddings(UiPathBaseLLMClient, OpenAIEmbeddings):
         return self
 
 
-class UiPathAzureOpenAIEmbeddings(UiPathBaseLLMClient, AzureOpenAIEmbeddings):
+class UiPathAzureOpenAIEmbeddings(UiPathBaseEmbeddings, AzureOpenAIEmbeddings):
     api_config: UiPathAPIConfig = UiPathAPIConfig(
         api_type="embeddings",
         client_type="passthrough",

@@ -34,7 +34,6 @@ from langchain_core.callbacks import (
 from langchain_core.language_models.base import (
     LanguageModelInput,
 )
-from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import (
     AIMessage,
     AIMessageChunk,
@@ -57,11 +56,15 @@ from langchain_core.utils.function_calling import (
 )
 from pydantic import Field
 
-from uipath_langchain_client.base_client import UiPathBaseLLMClient
+from uipath_langchain_client.base_client import UiPathBaseChatModel
 from uipath_langchain_client.settings import UiPathAPIConfig
+from uipath_llm_client.utils.headers import (
+    extract_matching_headers,
+    set_captured_response_headers,
+)
 
 
-class UiPathChat(UiPathBaseLLMClient, BaseChatModel):
+class UiPathChat(UiPathBaseChatModel):
     """LangChain chat model using UiPath's normalized (provider-agnostic) API.
 
     This model provides a consistent interface across all LLM providers supported
@@ -309,7 +312,13 @@ class UiPathChat(UiPathBaseLLMClient, BaseChatModel):
     ) -> ChatResult:
         request_body = self._preprocess_request(messages, **kwargs)
         response = self.uipath_request(request_body=request_body)
-        return self._postprocess_response(response.json())
+        result = self._postprocess_response(response.json())
+        if self.captured_headers:
+            captured = extract_matching_headers(response.headers, self.captured_headers)
+            if captured:
+                for gen in result.generations:
+                    gen.message.response_metadata["uipath_llmgateway_headers"] = captured
+        return result
 
     async def _agenerate(
         self,
@@ -320,7 +329,13 @@ class UiPathChat(UiPathBaseLLMClient, BaseChatModel):
     ) -> ChatResult:
         request_body = self._preprocess_request(messages, **kwargs)
         response = await self.uipath_arequest(request_body=request_body)
-        return self._postprocess_response(response.json())
+        result = self._postprocess_response(response.json())
+        if self.captured_headers:
+            captured = extract_matching_headers(response.headers, self.captured_headers)
+            if captured:
+                for gen in result.generations:
+                    gen.message.response_metadata["uipath_llmgateway_headers"] = captured
+        return result
 
     def _generate_chunk(
         self, original_message: str, json_data: dict[str, Any]
@@ -387,17 +402,26 @@ class UiPathChat(UiPathBaseLLMClient, BaseChatModel):
         **kwargs: Any,
     ) -> Iterator[ChatGenerationChunk]:
         request_body = self._preprocess_request(messages, **kwargs)
-        for chunk in self.uipath_stream(request_body=request_body, stream_type="lines"):
-            chunk = str(chunk)
-            if chunk.startswith("data:"):
-                chunk = chunk.split("data:")[1].strip()
-            try:
-                json_data = json.loads(chunk)
-            except json.JSONDecodeError:
-                continue
-            if "id" in json_data and not json_data["id"]:
-                continue
-            yield self._generate_chunk(chunk, json_data)
+        set_captured_response_headers({})
+        try:
+            first = True
+            for chunk in self.uipath_stream(request_body=request_body, stream_type="lines"):
+                chunk = str(chunk)
+                if chunk.startswith("data:"):
+                    chunk = chunk.split("data:")[1].strip()
+                try:
+                    json_data = json.loads(chunk)
+                except json.JSONDecodeError:
+                    continue
+                if "id" in json_data and not json_data["id"]:
+                    continue
+                gen_chunk = self._generate_chunk(chunk, json_data)
+                if first:
+                    self._inject_gateway_headers([gen_chunk])
+                    first = False
+                yield gen_chunk
+        finally:
+            set_captured_response_headers({})
 
     async def _astream(
         self,
@@ -407,14 +431,23 @@ class UiPathChat(UiPathBaseLLMClient, BaseChatModel):
         **kwargs: Any,
     ) -> AsyncIterator[ChatGenerationChunk]:
         request_body = self._preprocess_request(messages, **kwargs)
-        async for chunk in self.uipath_astream(request_body=request_body, stream_type="lines"):
-            chunk = str(chunk)
-            if chunk.startswith("data:"):
-                chunk = chunk.split("data:")[1].strip()
-            try:
-                json_data = json.loads(chunk)
-            except json.JSONDecodeError:
-                continue
-            if "id" in json_data and not json_data["id"]:
-                continue
-            yield self._generate_chunk(chunk, json_data)
+        set_captured_response_headers({})
+        try:
+            first = True
+            async for chunk in self.uipath_astream(request_body=request_body, stream_type="lines"):
+                chunk = str(chunk)
+                if chunk.startswith("data:"):
+                    chunk = chunk.split("data:")[1].strip()
+                try:
+                    json_data = json.loads(chunk)
+                except json.JSONDecodeError:
+                    continue
+                if "id" in json_data and not json_data["id"]:
+                    continue
+                gen_chunk = self._generate_chunk(chunk, json_data)
+                if first:
+                    self._inject_gateway_headers([gen_chunk])
+                    first = False
+                yield gen_chunk
+        finally:
+            set_captured_response_headers({})

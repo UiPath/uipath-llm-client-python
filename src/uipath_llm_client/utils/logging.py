@@ -25,7 +25,7 @@ import time
 from httpx import Request, Response
 from pydantic import BaseModel, ConfigDict
 
-from uipath_llm_client.settings import UiPathAPIConfig
+from uipath_llm_client.settings.base import UiPathAPIConfig
 
 
 class LoggingConfig(BaseModel):

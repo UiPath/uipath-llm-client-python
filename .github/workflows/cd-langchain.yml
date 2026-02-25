@@ -6,37 +6,10 @@ on:
       - main
     paths:
       - 'packages/uipath_langchain_client/src/uipath_langchain_client/__version__.py'
-  workflow_run:
-    workflows: ["cd"]
-    types:
-      - completed
   workflow_dispatch:
 
 jobs:
   build:
-    if: >
-      github.event_name == 'workflow_dispatch' ||
-
-      (
-        github.event_name == 'push' &&
-        !contains(
-          join(github.event.commits.*.modified, ' '),
-          'src/uipath_llm_client/__version__.py'
-        )
-      ) ||
-
-      (
-        github.event_name == 'workflow_run' &&
-        github.event.workflow_run.conclusion == 'success' &&
-        contains(
-          join(github.event.workflow_run.head_commit.modified, ' '),
-          'packages/uipath_langchain_client/src/uipath_langchain_client/__version__.py'
-        ) &&
-        contains(
-          join(github.event.workflow_run.head_commit.modified, ' '),
-          'src/uipath_llm_client/__version__.py'
-        )
-      )
     name: Build package
     runs-on: ubuntu-latest
     environment: pypi
@@ -46,10 +19,44 @@ jobs:
 
     steps:
       - uses: actions/checkout@v6
+        with:
+          fetch-depth: 2
 
-      - name: Wait for package indexing
-        if: github.event_name == 'workflow_run'
-        run: sleep 120
+      - name: Wait for uipath-llm-client publish
+        if: github.event_name == 'push'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Check if the core package version was also modified in this push
+          if ! git diff HEAD~1 --name-only | grep -q '^src/uipath_llm_client/__version__.py$'; then
+            echo "Core package version unchanged — no need to wait."
+            exit 0
+          fi
+
+          echo "Core package version also changed — waiting for 'cd' workflow to succeed..."
+
+          # Poll the cd workflow for up to 15 minutes
+          for i in $(seq 1 30); do
+            STATUS=$(gh run list --workflow=cd.yml --branch=main --commit=${{ github.sha }} --json status,conclusion --jq '.[0] | .status + ":" + .conclusion')
+            echo "  Attempt $i/30 — cd workflow: $STATUS"
+
+            case "$STATUS" in
+              completed:success)
+                echo "cd workflow succeeded — waiting 120s for PyPI indexing..."
+                sleep 120
+                exit 0
+                ;;
+              completed:*)
+                echo "::error::cd workflow finished with: $STATUS"
+                exit 1
+                ;;
+            esac
+
+            sleep 30
+          done
+
+          echo "::error::Timed out waiting for cd workflow (15 min)"
+          exit 1
 
       - name: Setup uv
         uses: astral-sh/setup-uv@v7

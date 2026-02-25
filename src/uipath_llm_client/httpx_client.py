@@ -21,7 +21,7 @@ Example:
 """
 
 import logging
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Mapping, Sequence
 from typing import Any
 
 from httpx import (
@@ -36,10 +36,13 @@ from httpx import (
 )
 from httpx._types import HeaderTypes
 
-from uipath_llm_client.settings import (
-    UiPathAPIConfig,
-)
+from uipath_llm_client.settings.base import UiPathAPIConfig
 from uipath_llm_client.utils.exceptions import patch_raise_for_status
+from uipath_llm_client.utils.headers import (
+    build_routing_headers,
+    extract_matching_headers,
+    set_captured_response_headers,
+)
 from uipath_llm_client.utils.logging import LoggingConfig
 from uipath_llm_client.utils.retry import (
     RetryableAsyncHTTPTransport,
@@ -47,36 +50,6 @@ from uipath_llm_client.utils.retry import (
     RetryConfig,
 )
 from uipath_llm_client.utils.ssl_config import get_httpx_ssl_client_kwargs
-
-
-def build_routing_headers(
-    *,
-    model_name: str | None = None,
-    byo_connection_id: str | None = None,
-    api_config: UiPathAPIConfig | None = None,
-) -> Mapping[str, str]:
-    """Build UiPath LLM Gateway routing headers based on configuration.
-
-    Args:
-        api_config: UiPath API configuration.
-        model_name: LLM model name (required for normalized API).
-        byo_connection_id: Bring Your Own connection ID.
-
-    Returns:
-        Headers mapping for routing requests through the gateway.
-    """
-    headers: dict[str, str] = {}
-    if api_config is not None:
-        if api_config.client_type == "normalized" and model_name is not None:
-            headers["X-UiPath-LlmGateway-NormalizedApi-ModelName"] = model_name
-        elif api_config.client_type == "passthrough" and api_config.api_type == "completions":
-            if api_config.api_flavor is not None:
-                headers["X-UiPath-LlmGateway-ApiFlavor"] = api_config.api_flavor
-            if api_config.api_version is not None:
-                headers["X-UiPath-LlmGateway-ApiVersion"] = api_config.api_version
-    if byo_connection_id is not None:
-        headers["X-UiPath-LlmGateway-ByoIsConnectionId"] = byo_connection_id
-    return headers
 
 
 class UiPathHttpxClient(Client):
@@ -109,6 +82,7 @@ class UiPathHttpxClient(Client):
         model_name: str | None = None,
         byo_connection_id: str | None = None,
         api_config: UiPathAPIConfig | None = None,
+        captured_headers: Sequence[str] = ("x-uipath-",),
         max_retries: int | None = None,
         retry_config: RetryConfig | None = None,
         logger: logging.Logger | None = None,
@@ -122,6 +96,9 @@ class UiPathHttpxClient(Client):
             api_config: UiPath API configuration (api_type, vendor_type, etc.).
                 Provides additional headers via build_headers() and controls URL
                 freezing via freeze_base_url attribute.
+            captured_headers: Case-insensitive header name prefixes to capture from
+                responses. Captured headers are stored in a ContextVar and can be
+                retrieved with get_captured_response_headers(). Defaults to ("x-uipath-",).
             max_retries: Maximum retry attempts for failed requests. Defaults to 1.
             retry_config: Custom retry configuration (backoff, retryable status codes).
             logger: Logger instance for request/response logging.
@@ -131,6 +108,7 @@ class UiPathHttpxClient(Client):
         self.model_name = model_name
         self.byo_connection_id = byo_connection_id
         self.api_config = api_config
+        self._captured_headers = tuple(captured_headers)
 
         # Extract httpx.Client params that we need to modify
         headers: HeaderTypes | None = kwargs.pop("headers", None)
@@ -183,6 +161,7 @@ class UiPathHttpxClient(Client):
         """Send an HTTP request with UiPath-specific modifications.
 
         Injects the streaming header and optionally freezes the URL before sending.
+        Captures matching response headers into a ContextVar for later retrieval.
 
         Args:
             request: The HTTP request to send.
@@ -196,6 +175,10 @@ class UiPathHttpxClient(Client):
             request.url = URL(str(self.base_url).rstrip("/"))
         request.headers[self._streaming_header] = str(stream).lower()
         response = super().send(request, stream=stream, **kwargs)
+        if self._captured_headers:
+            captured = extract_matching_headers(response.headers, self._captured_headers)
+            if captured:
+                set_captured_response_headers(captured)
         return patch_raise_for_status(response)
 
 
@@ -229,6 +212,7 @@ class UiPathHttpxAsyncClient(AsyncClient):
         model_name: str | None = None,
         byo_connection_id: str | None = None,
         api_config: UiPathAPIConfig | None = None,
+        captured_headers: Sequence[str] = ("x-uipath-",),
         max_retries: int | None = None,
         retry_config: RetryConfig | None = None,
         logger: logging.Logger | None = None,
@@ -242,6 +226,9 @@ class UiPathHttpxAsyncClient(AsyncClient):
             api_config: UiPath API configuration (api_type, vendor_type, etc.).
                 Provides additional headers via build_headers() and controls URL
                 freezing via freeze_base_url attribute.
+            captured_headers: Case-insensitive header name prefixes to capture from
+                responses. Captured headers are stored in a ContextVar and can be
+                retrieved with get_captured_response_headers(). Defaults to ("x-uipath-",).
             max_retries: Maximum retry attempts for failed requests. Defaults to 1.
             retry_config: Custom retry configuration (backoff, retryable status codes).
             logger: Logger instance for request/response logging.
@@ -251,6 +238,7 @@ class UiPathHttpxAsyncClient(AsyncClient):
         self.model_name = model_name
         self.byo_connection_id = byo_connection_id
         self.api_config = api_config
+        self._captured_headers = tuple(captured_headers)
 
         # Extract httpx.AsyncClient params that we need to modify
         headers: HeaderTypes | None = kwargs.pop("headers", None)
@@ -303,6 +291,7 @@ class UiPathHttpxAsyncClient(AsyncClient):
         """Send an HTTP request asynchronously with UiPath-specific modifications.
 
         Injects the streaming header and optionally freezes the URL before sending.
+        Captures matching response headers into a ContextVar for later retrieval.
 
         Args:
             request: The HTTP request to send.
@@ -316,4 +305,8 @@ class UiPathHttpxAsyncClient(AsyncClient):
             request.url = URL(str(self.base_url).rstrip("/"))
         request.headers[self._streaming_header] = str(stream).lower()
         response = await super().send(request, stream=stream, **kwargs)
+        if self._captured_headers:
+            captured = extract_matching_headers(response.headers, self._captured_headers)
+            if captured:
+                set_captured_response_headers(captured)
         return patch_raise_for_status(response)

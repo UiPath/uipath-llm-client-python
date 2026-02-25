@@ -4,7 +4,7 @@ from typing import Any, Literal, Self
 from pydantic import Field, model_validator
 from typing_extensions import override
 
-from uipath_langchain_client.base_client import UiPathBaseLLMClient
+from uipath_langchain_client.base_client import UiPathBaseChatModel
 from uipath_langchain_client.settings import UiPathAPIConfig
 
 try:
@@ -26,7 +26,7 @@ except ImportError as e:
     ) from e
 
 
-class UiPathChatAnthropic(UiPathBaseLLMClient, ChatAnthropic):
+class UiPathChatAnthropic(UiPathBaseChatModel, ChatAnthropic):
     api_config: UiPathAPIConfig = UiPathAPIConfig(
         api_type="completions",
         client_type="passthrough",
@@ -65,7 +65,7 @@ class UiPathChatAnthropic(UiPathBaseLLMClient, ChatAnthropic):
                     api_key="PLACEHOLDER",
                     base_url=str(self.uipath_sync_client.base_url),
                     default_headers=dict(self.uipath_sync_client.headers),
-                    max_retries=0,  # handled by the UiPathBaseLLMClient
+                    max_retries=0,  # handled by the UiPathBaseChatModel
                     http_client=self.uipath_sync_client,
                 )
             case "vertexai":
@@ -75,7 +75,7 @@ class UiPathChatAnthropic(UiPathBaseLLMClient, ChatAnthropic):
                     access_token="PLACEHOLDER",
                     base_url=str(self.uipath_sync_client.base_url),
                     default_headers=dict(self.uipath_sync_client.headers),
-                    max_retries=0,  # handled by the UiPathBaseLLMClient
+                    max_retries=0,  # handled by the UiPathBaseChatModel
                     http_client=self.uipath_sync_client,
                 )
             case "awsbedrock":
@@ -85,7 +85,7 @@ class UiPathChatAnthropic(UiPathBaseLLMClient, ChatAnthropic):
                     aws_region="PLACEHOLDER",
                     base_url=str(self.uipath_sync_client.base_url),
                     default_headers=dict(self.uipath_sync_client.headers),
-                    max_retries=0,  # handled by the UiPathBaseLLMClient
+                    max_retries=0,  # handled by the UiPathBaseChatModel
                     http_client=self.uipath_sync_client,
                 )
             case "anthropic":
@@ -93,7 +93,7 @@ class UiPathChatAnthropic(UiPathBaseLLMClient, ChatAnthropic):
                     api_key="PLACEHOLDER",
                     base_url=str(self.uipath_sync_client.base_url),
                     default_headers=dict(self.uipath_sync_client.headers),
-                    max_retries=0,  # handled by the UiPathBaseLLMClient
+                    max_retries=0,  # handled by the UiPathBaseChatModel
                     http_client=self.uipath_sync_client,
                 )
 
@@ -107,7 +107,7 @@ class UiPathChatAnthropic(UiPathBaseLLMClient, ChatAnthropic):
                     api_key="PLACEHOLDER",
                     base_url=str(self.uipath_async_client.base_url),
                     default_headers=dict(self.uipath_async_client.headers),
-                    max_retries=0,  # handled by the UiPathBaseLLMClient
+                    max_retries=0,  # handled by the UiPathBaseChatModel
                     http_client=self.uipath_async_client,
                 )
             case "vertexai":
@@ -117,7 +117,7 @@ class UiPathChatAnthropic(UiPathBaseLLMClient, ChatAnthropic):
                     access_token="PLACEHOLDER",
                     base_url=str(self.uipath_async_client.base_url),
                     default_headers=dict(self.uipath_async_client.headers),
-                    max_retries=0,  # handled by the UiPathBaseLLMClient
+                    max_retries=0,  # handled by the UiPathBaseChatModel
                     http_client=self.uipath_async_client,
                 )
             case "awsbedrock":
@@ -127,7 +127,7 @@ class UiPathChatAnthropic(UiPathBaseLLMClient, ChatAnthropic):
                     aws_region="PLACEHOLDER",
                     base_url=str(self.uipath_async_client.base_url),
                     default_headers=dict(self.uipath_async_client.headers),
-                    max_retries=0,  # handled by the UiPathBaseLLMClient
+                    max_retries=0,  # handled by the UiPathBaseChatModel
                     http_client=self.uipath_async_client,
                 )
             case _:
@@ -135,7 +135,7 @@ class UiPathChatAnthropic(UiPathBaseLLMClient, ChatAnthropic):
                     api_key="PLACEHOLDER",
                     base_url=str(self.uipath_async_client.base_url),
                     default_headers=dict(self.uipath_async_client.headers),
-                    max_retries=0,  # handled by the UiPathBaseLLMClient
+                    max_retries=0,  # handled by the UiPathBaseChatModel
                     http_client=self.uipath_async_client,
                 )
 

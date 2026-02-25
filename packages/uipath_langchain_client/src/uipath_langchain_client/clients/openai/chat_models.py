@@ -4,7 +4,7 @@ from typing import Self
 from httpx import URL, Request
 from pydantic import Field, SecretStr, model_validator
 
-from uipath_langchain_client.base_client import UiPathBaseLLMClient
+from uipath_langchain_client.base_client import UiPathBaseChatModel
 from uipath_langchain_client.settings import UiPathAPIConfig
 
 try:
@@ -17,7 +17,7 @@ except ImportError as e:
     ) from e
 
 
-class UiPathChatOpenAI(UiPathBaseLLMClient, ChatOpenAI):  # type: ignore[override]
+class UiPathChatOpenAI(UiPathBaseChatModel, ChatOpenAI):  # type: ignore[override]
     api_config: UiPathAPIConfig = UiPathAPIConfig(
         api_type="completions",
         client_type="passthrough",
@@ -69,7 +69,7 @@ class UiPathChatOpenAI(UiPathBaseLLMClient, ChatOpenAI):  # type: ignore[overrid
         return self
 
 
-class UiPathAzureChatOpenAI(UiPathBaseLLMClient, AzureChatOpenAI):  # type: ignore[override]
+class UiPathAzureChatOpenAI(UiPathBaseChatModel, AzureChatOpenAI):  # type: ignore[override]
     api_config: UiPathAPIConfig = UiPathAPIConfig(
         api_type="completions",
         client_type="passthrough",

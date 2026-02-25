@@ -10,7 +10,6 @@ from unittest.mock import patch
 
 import httpx
 import pytest
-from uipath_langchain_client.base_client import GATEWAY_HEADERS_KEY
 from uipath_langchain_client.clients.normalized.chat_models import UiPathChat
 
 from uipath_llm_client.httpx_client import (
@@ -20,9 +19,11 @@ from uipath_llm_client.httpx_client import (
 from uipath_llm_client.settings import LLMGatewaySettings
 from uipath_llm_client.settings.utils import SingletonMeta
 from uipath_llm_client.utils.headers import (
-    clear_captured_response_headers,
+    _CAPTURED_RESPONSE_HEADERS,
     extract_matching_headers,
     get_captured_response_headers,
+    reset_captured_response_headers,
+    set_captured_response_headers,
 )
 
 # ============================================================================
@@ -230,29 +231,33 @@ class TestExtractMatchingHeaders:
 
 
 class TestContextVarFunctions:
-    """Tests for get/clear captured response headers."""
+    """Tests for get/set/reset captured response headers."""
 
-    def test_get_returns_empty_by_default(self):
-        clear_captured_response_headers()
+    def test_get_returns_empty_when_unset(self):
+        """ContextVar has no default; get() should return {} via LookupError handling."""
+        # Reset to unset state by using a token
+        token = _CAPTURED_RESPONSE_HEADERS.set({})
+        _CAPTURED_RESPONSE_HEADERS.reset(token)
         assert get_captured_response_headers() == {}
 
-    def test_clear_resets_headers(self):
-        from uipath_llm_client.httpx_client import _captured_response_headers
-
-        _captured_response_headers.set({"X-UiPath-Foo": "bar"})
-        clear_captured_response_headers()
+    def test_set_returns_token_and_resets(self):
+        set_captured_response_headers({"X-UiPath-Foo": "bar"})
+        token = set_captured_response_headers({})
         assert get_captured_response_headers() == {}
+        # Reset restores previous value
+        reset_captured_response_headers(token)
+        assert get_captured_response_headers() == {"X-UiPath-Foo": "bar"}
+        # Clean up
+        set_captured_response_headers({})
 
     def test_get_returns_copy(self):
         """Verify get_captured_response_headers returns a copy, not the ContextVar reference."""
-        from uipath_llm_client.httpx_client import _captured_response_headers
-
         original = {"X-UiPath-Foo": "bar"}
-        _captured_response_headers.set(original)
+        set_captured_response_headers(original)
         result = get_captured_response_headers()
         result["X-UiPath-New"] = "new"
         assert "X-UiPath-New" not in get_captured_response_headers()
-        clear_captured_response_headers()
+        set_captured_response_headers({})
 
 
 # ============================================================================
@@ -270,7 +275,7 @@ class TestHttpxClientHeaderCapture:
             transport=transport,
             captured_headers=("x-uipath-",),
         )
-        clear_captured_response_headers()
+        set_captured_response_headers({})
         client.get("/")
         captured = get_captured_response_headers()
         assert "x-uipath-requestid" in captured
@@ -285,7 +290,7 @@ class TestHttpxClientHeaderCapture:
             transport=transport,
             captured_headers=(),
         )
-        clear_captured_response_headers()
+        set_captured_response_headers({})
         client.get("/")
         assert get_captured_response_headers() == {}
         client.close()
@@ -297,7 +302,7 @@ class TestHttpxClientHeaderCapture:
             transport=transport,
             captured_headers=("x-ratelimit-",),
         )
-        clear_captured_response_headers()
+        set_captured_response_headers({})
         client.get("/")
         captured = get_captured_response_headers()
         assert "x-ratelimit-remaining" in captured
@@ -312,7 +317,7 @@ class TestHttpxClientHeaderCapture:
             transport=async_transport,
             captured_headers=("x-uipath-",),
         )
-        clear_captured_response_headers()
+        set_captured_response_headers({})
         await client.get("/")
         captured = get_captured_response_headers()
         assert "x-uipath-requestid" in captured
@@ -330,8 +335,8 @@ class TestNormalizedClientHeaderCapture:
     def test_generate_captures_headers(self, llmgw_settings):
         chat = _make_normalized_chat(llmgw_settings)
         result = chat.invoke("Hello")
-        assert GATEWAY_HEADERS_KEY in result.response_metadata
-        gateway_headers = result.response_metadata[GATEWAY_HEADERS_KEY]
+        assert "uipath_llmgateway_headers" in result.response_metadata
+        gateway_headers = result.response_metadata["uipath_llmgateway_headers"]
         assert "x-uipath-requestid" in gateway_headers
         assert "x-uipath-traceid" in gateway_headers
         assert "content-type" not in gateway_headers
@@ -340,8 +345,8 @@ class TestNormalizedClientHeaderCapture:
     async def test_agenerate_captures_headers(self, llmgw_settings):
         chat = _make_normalized_chat(llmgw_settings)
         result = await chat.ainvoke("Hello")
-        assert GATEWAY_HEADERS_KEY in result.response_metadata
-        gateway_headers = result.response_metadata[GATEWAY_HEADERS_KEY]
+        assert "uipath_llmgateway_headers" in result.response_metadata
+        gateway_headers = result.response_metadata["uipath_llmgateway_headers"]
         assert "x-uipath-requestid" in gateway_headers
 
     def test_stream_captures_headers_on_first_chunk(self, llmgw_settings):
@@ -350,12 +355,12 @@ class TestNormalizedClientHeaderCapture:
         assert len(chunks) >= 1
         # First chunk should have gateway headers
         first_chunk = chunks[0]
-        assert GATEWAY_HEADERS_KEY in first_chunk.response_metadata
-        gateway_headers = first_chunk.response_metadata[GATEWAY_HEADERS_KEY]
+        assert "uipath_llmgateway_headers" in first_chunk.response_metadata
+        gateway_headers = first_chunk.response_metadata["uipath_llmgateway_headers"]
         assert "x-uipath-requestid" in gateway_headers
         # Later chunks should not have gateway headers
         if len(chunks) > 1:
-            assert GATEWAY_HEADERS_KEY not in chunks[1].response_metadata
+            assert "uipath_llmgateway_headers" not in chunks[1].response_metadata
 
     @pytest.mark.asyncio
     async def test_astream_captures_headers_on_first_chunk(self, llmgw_settings):
@@ -365,7 +370,7 @@ class TestNormalizedClientHeaderCapture:
             chunks.append(chunk)
         assert len(chunks) >= 1
         first_chunk = chunks[0]
-        assert GATEWAY_HEADERS_KEY in first_chunk.response_metadata
+        assert "uipath_llmgateway_headers" in first_chunk.response_metadata
 
     def test_custom_prefixes(self, llmgw_settings):
         chat = _make_normalized_chat(
@@ -373,14 +378,14 @@ class TestNormalizedClientHeaderCapture:
             captured_headers=("x-uipath-", "x-ratelimit-"),
         )
         result = chat.invoke("Hello")
-        gateway_headers = result.response_metadata[GATEWAY_HEADERS_KEY]
+        gateway_headers = result.response_metadata["uipath_llmgateway_headers"]
         assert "x-uipath-requestid" in gateway_headers
         assert "x-ratelimit-remaining" in gateway_headers
 
     def test_disabled_capture(self, llmgw_settings):
         chat = _make_normalized_chat(llmgw_settings, captured_headers=())
         result = chat.invoke("Hello")
-        assert GATEWAY_HEADERS_KEY not in result.response_metadata
+        assert "uipath_llmgateway_headers" not in result.response_metadata
 
     def test_no_matching_headers(self, llmgw_settings):
         chat = _make_normalized_chat(
@@ -389,7 +394,7 @@ class TestNormalizedClientHeaderCapture:
         )
         result = chat.invoke("Hello")
         # No matching headers, so the key should not be present
-        assert GATEWAY_HEADERS_KEY not in result.response_metadata
+        assert "uipath_llmgateway_headers" not in result.response_metadata
 
 
 # ============================================================================
@@ -406,12 +411,10 @@ class TestBaseChatModelWrapping:
 
     def test_inject_gateway_headers_populates_result(self, llmgw_settings):
         """Test that _inject_gateway_headers reads from ContextVar."""
-        from uipath_llm_client.httpx_client import _captured_response_headers
-
         chat = _make_normalized_chat(llmgw_settings)
 
         # Simulate what send() does: store headers in ContextVar
-        _captured_response_headers.set({"x-uipath-requestid": "test-123"})
+        set_captured_response_headers({"x-uipath-requestid": "test-123"})
 
         from langchain_core.messages import AIMessage
         from langchain_core.outputs import ChatGeneration, ChatResult
@@ -419,18 +422,16 @@ class TestBaseChatModelWrapping:
         result = ChatResult(
             generations=[ChatGeneration(message=AIMessage(content="test", response_metadata={}))]
         )
-        chat._inject_gateway_headers(result)
-        assert result.generations[0].message.response_metadata[GATEWAY_HEADERS_KEY] == {
+        chat._inject_gateway_headers(result.generations)
+        assert result.generations[0].message.response_metadata["uipath_llmgateway_headers"] == {
             "x-uipath-requestid": "test-123"
         }
-        clear_captured_response_headers()
+        set_captured_response_headers({})
 
     def test_inject_gateway_headers_skipped_when_disabled(self, llmgw_settings):
         """Test that _inject_gateway_headers is skipped when captured_headers is empty."""
-        from uipath_llm_client.httpx_client import _captured_response_headers
-
         chat = _make_normalized_chat(llmgw_settings, captured_headers=())
-        _captured_response_headers.set({"x-uipath-requestid": "test-123"})
+        set_captured_response_headers({"x-uipath-requestid": "test-123"})
 
         from langchain_core.messages import AIMessage
         from langchain_core.outputs import ChatGeneration, ChatResult
@@ -438,6 +439,6 @@ class TestBaseChatModelWrapping:
         result = ChatResult(
             generations=[ChatGeneration(message=AIMessage(content="test", response_metadata={}))]
         )
-        chat._inject_gateway_headers(result)
-        assert GATEWAY_HEADERS_KEY not in result.generations[0].message.response_metadata
-        clear_captured_response_headers()
+        chat._inject_gateway_headers(result.generations)
+        assert "uipath_llmgateway_headers" not in result.generations[0].message.response_metadata
+        set_captured_response_headers({})

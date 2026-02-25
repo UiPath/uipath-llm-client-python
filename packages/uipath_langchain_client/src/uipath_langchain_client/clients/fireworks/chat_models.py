@@ -2,7 +2,7 @@ from typing import Self
 
 from pydantic import Field, SecretStr, model_validator
 
-from uipath_langchain_client.base_client import UiPathBaseLLMClient
+from uipath_langchain_client.base_client import UiPathBaseChatModel
 from uipath_langchain_client.settings import UiPathAPIConfig
 
 try:
@@ -15,7 +15,7 @@ except ImportError as e:
     ) from e
 
 
-class UiPathChatFireworks(UiPathBaseLLMClient, ChatFireworks):  # type: ignore[override]
+class UiPathChatFireworks(UiPathBaseChatModel, ChatFireworks):  # type: ignore[override]
     api_config: UiPathAPIConfig = UiPathAPIConfig(
         api_type="completions",
         client_type="passthrough",

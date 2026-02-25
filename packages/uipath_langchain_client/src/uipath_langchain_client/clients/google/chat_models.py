@@ -3,7 +3,7 @@ from typing import Self
 from httpx import URL, Request
 from pydantic import Field, model_validator
 
-from uipath_langchain_client.base_client import UiPathBaseLLMClient
+from uipath_langchain_client.base_client import UiPathBaseChatModel
 from uipath_langchain_client.settings import UiPathAPIConfig
 
 try:
@@ -17,7 +17,7 @@ except ImportError as e:
     ) from e
 
 
-class UiPathChatGoogleGenerativeAI(UiPathBaseLLMClient, ChatGoogleGenerativeAI):
+class UiPathChatGoogleGenerativeAI(UiPathBaseChatModel, ChatGoogleGenerativeAI):
     api_config: UiPathAPIConfig = UiPathAPIConfig(
         api_type="completions",
         client_type="passthrough",

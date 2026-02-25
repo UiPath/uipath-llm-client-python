@@ -25,13 +25,15 @@ Example:
 
 import logging
 from abc import ABC
-from collections.abc import AsyncIterator, Iterator, Mapping
+from collections.abc import AsyncIterator, Iterator, Mapping, Sequence
 from functools import cached_property
 from typing import Any, Literal
 
 from httpx import URL, Response
 from langchain_core.embeddings import Embeddings
 from langchain_core.language_models.chat_models import BaseChatModel
+from langchain_core.messages import BaseMessage
+from langchain_core.outputs import ChatGeneration, ChatGenerationChunk, ChatResult
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field
 
 from uipath_langchain_client.settings import (
@@ -39,7 +41,15 @@ from uipath_langchain_client.settings import (
     UiPathBaseSettings,
     get_default_client_settings,
 )
-from uipath_llm_client.httpx_client import UiPathHttpxAsyncClient, UiPathHttpxClient
+from uipath_llm_client.httpx_client import (
+    UiPathHttpxAsyncClient,
+    UiPathHttpxClient,
+)
+from uipath_llm_client.utils.headers import (
+    get_captured_response_headers,
+    reset_captured_response_headers,
+    set_captured_response_headers,
+)
 from uipath_llm_client.utils.retry import RetryConfig
 
 
@@ -99,6 +109,13 @@ class UiPathBaseLLMClient(BaseModel, ABC):
         },
         description="Default request headers to include in requests",
     )
+    captured_headers: tuple[str, ...] = Field(
+        default=("x-uipath-",),
+        description="Case-insensitive response header prefixes to capture from LLM Gateway responses. "
+        "Captured headers appear in response_metadata under the 'uipath_llmgateway_headers' key. "
+        "Set to an empty tuple to disable.",
+    )
+
     request_timeout: float | None = Field(
         alias="timeout",
         validation_alias=AliasChoices("timeout", "request_timeout", "default_request_timeout"),
@@ -113,6 +130,7 @@ class UiPathBaseLLMClient(BaseModel, ABC):
         default=None,
         description="Retry configuration for failed requests",
     )
+
     logger: logging.Logger | None = Field(
         default=None,
         description="Logger for request/response logging",
@@ -135,6 +153,7 @@ class UiPathBaseLLMClient(BaseModel, ABC):
                     model_name=self.model_name, api_config=self.api_config
                 ),
             },
+            captured_headers=self.captured_headers,
             timeout=self.request_timeout,
             max_retries=self.max_retries,
             retry_config=self.retry_config,
@@ -158,6 +177,7 @@ class UiPathBaseLLMClient(BaseModel, ABC):
                     model_name=self.model_name, api_config=self.api_config
                 ),
             },
+            captured_headers=self.captured_headers,
             timeout=self.request_timeout,
             max_retries=self.max_retries,
             retry_config=self.retry_config,
@@ -283,7 +303,87 @@ class UiPathBaseLLMClient(BaseModel, ABC):
 
 
 class UiPathBaseChatModel(UiPathBaseLLMClient, BaseChatModel):
-    pass
+    """Base chat model that captures LLM Gateway response headers into response_metadata.
+
+    Wraps _generate/_agenerate/_stream/_astream to automatically read captured headers
+    from the ContextVar (populated by the httpx client's send()) and inject them into
+    the AIMessage's response_metadata under the 'uipath_llmgateway_headers' key.
+
+    Passthrough clients that delegate to vendor SDKs should inherit from this class
+    so that headers are captured transparently.
+    """
+
+    def _generate(
+        self,
+        messages: list[BaseMessage],
+        *args: Any,
+        **kwargs: Any,
+    ) -> ChatResult:
+        token = set_captured_response_headers({})
+        try:
+            result = super()._generate(messages, *args, **kwargs)
+            self._inject_gateway_headers(result.generations)
+            return result
+        finally:
+            reset_captured_response_headers(token)
+
+    async def _agenerate(
+        self,
+        messages: list[BaseMessage],
+        *args: Any,
+        **kwargs: Any,
+    ) -> ChatResult:
+        token = set_captured_response_headers({})
+        try:
+            result = await super()._agenerate(messages, *args, **kwargs)
+            self._inject_gateway_headers(result.generations)
+            return result
+        finally:
+            reset_captured_response_headers(token)
+
+    def _stream(
+        self,
+        messages: list[BaseMessage],
+        *args: Any,
+        **kwargs: Any,
+    ) -> Iterator[ChatGenerationChunk]:
+        token = set_captured_response_headers({})
+        try:
+            first = True
+            for chunk in super()._stream(messages, *args, **kwargs):
+                if first:
+                    self._inject_gateway_headers([chunk])
+                    first = False
+                yield chunk
+        finally:
+            reset_captured_response_headers(token)
+
+    async def _astream(
+        self,
+        messages: list[BaseMessage],
+        *args: Any,
+        **kwargs: Any,
+    ) -> AsyncIterator[ChatGenerationChunk]:
+        token = set_captured_response_headers({})
+        try:
+            first = True
+            async for chunk in super()._astream(messages, *args, **kwargs):
+                if first:
+                    self._inject_gateway_headers([chunk])
+                    first = False
+                yield chunk
+        finally:
+            reset_captured_response_headers(token)
+
+    def _inject_gateway_headers(self, generations: Sequence[ChatGeneration]) -> None:
+        """Inject captured gateway headers into each generation's response_metadata."""
+        if not self.captured_headers:
+            return
+        headers = get_captured_response_headers()
+        if not headers:
+            return
+        for generation in generations:
+            generation.message.response_metadata["uipath_llmgateway_headers"] = headers
 
 
 class UiPathBaseEmbeddings(UiPathBaseLLMClient, Embeddings):

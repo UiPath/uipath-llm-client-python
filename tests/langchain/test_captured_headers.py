@@ -19,10 +19,8 @@ from uipath_llm_client.httpx_client import (
 from uipath_llm_client.settings import LLMGatewaySettings
 from uipath_llm_client.settings.utils import SingletonMeta
 from uipath_llm_client.utils.headers import (
-    _CAPTURED_RESPONSE_HEADERS,
     extract_matching_headers,
     get_captured_response_headers,
-    reset_captured_response_headers,
     set_captured_response_headers,
 )
 
@@ -232,24 +230,19 @@ class TestExtractMatchingHeaders:
 
 
 class TestContextVarFunctions:
-    """Tests for get/set/reset captured response headers."""
+    """Tests for get/set captured response headers."""
 
-    def test_get_returns_empty_when_unset(self):
-        """ContextVar has no default; get() should return {} via LookupError handling."""
-        # Reset to unset state by using a token
-        token = _CAPTURED_RESPONSE_HEADERS.set({})
-        _CAPTURED_RESPONSE_HEADERS.reset(token)
-        assert get_captured_response_headers() == {}
-
-    def test_set_returns_token_and_resets(self):
-        set_captured_response_headers({"X-UiPath-Foo": "bar"})
-        token = set_captured_response_headers({})
-        assert get_captured_response_headers() == {}
-        # Reset restores previous value
-        reset_captured_response_headers(token)
-        assert get_captured_response_headers() == {"X-UiPath-Foo": "bar"}
-        # Clean up
+    def test_get_returns_empty_by_default(self):
+        """ContextVar default is {}; get() should return {}."""
         set_captured_response_headers({})
+        assert get_captured_response_headers() == {}
+
+    def test_set_and_get(self):
+        set_captured_response_headers({"X-UiPath-Foo": "bar"})
+        assert get_captured_response_headers() == {"X-UiPath-Foo": "bar"}
+        # Overwrite with empty clears
+        set_captured_response_headers({})
+        assert get_captured_response_headers() == {}
 
     def test_get_returns_copy(self):
         """Verify get_captured_response_headers returns a copy, not the ContextVar reference."""

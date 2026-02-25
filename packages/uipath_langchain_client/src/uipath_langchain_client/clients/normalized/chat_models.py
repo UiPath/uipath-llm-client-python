@@ -60,7 +60,6 @@ from uipath_langchain_client.base_client import UiPathBaseChatModel
 from uipath_langchain_client.settings import UiPathAPIConfig
 from uipath_llm_client.utils.headers import (
     extract_matching_headers,
-    reset_captured_response_headers,
     set_captured_response_headers,
 )
 
@@ -403,7 +402,7 @@ class UiPathChat(UiPathBaseChatModel):
         **kwargs: Any,
     ) -> Iterator[ChatGenerationChunk]:
         request_body = self._preprocess_request(messages, **kwargs)
-        token = set_captured_response_headers({})
+        set_captured_response_headers({})
         try:
             first = True
             for chunk in self.uipath_stream(request_body=request_body, stream_type="lines"):
@@ -422,7 +421,7 @@ class UiPathChat(UiPathBaseChatModel):
                     first = False
                 yield gen_chunk
         finally:
-            reset_captured_response_headers(token)
+            set_captured_response_headers({})
 
     async def _astream(
         self,
@@ -432,7 +431,7 @@ class UiPathChat(UiPathBaseChatModel):
         **kwargs: Any,
     ) -> AsyncIterator[ChatGenerationChunk]:
         request_body = self._preprocess_request(messages, **kwargs)
-        token = set_captured_response_headers({})
+        set_captured_response_headers({})
         try:
             first = True
             async for chunk in self.uipath_astream(request_body=request_body, stream_type="lines"):
@@ -451,4 +450,4 @@ class UiPathChat(UiPathBaseChatModel):
                     first = False
                 yield gen_chunk
         finally:
-            reset_captured_response_headers(token)
+            set_captured_response_headers({})

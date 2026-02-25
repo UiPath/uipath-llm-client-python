@@ -47,7 +47,6 @@ from uipath_llm_client.httpx_client import (
 )
 from uipath_llm_client.utils.headers import (
     get_captured_response_headers,
-    reset_captured_response_headers,
     set_captured_response_headers,
 )
 from uipath_llm_client.utils.retry import RetryConfig
@@ -319,13 +318,13 @@ class UiPathBaseChatModel(UiPathBaseLLMClient, BaseChatModel):
         *args: Any,
         **kwargs: Any,
     ) -> ChatResult:
-        token = set_captured_response_headers({})
+        set_captured_response_headers({})
         try:
             result = super()._generate(messages, *args, **kwargs)
             self._inject_gateway_headers(result.generations)
             return result
         finally:
-            reset_captured_response_headers(token)
+            set_captured_response_headers({})
 
     async def _agenerate(
         self,
@@ -333,13 +332,13 @@ class UiPathBaseChatModel(UiPathBaseLLMClient, BaseChatModel):
         *args: Any,
         **kwargs: Any,
     ) -> ChatResult:
-        token = set_captured_response_headers({})
+        set_captured_response_headers({})
         try:
             result = await super()._agenerate(messages, *args, **kwargs)
             self._inject_gateway_headers(result.generations)
             return result
         finally:
-            reset_captured_response_headers(token)
+            set_captured_response_headers({})
 
     def _stream(
         self,
@@ -347,7 +346,7 @@ class UiPathBaseChatModel(UiPathBaseLLMClient, BaseChatModel):
         *args: Any,
         **kwargs: Any,
     ) -> Iterator[ChatGenerationChunk]:
-        token = set_captured_response_headers({})
+        set_captured_response_headers({})
         try:
             first = True
             for chunk in super()._stream(messages, *args, **kwargs):
@@ -356,7 +355,7 @@ class UiPathBaseChatModel(UiPathBaseLLMClient, BaseChatModel):
                     first = False
                 yield chunk
         finally:
-            reset_captured_response_headers(token)
+            set_captured_response_headers({})
 
     async def _astream(
         self,
@@ -364,7 +363,7 @@ class UiPathBaseChatModel(UiPathBaseLLMClient, BaseChatModel):
         *args: Any,
         **kwargs: Any,
     ) -> AsyncIterator[ChatGenerationChunk]:
-        token = set_captured_response_headers({})
+        set_captured_response_headers({})
         try:
             first = True
             async for chunk in super()._astream(messages, *args, **kwargs):
@@ -373,7 +372,7 @@ class UiPathBaseChatModel(UiPathBaseLLMClient, BaseChatModel):
                     first = False
                 yield chunk
         finally:
-            reset_captured_response_headers(token)
+            set_captured_response_headers({})
 
     def _inject_gateway_headers(self, generations: Sequence[ChatGeneration]) -> None:
         """Inject captured gateway headers into each generation's response_metadata."""

@@ -24,10 +24,6 @@ def set_captured_response_headers(headers: dict[str, str]) -> contextvars.Token[
     return _CAPTURED_RESPONSE_HEADERS.set(headers)
 
 
-def reset_captured_response_headers(token: contextvars.Token[dict[str, str]]) -> None:
-    """End a header capture scope by resetting the ContextVar to its previous state."""
-    _CAPTURED_RESPONSE_HEADERS.reset(token)
-
 
 def extract_matching_headers(
     response_headers: Headers,

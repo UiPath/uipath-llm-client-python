@@ -50,6 +50,10 @@ from uipath_llm_client.utils.exceptions import (
     UiPathTooManyRequestsError,
     UiPathUnprocessableEntityError,
 )
+from uipath_llm_client.utils.headers import (
+    clear_captured_response_headers,
+    get_captured_response_headers,
+)
 from uipath_llm_client.utils.retry import RetryConfig
 
 __all__ = [
@@ -61,6 +65,9 @@ __all__ = [
     # HTTPX clients
     "UiPathHttpxClient",
     "UiPathHttpxAsyncClient",
+    # Header capture
+    "get_captured_response_headers",
+    "clear_captured_response_headers",
     # Retry
     "RetryConfig",
     # Exceptions

@@ -24,7 +24,6 @@ def set_captured_response_headers(headers: dict[str, str]) -> contextvars.Token[
     return _CAPTURED_RESPONSE_HEADERS.set(headers)
 
 
-
 def extract_matching_headers(
     response_headers: Headers,
     prefixes: Sequence[str],

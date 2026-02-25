@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_langchain_client` will be documented in this file.
 
+## [1.2.3] - 2026-02-25
+
+### Feature
+- Capture headers and inject them in response_metadata.
+
 ## [1.2.2] - 2026-02-23
 
 ### Fix

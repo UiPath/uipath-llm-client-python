@@ -179,9 +179,10 @@ def _make_normalized_chat(
         transport=async_transport,
         captured_headers=captured_headers,
     )
-    # Override cached properties
-    type(chat).uipath_sync_client = property(lambda self: sync_client)
-    type(chat).uipath_async_client = property(lambda self: async_client)
+    # Override cached properties by setting instance attributes directly
+    # (cached_property stores values in instance.__dict__, so this takes precedence)
+    object.__setattr__(chat, "uipath_sync_client", sync_client)
+    object.__setattr__(chat, "uipath_async_client", async_client)
     return chat
 
 

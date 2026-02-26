@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_langchain_client` will be documented in this file.
 
+## [1.2.7] - 2026-02-26
+
+### Fix
+- Fix Bedrock clients model_id
+
 ## [1.2.6] - 2026-02-26
 
 ### Refactor

@@ -22,17 +22,17 @@ jobs:
 
       - name: Validate version update
         run: |
-          core_changes=$(grep -E '^src/uipath_llm_client/' changes.txt | grep -v '__version__.py' || true)
-          core_version=$(grep -E '^src/uipath_llm_client/__version__.py' changes.txt || true)
+          core_changes=$(grep -E '^src/uipath/llm_client/' changes.txt | grep -v '__version__.py' || true)
+          core_version=$(grep -E '^src/uipath/llm_client/__version__.py' changes.txt || true)
           if [ -n "$core_changes" ] && [ -z "$core_version" ]; then
-            echo "::error::uipath-llm-client: package changes detected but no version update in src/uipath_llm_client/__version__.py"
+            echo "::error::uipath-llm-client: package changes detected but no version update in src/uipath/llm_client/__version__.py"
             exit 1
           fi
           echo "✓ Version is consistent with changes."
 
       - name: Validate changelog update
         run: |
-          core_version=$(grep -E '^src/uipath_llm_client/__version__.py' changes.txt || true)
+          core_version=$(grep -E '^src/uipath/llm_client/__version__.py' changes.txt || true)
           core_changelog=$(grep -E '^CHANGELOG.md' changes.txt || true)
           if [ -n "$core_version" ] && [ -z "$core_changelog" ]; then
             echo "::error::uipath-llm-client: version changed but no changelog update in CHANGELOG.md"

@@ -14,7 +14,7 @@ def test_main_package_imports():
     """Test that the main package and its exports can be imported."""
     print("Testing main package imports...")
 
-    from uipath_llm_client import (
+    from uipath.llm_client import (
         AgentHubSettings,
         LLMGatewaySettings,
         RetryConfig,
@@ -54,7 +54,7 @@ def test_exception_imports():
     """Test that all exception classes can be imported from main package."""
     print("Testing exception imports...")
 
-    from uipath_llm_client import (
+    from uipath.llm_client import (
         UiPathAPIError,
         UiPathAuthenticationError,
         UiPathBadRequestError,
@@ -98,7 +98,7 @@ def test_settings_module_imports():
     """Test that the settings module exports can be imported directly."""
     print("Testing settings module imports...")
 
-    from uipath_llm_client.settings import (
+    from uipath.llm_client.settings import (
         UIPATH_LLM_BACKEND_ENV,
         AgentHubSettings,
         BackendType,
@@ -138,7 +138,7 @@ def test_httpx_client_module_imports():
 
     from httpx import AsyncClient, Client
 
-    from uipath_llm_client.httpx_client import (
+    from uipath.llm_client.httpx_client import (
         UiPathHttpxAsyncClient,
         UiPathHttpxClient,
         build_routing_headers,
@@ -168,7 +168,7 @@ def test_exceptions_module_imports():
 
     from httpx import HTTPStatusError
 
-    from uipath_llm_client.utils.exceptions import (
+    from uipath.llm_client.utils.exceptions import (
         UiPathAPIError,
         UiPathAuthenticationError,
         UiPathBadRequestError,
@@ -239,7 +239,7 @@ def test_retry_module_imports():
 
     from httpx import AsyncHTTPTransport, HTTPTransport
 
-    from uipath_llm_client.utils.retry import (
+    from uipath.llm_client.utils.retry import (
         RetryableAsyncHTTPTransport,
         RetryableHTTPTransport,
         RetryConfig,
@@ -269,7 +269,7 @@ def test_openai_client_imports():
     """Test OpenAI client imports."""
     print("Testing OpenAI client imports...")
 
-    from uipath_llm_client.clients.openai import (
+    from uipath.llm_client.clients.openai import (
         UiPathAsyncAzureOpenAI,
         UiPathAsyncOpenAI,
         UiPathAzureOpenAI,
@@ -289,7 +289,7 @@ def test_anthropic_client_imports():
     """Test Anthropic client imports."""
     print("Testing Anthropic client imports...")
 
-    from uipath_llm_client.clients.anthropic import (
+    from uipath.llm_client.clients.anthropic import (
         UiPathAnthropic,
         UiPathAnthropicBedrock,
         UiPathAnthropicFoundry,
@@ -323,7 +323,7 @@ def test_google_client_imports():
     """Test Google client imports."""
     print("Testing Google client imports...")
 
-    from uipath_llm_client.clients.google import UiPathGoogle
+    from uipath.llm_client.clients.google import UiPathGoogle
 
     assert isinstance(UiPathGoogle, type), "UiPathGoogle should be a class"
 
@@ -336,7 +336,7 @@ def test_openai_client_inheritance():
 
     from openai import AsyncAzureOpenAI, AsyncOpenAI, AzureOpenAI, OpenAI
 
-    from uipath_llm_client.clients.openai import (
+    from uipath.llm_client.clients.openai import (
         UiPathAsyncAzureOpenAI,
         UiPathAsyncOpenAI,
         UiPathAzureOpenAI,
@@ -370,7 +370,7 @@ def test_anthropic_client_inheritance():
         AsyncAnthropicVertex,
     )
 
-    from uipath_llm_client.clients.anthropic import (
+    from uipath.llm_client.clients.anthropic import (
         UiPathAnthropic,
         UiPathAnthropicBedrock,
         UiPathAnthropicVertex,
@@ -405,7 +405,7 @@ def test_google_client_inheritance():
 
     from google.genai import Client as GoogleClient
 
-    from uipath_llm_client.clients.google import UiPathGoogle
+    from uipath.llm_client.clients.google import UiPathGoogle
 
     assert issubclass(UiPathGoogle, GoogleClient), (
         "UiPathGoogle should inherit from google.genai.Client"
@@ -418,7 +418,7 @@ def test_uipath_api_config():
     """Test UiPathAPIConfig can be instantiated with valid configurations."""
     print("Testing UiPathAPIConfig instantiation...")
 
-    from uipath_llm_client.settings import UiPathAPIConfig
+    from uipath.llm_client.settings import UiPathAPIConfig
 
     # Test passthrough config (requires vendor_type)
     passthrough_config = UiPathAPIConfig(

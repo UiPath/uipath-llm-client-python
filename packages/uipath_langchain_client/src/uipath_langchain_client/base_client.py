@@ -36,20 +36,20 @@ from langchain_core.messages import BaseMessage
 from langchain_core.outputs import ChatGeneration, ChatGenerationChunk, ChatResult
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field
 
+from uipath.llm_client.httpx_client import (
+    UiPathHttpxAsyncClient,
+    UiPathHttpxClient,
+)
+from uipath.llm_client.utils.headers import (
+    get_captured_response_headers,
+    set_captured_response_headers,
+)
+from uipath.llm_client.utils.retry import RetryConfig
 from uipath_langchain_client.settings import (
     UiPathAPIConfig,
     UiPathBaseSettings,
     get_default_client_settings,
 )
-from uipath_llm_client.httpx_client import (
-    UiPathHttpxAsyncClient,
-    UiPathHttpxClient,
-)
-from uipath_llm_client.utils.headers import (
-    get_captured_response_headers,
-    set_captured_response_headers,
-)
-from uipath_llm_client.utils.retry import RetryConfig
 
 
 class UiPathBaseLLMClient(BaseModel, ABC):

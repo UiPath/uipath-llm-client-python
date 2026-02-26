@@ -2,6 +2,12 @@
 
 All notable changes to `uipath_langchain_client` will be documented in this file.
 
+## [1.2.6] - 2026-02-26
+
+### Refactor
+- Restructured project such that uipath_llm_client can be included in uipath as submodule.
+- imports are now from uipath.llm_client instead of uipath_llm_client
+
 ## [1.2.5] - 2026-02-26
 
 ### Fix

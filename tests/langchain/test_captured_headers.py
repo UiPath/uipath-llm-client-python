@@ -12,13 +12,13 @@ import httpx
 import pytest
 from uipath_langchain_client.clients.normalized.chat_models import UiPathChat
 
-from uipath_llm_client.httpx_client import (
+from uipath.llm_client.httpx_client import (
     UiPathHttpxAsyncClient,
     UiPathHttpxClient,
 )
-from uipath_llm_client.settings import LLMGatewaySettings
-from uipath_llm_client.settings.utils import SingletonMeta
-from uipath_llm_client.utils.headers import (
+from uipath.llm_client.settings import LLMGatewaySettings
+from uipath.llm_client.settings.utils import SingletonMeta
+from uipath.llm_client.utils.headers import (
     extract_matching_headers,
     get_captured_response_headers,
     set_captured_response_headers,

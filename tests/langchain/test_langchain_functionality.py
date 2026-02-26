@@ -6,7 +6,7 @@ from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_tests.unit_tests import ChatModelUnitTests, EmbeddingsUnitTests
 
 from tests.langchain.conftest import COMPLETION_CLIENTS_CLASSES, EMBEDDINGS_CLIENTS_CLASSES
-from uipath_llm_client.settings import UiPathBaseSettings
+from uipath.llm_client.settings import UiPathBaseSettings
 
 
 class TestCoreChatModel(ChatModelUnitTests):

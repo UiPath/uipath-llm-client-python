@@ -5,7 +5,7 @@ on:
     branches:
       - main
     paths:
-      - 'src/uipath_llm_client/__version__.py'
+      - 'src/uipath/llm_client/__version__.py'
   workflow_dispatch:
 
 jobs:
@@ -63,7 +63,7 @@ jobs:
       - name: Get version
         id: version
         run: |
-          VERSION=$(grep '^__version__' src/uipath_llm_client/__version__.py | sed -n 's/.*"\([^"]*\)".*/\1/p')
+          VERSION=$(grep '^__version__' src/uipath/llm_client/__version__.py | sed -n 's/.*"\([^"]*\)".*/\1/p')
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
 
       - name: Extract changelog section

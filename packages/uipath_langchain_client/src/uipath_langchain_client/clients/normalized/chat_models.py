@@ -56,12 +56,12 @@ from langchain_core.utils.function_calling import (
 )
 from pydantic import Field
 
-from uipath_langchain_client.base_client import UiPathBaseChatModel
-from uipath_langchain_client.settings import UiPathAPIConfig
-from uipath_llm_client.utils.headers import (
+from uipath.llm_client.utils.headers import (
     extract_matching_headers,
     set_captured_response_headers,
 )
+from uipath_langchain_client.base_client import UiPathBaseChatModel
+from uipath_langchain_client.settings import UiPathAPIConfig
 
 
 class UiPathChat(UiPathBaseChatModel):

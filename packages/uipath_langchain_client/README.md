@@ -327,4 +327,4 @@ The `stream_type` parameter controls iteration: `"lines"` (default, best for SSE
 ## See Also
 
 - [Main README](../../README.md) - Overview and core client documentation
-- [UiPath LLM Client](../../src/uipath_llm_client/) - Low-level HTTP client
+- [UiPath LLM Client](../../src/uipath/llm_client//) - Low-level HTTP client

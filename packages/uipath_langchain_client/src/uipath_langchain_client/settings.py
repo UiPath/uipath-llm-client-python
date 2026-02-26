@@ -1,7 +1,7 @@
 """
 Settings re-exports for UiPath LangChain Client.
 
-This module re-exports the settings classes from uipath_llm_client for convenience,
+This module re-exports the settings classes from uipath.llm_client for convenience,
 allowing users to configure authentication without importing from the base package.
 
 Example:
@@ -15,7 +15,7 @@ Example:
     >>> settings = LLMGatewaySettings()
 """
 
-from uipath_llm_client.settings import (
+from uipath.llm_client.settings import (
     AgentHubSettings,
     LLMGatewaySettings,
     UiPathAPIConfig,

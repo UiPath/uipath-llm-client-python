@@ -123,7 +123,7 @@ export LLMGW_SEMANTIC_USER_ID="your-user-id"
 Configuration settings for UiPath AgentHub client requests. These settings control routing, authentication, and tracking for requests to AgentHub.
 
 ```python
-from uipath_llm_client.settings import AgentHubSettings
+from uipath.llm_client.settings import AgentHubSettings
 
 settings = AgentHubSettings(
     environment="cloud",        # UiPath environment
@@ -158,7 +158,7 @@ settings = AgentHubSettings(
 Configuration settings for LLM Gateway client requests. These settings control routing, authentication, and tracking for requests to LLM Gateway.
 
 ```python
-from uipath_llm_client.settings import LLMGatewaySettings
+from uipath.llm_client.settings import LLMGatewaySettings
 
 settings = LLMGatewaySettings(
     base_url="https://your-llmgw-url.com",
@@ -240,7 +240,7 @@ Factory functions automatically detect the model vendor but require settings to 
 
 ```python
 from uipath_langchain_client import get_chat_model, get_embedding_model
-from uipath_llm_client.settings import get_default_client_settings
+from uipath.llm_client.settings import get_default_client_settings
 
 settings = get_default_client_settings()
 
@@ -260,7 +260,7 @@ The normalized API provides a consistent interface across all LLM providers:
 
 ```python
 from uipath_langchain_client import get_chat_model
-from uipath_llm_client.settings import get_default_client_settings
+from uipath.llm_client.settings import get_default_client_settings
 
 settings = get_default_client_settings()
 
@@ -368,7 +368,7 @@ print(result["messages"][-1].content)
 The core `uipath_llm_client` package provides thin wrappers around native vendor SDKs. These are drop-in replacements that route requests through UiPath's infrastructure while preserving the original SDK's interface:
 
 ```python
-from uipath_llm_client.clients.openai import UiPathOpenAI, UiPathAzureOpenAI
+from uipath.llm_client.clients.openai import UiPathOpenAI, UiPathAzureOpenAI
 
 # Drop-in replacement for openai.OpenAI — routes through UiPath
 client = UiPathOpenAI(model_name="gpt-4o-2024-11-20")
@@ -383,7 +383,7 @@ azure_client = UiPathAzureOpenAI(model_name="gpt-4o-2024-11-20")
 ```
 
 ```python
-from uipath_llm_client.clients.anthropic import UiPathAnthropic
+from uipath.llm_client.clients.anthropic import UiPathAnthropic
 
 # Drop-in replacement for anthropic.Anthropic
 client = UiPathAnthropic(model_name="anthropic.claude-sonnet-4-5-20250929-v1:0")
@@ -396,7 +396,7 @@ print(response.content[0].text)
 ```
 
 ```python
-from uipath_llm_client.clients.google import UiPathGoogle
+from uipath.llm_client.clients.google import UiPathGoogle
 
 # Drop-in replacement for google.genai.Client
 client = UiPathGoogle(model_name="gemini-2.5-flash")
@@ -424,8 +424,8 @@ All native SDK wrappers are available in sync and async variants:
 For completely custom HTTP requests, use the low-level HTTPX client directly:
 
 ```python
-from uipath_llm_client import UiPathHttpxClient
-from uipath_llm_client.settings import UiPathAPIConfig, get_default_client_settings
+from uipath.llm_client import UiPathHttpxClient
+from uipath.llm_client.settings import UiPathAPIConfig, get_default_client_settings
 
 settings = get_default_client_settings()
 
@@ -463,8 +463,8 @@ Pass custom settings when you need more control:
 
 ```python
 from uipath_langchain_client.clients.openai.chat_models import UiPathAzureChatOpenAI
-from uipath_llm_client.settings import AgentHubSettings
-from uipath_llm_client.utils.retry import RetryConfig
+from uipath.llm_client.settings import AgentHubSettings
+from uipath.llm_client.utils.retry import RetryConfig
 
 # Custom settings for AgentHub
 settings = AgentHubSettings(environment="cloud")  # or "staging", "alpha"
@@ -489,7 +489,7 @@ chat_model = UiPathAzureChatOpenAI(
 
 ```python
 from uipath_langchain_client.clients.openai.chat_models import UiPathAzureChatOpenAI
-from uipath_llm_client.settings import get_default_client_settings
+from uipath.llm_client.settings import get_default_client_settings
 
 # Explicitly specify the backend
 agenthub_settings = get_default_client_settings(backend="agenthub")
@@ -511,7 +511,7 @@ You can instantiate `LLMGatewaySettings` directly for full control over configur
 from uipath_langchain_client.clients.openai.chat_models import UiPathAzureChatOpenAI
 from uipath_langchain_client.clients.google.chat_models import UiPathChatGoogleGenerativeAI
 from uipath_langchain_client.clients.openai.embeddings import UiPathAzureOpenAIEmbeddings
-from uipath_llm_client.settings import LLMGatewaySettings
+from uipath.llm_client.settings import LLMGatewaySettings
 
 # Create LLMGatewaySettings with explicit configuration
 settings = LLMGatewaySettings(
@@ -553,7 +553,7 @@ vectors = embeddings.embed_documents(["Hello world"])
 
 ```python
 from uipath_langchain_client import get_chat_model, get_embedding_model
-from uipath_llm_client.settings import LLMGatewaySettings
+from uipath.llm_client.settings import LLMGatewaySettings
 
 # Create LLMGatewaySettings
 settings = LLMGatewaySettings(
@@ -632,7 +632,7 @@ byo_embeddings = UiPathAzureOpenAIEmbeddings(
 The client provides a hierarchy of typed exceptions for handling API errors. All exceptions extend `UiPathAPIError` (which extends `httpx.HTTPStatusError`):
 
 ```python
-from uipath_llm_client import (
+from uipath.llm_client import (
     UiPathAPIError,
     UiPathAuthenticationError,
     UiPathRateLimitError,
@@ -675,7 +675,7 @@ except UiPathAPIError as e:
 The `UiPathAPIConfig` class controls how requests are routed through UiPath's infrastructure:
 
 ```python
-from uipath_llm_client.settings import UiPathAPIConfig
+from uipath.llm_client.settings import UiPathAPIConfig
 
 config = UiPathAPIConfig(
     api_type="completions",
@@ -802,7 +802,7 @@ When adding new tests or modifying existing ones that require new API interactio
 
 ```
 uipath-llm-client/
-├── src/uipath_llm_client/              # Core package
+├── src/uipath/llm_client/              # Core package
 │   ├── httpx_client.py                 # UiPathHttpxClient / UiPathHttpxAsyncClient
 │   ├── clients/                        # Native SDK wrappers
 │   │   ├── openai/                     # UiPathOpenAI, UiPathAzureOpenAI, etc.

@@ -15,19 +15,19 @@ from unittest.mock import MagicMock, patch
 import pytest
 from httpx import Client, Request, Response
 
-from uipath_llm_client.settings import (
+from uipath.llm_client.settings import (
     AgentHubSettings,
     LLMGatewaySettings,
     UiPathAPIConfig,
     get_default_client_settings,
 )
-from uipath_llm_client.settings.utils import SingletonMeta
-from uipath_llm_client.utils.exceptions import (
+from uipath.llm_client.settings.utils import SingletonMeta
+from uipath.llm_client.utils.exceptions import (
     UiPathAPIError,
     UiPathAuthenticationError,
     UiPathRateLimitError,
 )
-from uipath_llm_client.utils.retry import (
+from uipath.llm_client.utils.retry import (
     RetryableAsyncHTTPTransport,
     RetryableHTTPTransport,
     RetryConfig,
@@ -185,14 +185,14 @@ class TestSettingsFactory:
             env = {**agenthub_env_vars}
             env.pop("UIPATH_LLM_BACKEND", None)
             with patch.dict(os.environ, env, clear=True):
-                with patch("uipath_llm_client.settings.agenthub.settings.AuthService"):
+                with patch("uipath.llm_client.settings.agenthub.settings.AuthService"):
                     settings = get_default_client_settings()
                     assert isinstance(settings, AgentHubSettings)
 
     def test_explicit_agenthub(self, agenthub_env_vars):
         """Test explicit agenthub backend."""
         with patch.dict(os.environ, agenthub_env_vars, clear=True):
-            with patch("uipath_llm_client.settings.agenthub.settings.AuthService"):
+            with patch("uipath.llm_client.settings.agenthub.settings.AuthService"):
                 settings = get_default_client_settings(backend="agenthub")
                 assert isinstance(settings, AgentHubSettings)
 
@@ -206,7 +206,7 @@ class TestSettingsFactory:
         """Test UIPATH_LLM_BACKEND=agenthub from environment."""
         env = {**agenthub_env_vars, "UIPATH_LLM_BACKEND": "agenthub"}
         with patch.dict(os.environ, env, clear=True):
-            with patch("uipath_llm_client.settings.agenthub.settings.AuthService"):
+            with patch("uipath.llm_client.settings.agenthub.settings.AuthService"):
                 settings = get_default_client_settings()
                 assert isinstance(settings, AgentHubSettings)
 
@@ -296,7 +296,7 @@ class TestLLMGatewaySettings:
 
     def test_build_auth_pipeline_with_access_token(self, llmgw_env_vars):
         """Test auth pipeline uses access_token when provided."""
-        from uipath_llm_client.settings.llmgateway.auth import LLMGatewayS2SAuth
+        from uipath.llm_client.settings.llmgateway.auth import LLMGatewayS2SAuth
 
         with patch.dict(os.environ, llmgw_env_vars, clear=True):
             settings = LLMGatewaySettings()
@@ -381,7 +381,7 @@ class TestLLMGatewayAuthRefresh:
 
     def test_auth_flow_adds_bearer_token(self, llmgw_env_vars):
         """Test auth_flow adds Authorization header."""
-        from uipath_llm_client.settings.llmgateway.auth import LLMGatewayS2SAuth
+        from uipath.llm_client.settings.llmgateway.auth import LLMGatewayS2SAuth
 
         with patch.dict(os.environ, llmgw_env_vars, clear=True):
             settings = LLMGatewaySettings()
@@ -394,7 +394,7 @@ class TestLLMGatewayAuthRefresh:
 
     def test_auth_flow_refreshes_on_401(self, llmgw_s2s_env_vars):
         """Test auth_flow refreshes token on 401 response."""
-        from uipath_llm_client.settings.llmgateway.auth import LLMGatewayS2SAuth
+        from uipath.llm_client.settings.llmgateway.auth import LLMGatewayS2SAuth
 
         with patch.dict(os.environ, llmgw_s2s_env_vars, clear=True):
             settings = LLMGatewaySettings()
@@ -430,7 +430,7 @@ class TestLLMGatewayAuthRefresh:
 
     def test_auth_singleton_reuses_instance(self, llmgw_env_vars):
         """Test that LLMGatewayS2SAuth is a singleton."""
-        from uipath_llm_client.settings.llmgateway.auth import LLMGatewayS2SAuth
+        from uipath.llm_client.settings.llmgateway.auth import LLMGatewayS2SAuth
 
         with patch.dict(os.environ, llmgw_env_vars, clear=True):
             settings = LLMGatewaySettings()
@@ -450,7 +450,7 @@ class TestAgentHubSettings:
     def test_build_base_url_passthrough(self, agenthub_env_vars, passthrough_api_config):
         """Test build_base_url for passthrough mode."""
         with patch.dict(os.environ, agenthub_env_vars, clear=True):
-            with patch("uipath_llm_client.settings.agenthub.settings.AuthService"):
+            with patch("uipath.llm_client.settings.agenthub.settings.AuthService"):
                 settings = AgentHubSettings()
                 url = settings.build_base_url(
                     model_name="gpt-4o",
@@ -461,7 +461,7 @@ class TestAgentHubSettings:
     def test_build_base_url_normalized(self, agenthub_env_vars, normalized_api_config):
         """Test build_base_url for normalized mode."""
         with patch.dict(os.environ, agenthub_env_vars, clear=True):
-            with patch("uipath_llm_client.settings.agenthub.settings.AuthService"):
+            with patch("uipath.llm_client.settings.agenthub.settings.AuthService"):
                 settings = AgentHubSettings()
                 url = settings.build_base_url(
                     model_name="gpt-4o",
@@ -472,7 +472,7 @@ class TestAgentHubSettings:
     def test_build_auth_headers_has_default_config(self, agenthub_env_vars):
         """Test build_auth_headers includes default agenthub_config."""
         with patch.dict(os.environ, agenthub_env_vars, clear=True):
-            with patch("uipath_llm_client.settings.agenthub.settings.AuthService"):
+            with patch("uipath.llm_client.settings.agenthub.settings.AuthService"):
                 settings = AgentHubSettings()
                 headers = settings.build_auth_headers()
                 assert headers == {"X-UiPath-AgentHub-Config": "agentsruntime"}
@@ -486,7 +486,7 @@ class TestAgentHubSettings:
             "UIPATH_JOB_KEY": "test-job",
         }
         with patch.dict(os.environ, env, clear=True):
-            with patch("uipath_llm_client.settings.agenthub.settings.AuthService"):
+            with patch("uipath.llm_client.settings.agenthub.settings.AuthService"):
                 settings = AgentHubSettings()
                 headers = settings.build_auth_headers()
                 assert headers["X-UiPath-AgentHub-Config"] == "test-config"
@@ -498,7 +498,7 @@ class TestAgentHubSettings:
         from httpx import Auth
 
         with patch.dict(os.environ, agenthub_env_vars, clear=True):
-            with patch("uipath_llm_client.settings.agenthub.settings.AuthService"):
+            with patch("uipath.llm_client.settings.agenthub.settings.AuthService"):
                 settings = AgentHubSettings()
                 auth = settings.build_auth_pipeline()
                 assert isinstance(auth, Auth)
@@ -506,7 +506,7 @@ class TestAgentHubSettings:
     def test_credentials_available(self, agenthub_env_vars):
         """Test credentials_available returns True when all credentials present."""
         with patch.dict(os.environ, agenthub_env_vars, clear=True):
-            with patch("uipath_llm_client.settings.agenthub.settings.AuthService"):
+            with patch("uipath.llm_client.settings.agenthub.settings.AuthService"):
                 settings = AgentHubSettings()
                 assert settings.credentials_available() is True
 
@@ -521,10 +521,10 @@ class TestAgentHubAuthRefresh:
 
     def test_auth_flow_adds_bearer_token(self, agenthub_env_vars):
         """Test auth_flow adds Authorization header."""
-        from uipath_llm_client.settings.agenthub.auth import AgentHubAuth
+        from uipath.llm_client.settings.agenthub.auth import AgentHubAuth
 
         with patch.dict(os.environ, agenthub_env_vars, clear=True):
-            with patch("uipath_llm_client.settings.agenthub.settings.AuthService"):
+            with patch("uipath.llm_client.settings.agenthub.settings.AuthService"):
                 settings = AgentHubSettings()
                 auth = AgentHubAuth(settings=settings)
                 request = Request("GET", "https://example.com")
@@ -535,10 +535,10 @@ class TestAgentHubAuthRefresh:
 
     def test_auth_flow_refreshes_on_401(self, agenthub_env_vars):
         """Test auth_flow refreshes token on 401 response."""
-        from uipath_llm_client.settings.agenthub.auth import AgentHubAuth
+        from uipath.llm_client.settings.agenthub.auth import AgentHubAuth
 
         with patch.dict(os.environ, agenthub_env_vars, clear=True):
-            with patch("uipath_llm_client.settings.agenthub.settings.AuthService"):
+            with patch("uipath.llm_client.settings.agenthub.settings.AuthService"):
                 settings = AgentHubSettings()
 
                 # Mock get_access_token to return a new token on refresh
@@ -566,10 +566,10 @@ class TestAgentHubAuthRefresh:
 
     def test_auth_singleton_reuses_instance(self, agenthub_env_vars):
         """Test that AgentHubAuth is a singleton."""
-        from uipath_llm_client.settings.agenthub.auth import AgentHubAuth
+        from uipath.llm_client.settings.agenthub.auth import AgentHubAuth
 
         with patch.dict(os.environ, agenthub_env_vars, clear=True):
-            with patch("uipath_llm_client.settings.agenthub.settings.AuthService"):
+            with patch("uipath.llm_client.settings.agenthub.settings.AuthService"):
                 settings = AgentHubSettings()
                 auth1 = AgentHubAuth(settings=settings)
                 auth2 = AgentHubAuth(settings=settings)
@@ -676,13 +676,13 @@ class TestUiPathHttpxClient:
 
     def test_client_inherits_from_httpx_client(self):
         """Test client inherits from httpx.Client."""
-        from uipath_llm_client.httpx_client import UiPathHttpxClient
+        from uipath.llm_client.httpx_client import UiPathHttpxClient
 
         assert issubclass(UiPathHttpxClient, Client)
 
     def test_client_has_default_headers(self):
         """Test client has default UiPath headers."""
-        from uipath_llm_client.httpx_client import UiPathHttpxClient
+        from uipath.llm_client.httpx_client import UiPathHttpxClient
 
         client = UiPathHttpxClient(base_url="https://example.com")
         assert "X-UiPath-LLMGateway-TimeoutSeconds" in client.headers
@@ -691,7 +691,7 @@ class TestUiPathHttpxClient:
 
     def test_client_merges_custom_headers(self):
         """Test client merges custom headers with defaults."""
-        from uipath_llm_client.httpx_client import UiPathHttpxClient
+        from uipath.llm_client.httpx_client import UiPathHttpxClient
 
         client = UiPathHttpxClient(
             base_url="https://example.com",
@@ -705,7 +705,7 @@ class TestUiPathHttpxClient:
 
     def test_client_with_model_name(self):
         """Test client stores model_name."""
-        from uipath_llm_client.httpx_client import UiPathHttpxClient
+        from uipath.llm_client.httpx_client import UiPathHttpxClient
 
         client = UiPathHttpxClient(
             base_url="https://example.com",
@@ -716,7 +716,7 @@ class TestUiPathHttpxClient:
 
     def test_client_with_api_config(self, normalized_api_config):
         """Test client stores api_config."""
-        from uipath_llm_client.httpx_client import UiPathHttpxClient
+        from uipath.llm_client.httpx_client import UiPathHttpxClient
 
         client = UiPathHttpxClient(
             base_url="https://example.com",
@@ -730,7 +730,7 @@ class TestUiPathHttpxClient:
 
     def test_client_with_retry_config(self):
         """Test client creates retryable transport."""
-        from uipath_llm_client.httpx_client import UiPathHttpxClient
+        from uipath.llm_client.httpx_client import UiPathHttpxClient
 
         client = UiPathHttpxClient(
             base_url="https://example.com",
@@ -742,7 +742,7 @@ class TestUiPathHttpxClient:
 
     def test_client_with_byo_connection_id(self):
         """Test client adds BYO connection ID header."""
-        from uipath_llm_client.httpx_client import UiPathHttpxClient
+        from uipath.llm_client.httpx_client import UiPathHttpxClient
 
         client = UiPathHttpxClient(
             base_url="https://example.com",
@@ -760,13 +760,13 @@ class TestUiPathHttpxAsyncClient:
         """Test async client inherits from httpx.AsyncClient."""
         from httpx import AsyncClient
 
-        from uipath_llm_client.httpx_client import UiPathHttpxAsyncClient
+        from uipath.llm_client.httpx_client import UiPathHttpxAsyncClient
 
         assert issubclass(UiPathHttpxAsyncClient, AsyncClient)
 
     def test_async_client_has_default_headers(self):
         """Test async client has default UiPath headers."""
-        from uipath_llm_client.httpx_client import UiPathHttpxAsyncClient
+        from uipath.llm_client.httpx_client import UiPathHttpxAsyncClient
 
         client = UiPathHttpxAsyncClient(base_url="https://example.com")
         assert "X-UiPath-LLMGateway-TimeoutSeconds" in client.headers
@@ -774,7 +774,7 @@ class TestUiPathHttpxAsyncClient:
 
     def test_async_client_with_retry_config(self):
         """Test async client creates retryable async transport."""
-        from uipath_llm_client.httpx_client import UiPathHttpxAsyncClient
+        from uipath.llm_client.httpx_client import UiPathHttpxAsyncClient
 
         client = UiPathHttpxAsyncClient(
             base_url="https://example.com",
@@ -794,14 +794,14 @@ class TestBuildRoutingHeaders:
 
     def test_empty_headers_when_no_config(self):
         """Test empty headers when no api_config provided."""
-        from uipath_llm_client.httpx_client import build_routing_headers
+        from uipath.llm_client.httpx_client import build_routing_headers
 
         headers = build_routing_headers()
         assert headers == {}
 
     def test_normalized_api_header(self, normalized_api_config):
         """Test normalized API adds model name header."""
-        from uipath_llm_client.httpx_client import build_routing_headers
+        from uipath.llm_client.httpx_client import build_routing_headers
 
         headers = build_routing_headers(
             model_name="gpt-4o",
@@ -811,7 +811,7 @@ class TestBuildRoutingHeaders:
 
     def test_passthrough_api_headers(self):
         """Test passthrough API adds flavor and version headers when set."""
-        from uipath_llm_client.httpx_client import build_routing_headers
+        from uipath.llm_client.httpx_client import build_routing_headers
 
         api_config = UiPathAPIConfig(
             api_type="completions",
@@ -829,7 +829,7 @@ class TestBuildRoutingHeaders:
 
     def test_byo_connection_id_header(self):
         """Test BYO connection ID header is added."""
-        from uipath_llm_client.httpx_client import build_routing_headers
+        from uipath.llm_client.httpx_client import build_routing_headers
 
         headers = build_routing_headers(
             byo_connection_id="test-connection-id",
@@ -855,7 +855,7 @@ class TestExceptions:
 
     def test_exception_status_codes(self):
         """Test exception classes have correct status codes."""
-        from uipath_llm_client.utils.exceptions import (
+        from uipath.llm_client.utils.exceptions import (
             UiPathBadRequestError,
             UiPathInternalServerError,
             UiPathNotFoundError,

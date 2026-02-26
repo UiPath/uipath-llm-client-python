@@ -1,7 +1,7 @@
 import pytest
 
-from uipath_llm_client.settings import UiPathBaseSettings
-from uipath_llm_client.settings.llmgateway import LLMGatewaySettings
+from uipath.llm_client.settings import UiPathBaseSettings
+from uipath.llm_client.settings.llmgateway import LLMGatewaySettings
 
 
 @pytest.fixture(autouse=True, scope="session")

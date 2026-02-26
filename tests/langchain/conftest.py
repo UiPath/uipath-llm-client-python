@@ -23,7 +23,7 @@ from uipath_langchain_client.clients.openai.embeddings import (
 )
 from uipath_langchain_client.clients.vertexai.chat_models import UiPathChatAnthropicVertex
 
-from uipath_llm_client.settings import UiPathBaseSettings
+from uipath.llm_client.settings import UiPathBaseSettings
 
 GPT_MODELS_NON_REASONING_CONFIGS = [
     {"model_class": UiPathAzureChatOpenAI},

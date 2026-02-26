@@ -31,6 +31,7 @@ from uipath_langchain_client.settings import UiPathBaseSettings, get_default_cli
 
 def _get_model_info(
     model_name: str,
+    *,
     client_settings: UiPathBaseSettings,
     byo_connection_id: str | None = None,
 ) -> dict[str, Any]:
@@ -67,6 +68,7 @@ def _get_model_info(
 
 def get_chat_model(
     model_name: str,
+    *,
     byo_connection_id: str | None = None,
     client_settings: UiPathBaseSettings | None = None,
     client_type: Literal["passthrough", "normalized"] = "passthrough",
@@ -88,7 +90,9 @@ def get_chat_model(
         ValueError: If the model is not found in available models or vendor is not supported
     """
     client_settings = client_settings or get_default_client_settings()
-    model_info = _get_model_info(model_name, client_settings, byo_connection_id)
+    model_info = _get_model_info(
+        model_name, client_settings=client_settings, byo_connection_id=byo_connection_id
+    )
     is_uipath_owned = model_info.get("modelSubscriptionType") == "UiPathOwned"
     if not is_uipath_owned:
         client_settings.validate_byo_model(model_info)
@@ -215,6 +219,7 @@ def get_chat_model(
 
 def get_embedding_model(
     model_name: str,
+    *,
     byo_connection_id: str | None = None,
     client_settings: UiPathBaseSettings | None = None,
     client_type: Literal["passthrough", "normalized"] = "passthrough",
@@ -243,7 +248,9 @@ def get_embedding_model(
         >>> vectors = embeddings.embed_documents(["Hello world"])
     """
     client_settings = client_settings or get_default_client_settings()
-    model_info = _get_model_info(model_name, client_settings, byo_connection_id)
+    model_info = _get_model_info(
+        model_name, client_settings=client_settings, byo_connection_id=byo_connection_id
+    )
     is_uipath_owned = model_info.get("modelSubscriptionType") == "UiPathOwned"
     if not is_uipath_owned:
         client_settings.validate_byo_model(model_info)

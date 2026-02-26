@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_langchain_client` will be documented in this file.
 
+## [1.2.5] - 2026-02-26
+
+### Fix
+- Parameters on factory fix
+
 ## [1.2.4] - 2026-02-26
 
 ### Fix

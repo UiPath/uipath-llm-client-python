@@ -30,9 +30,17 @@ class UiPathChatBedrockConverse(UiPathBaseChatModel, ChatBedrockConverse):
     client: Any = WrappedBotoClient()
     bedrock_client: Any = WrappedBotoClient()
 
+    @model_validator(mode="before")
+    @classmethod
+    def setup_model_id(cls, values: Any) -> Any:
+        if isinstance(values, dict) and "model_id" not in values:
+            model = values.get("model") or values.get("model_name")
+            if model:
+                values = {**values, "model_id": model}
+        return values
+
     @model_validator(mode="after")
     def setup_uipath_client(self) -> Self:
-        self.model_id = self.model_name
         self.client = WrappedBotoClient(self.uipath_sync_client)
         return self
 
@@ -51,9 +59,17 @@ class UiPathChatBedrock(UiPathBaseChatModel, ChatBedrock):
     client: Any = WrappedBotoClient()
     bedrock_client: Any = WrappedBotoClient()
 
+    @model_validator(mode="before")
+    @classmethod
+    def setup_model_id(cls, values: Any) -> Any:
+        if isinstance(values, dict) and "model_id" not in values:
+            model = values.get("model") or values.get("model_name")
+            if model:
+                values = {**values, "model_id": model}
+        return values
+
     @model_validator(mode="after")
     def setup_uipath_client(self) -> Self:
-        self.model_id = self.model_name
         self.client = WrappedBotoClient(self.uipath_sync_client)
         return self
 

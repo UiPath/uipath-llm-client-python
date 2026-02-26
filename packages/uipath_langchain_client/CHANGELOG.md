@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_langchain_client` will be documented in this file.
 
+## [1.2.4] - 2026-02-26
+
+### Fix
+- Fix typing on factory method
+
 ## [1.2.3] - 2026-02-25
 
 ### Feature

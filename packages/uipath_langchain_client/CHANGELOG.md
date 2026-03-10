@@ -2,6 +2,12 @@
 
 All notable changes to `uipath_langchain_client` will be documented in this file.
 
+## [1.3.0] - 2026-03-10
+
+### Version Bump
+- Stable release
+- Fixes
+
 ## [1.2.7] - 2026-02-26
 
 ### Fix

@@ -2,6 +2,12 @@
 
 All notable changes to `uipath_llm_client` (core package) will be documented in this file.
 
+## [1.3.0] - 2026-03-10
+
+### Version Bump
+- Stable release
+- Fixes
+
 ## [1.2.4] - 2026-02-26
 
 ### Refactor

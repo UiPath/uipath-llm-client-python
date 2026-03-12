@@ -28,7 +28,9 @@ class UiPathAzureAIChatCompletionsModel(UiPathBaseChatModel, AzureAIOpenAIApiCha
 
     # Override fields to avoid env var lookup / validation errors at instantiation
     endpoint: str | None = Field(default="PLACEHOLDER")
-    credential: str | AzureKeyCredential | TokenCredential | AsyncTokenCredential | None = Field(default="PLACEHOLDER")
+    credential: str | AzureKeyCredential | TokenCredential | AsyncTokenCredential | None = Field(
+        default="PLACEHOLDER"
+    )
 
     @model_validator(mode="after")
     def setup_uipath_client(self) -> Self:

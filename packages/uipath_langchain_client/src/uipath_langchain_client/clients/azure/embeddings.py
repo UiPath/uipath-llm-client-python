@@ -28,7 +28,9 @@ class UiPathAzureAIEmbeddingsModel(UiPathBaseEmbeddings, AzureAIOpenAIApiEmbeddi
     # Override fields to avoid env var lookup / validation errors at instantiation
     model: str = Field(default="", alias="model_name")
     endpoint: str | None = Field(default="PLACEHOLDER")
-    credential: str | AzureKeyCredential | TokenCredential | AsyncTokenCredential | None = Field(default="PLACEHOLDER")
+    credential: str | AzureKeyCredential | TokenCredential | AsyncTokenCredential | None = Field(
+        default="PLACEHOLDER"
+    )
 
     @model_validator(mode="after")
     def setup_uipath_client(self) -> Self:

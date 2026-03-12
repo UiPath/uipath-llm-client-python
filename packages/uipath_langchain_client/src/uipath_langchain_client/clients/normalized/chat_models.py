@@ -244,7 +244,11 @@ class UiPathChat(UiPathBaseChatModel):
                             "arguments": (
                                 tool_call["function"]["arguments"]
                                 if isinstance(tool_call["function"]["arguments"], dict)
-                                else (json.loads(tool_call["function"]["arguments"]) if tool_call["function"]["arguments"] else {})
+                                else (
+                                    json.loads(tool_call["function"]["arguments"])
+                                    if tool_call["function"]["arguments"]
+                                    else {}
+                                )
                             ),
                         }
                         for tool_call in converted_message["tool_calls"]

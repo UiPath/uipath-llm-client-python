@@ -319,7 +319,7 @@ class UiPathChat(UiPathBaseChatModel):
         **kwargs: Any,
     ) -> ChatResult:
         request_body = self._preprocess_request(messages, **kwargs)
-        response = self.uipath_request(request_body=request_body)
+        response = self.uipath_request(request_body=request_body, raise_status_error=True)
         result = self._postprocess_response(response.json())
         if self.captured_headers:
             captured = extract_matching_headers(response.headers, self.captured_headers)
@@ -336,7 +336,7 @@ class UiPathChat(UiPathBaseChatModel):
         **kwargs: Any,
     ) -> ChatResult:
         request_body = self._preprocess_request(messages, **kwargs)
-        response = await self.uipath_arequest(request_body=request_body)
+        response = await self.uipath_arequest(request_body=request_body, raise_status_error=True)
         result = self._postprocess_response(response.json())
         if self.captured_headers:
             captured = extract_matching_headers(response.headers, self.captured_headers)
@@ -413,7 +413,9 @@ class UiPathChat(UiPathBaseChatModel):
         set_captured_response_headers({})
         try:
             first = True
-            for chunk in self.uipath_stream(request_body=request_body, stream_type="lines"):
+            for chunk in self.uipath_stream(
+                request_body=request_body, stream_type="lines", raise_status_error=True
+            ):
                 chunk = str(chunk)
                 if chunk.startswith("data:"):
                     chunk = chunk.split("data:")[1].strip()
@@ -442,7 +444,9 @@ class UiPathChat(UiPathBaseChatModel):
         set_captured_response_headers({})
         try:
             first = True
-            async for chunk in self.uipath_astream(request_body=request_body, stream_type="lines"):
+            async for chunk in self.uipath_astream(
+                request_body=request_body, stream_type="lines", raise_status_error=True
+            ):
                 chunk = str(chunk)
                 if chunk.startswith("data:"):
                     chunk = chunk.split("data:")[1].strip()

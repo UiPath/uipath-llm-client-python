@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_langchain_client` will be documented in this file.
 
+## [1.3.1] - 2026-03-12
+
+### Fix
+- Fix normalized client raise error
+
 ## [1.3.0] - 2026-03-10
 
 ### Version Bump

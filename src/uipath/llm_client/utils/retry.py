@@ -49,13 +49,6 @@ from typing_extensions import TypedDict
 
 from uipath.llm_client.utils.exceptions import UiPathAPIError, UiPathRateLimitError
 
-__all__ = [
-    "RetryConfig",
-    "RetryableHTTPTransport",
-    "RetryableAsyncHTTPTransport",
-]
-
-
 # Default retry configuration values
 _DEFAULT_RETRY_ON_EXCEPTIONS: tuple[type[Exception], ...] = (UiPathRateLimitError,)
 _DEFAULT_INITIAL_DELAY: float = 2.0
@@ -147,7 +140,7 @@ class RetryConfig(TypedDict):
         ... }
     """
 
-    retry_on_exceptions: NotRequired[tuple[type[UiPathAPIError], ...]]
+    retry_on_exceptions: NotRequired[tuple[type[Exception], ...]]
     initial_delay: NotRequired[float]
     max_delay: NotRequired[float]
     exp_base: NotRequired[float]
@@ -327,3 +320,10 @@ class RetryableAsyncHTTPTransport(AsyncHTTPTransport):
                 return await _send()
         except UiPathAPIError as e:
             return e.response
+
+
+__all__ = [
+    "RetryConfig",
+    "RetryableHTTPTransport",
+    "RetryableAsyncHTTPTransport",
+]

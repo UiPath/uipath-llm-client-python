@@ -10,5 +10,5 @@ class LLMGatewayEndpoints(StrEnum):
 
     IDENTITY_ENDPOINT = "identity_/connect/token"
     DISCOVERY_ENDPOINT = "llmgateway_/api/discovery"
-    NORMALIZED_ENDPOOINT = "llmgateway_/api/{api_type}"
-    PASSTHROUGH_ENDPOOINT = "llmgateway_/api/raw/vendor/{vendor}/model/{model}/{api_type}"
+    NORMALIZED_ENDPOINT = "llmgateway_/api/{api_type}"
+    PASSTHROUGH_ENDPOINT = "llmgateway_/api/raw/vendor/{vendor}/model/{model}/{api_type}"

@@ -140,7 +140,7 @@ class UiPathChat(UiPathBaseChatModel):
 
     @property
     def _default_params(self) -> dict[str, Any]:
-        """Get the default parameters for calling OpenAI API."""
+        """Get the default parameters for the normalized API request."""
         exclude_if_none = {
             "frequency_penalty": self.frequency_penalty,
             "presence_penalty": self.presence_penalty,
@@ -175,7 +175,7 @@ class UiPathChat(UiPathBaseChatModel):
                 cache_creation=json_data.get("cache_creation_input_tokens", 0),
             ),
             output_token_details=OutputTokenDetails(
-                audio=json_data.get("audio_tokens", 0),
+                audio=json_data.get("output_audio_tokens", 0),
                 reasoning=json_data.get("thoughts_tokens", 0),
             ),
         )
@@ -241,7 +241,11 @@ class UiPathChat(UiPathBaseChatModel):
                         {
                             "id": tool_call["id"],
                             "name": tool_call["function"]["name"],
-                            "arguments": json.loads(tool_call["function"]["arguments"]),
+                            "arguments": (
+                                tool_call["function"]["arguments"]
+                                if isinstance(tool_call["function"]["arguments"], dict)
+                                else (json.loads(tool_call["function"]["arguments"]) if tool_call["function"]["arguments"] else {})
+                            ),
                         }
                         for tool_call in converted_message["tool_calls"]
                     ]

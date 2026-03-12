@@ -30,8 +30,8 @@ class LLMGatewayS2SAuth(Auth, metaclass=SingletonMeta):
     ) -> str:
         """Retrieve a new access token from the LLM Gateway identity endpoint."""
         url_get_token = f"{self.settings.base_url}/{LLMGatewayEndpoints.IDENTITY_ENDPOINT.value}"
-        assert self.settings.client_id is not None
-        assert self.settings.client_secret is not None
+        if self.settings.client_id is None or self.settings.client_secret is None:
+            raise ValueError("client_id and client_secret are required for S2S authentication")
         token_credentials = dict(
             client_id=self.settings.client_id.get_secret_value(),
             client_secret=self.settings.client_secret.get_secret_value(),
@@ -40,11 +40,15 @@ class LLMGatewayS2SAuth(Auth, metaclass=SingletonMeta):
         with Client() as http_client:
             response = http_client.post(url_get_token, data=token_credentials)
             if response.is_client_error:
+                try:
+                    body = response.json()
+                except Exception:
+                    body = response.text
                 raise UiPathAuthenticationError(
                     message="Failed to authenticate with LLM Gateway, invalid credentials",
                     request=response.request,
                     response=response,
-                    body=response.json(),
+                    body=body,
                 )
             elif response.is_error:
                 raise UiPathAPIError.from_response(response)

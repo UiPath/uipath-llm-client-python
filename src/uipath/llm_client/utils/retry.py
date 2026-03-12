@@ -47,17 +47,17 @@ from tenacity import (
 from tenacity.wait import wait_base
 from typing_extensions import TypedDict
 
-from uipath.llm_client.utils.exceptions import UiPathAPIError, UiPathRateLimitError
-
-__all__ = [
-    "RetryConfig",
-    "RetryableHTTPTransport",
-    "RetryableAsyncHTTPTransport",
-]
-
+from uipath.llm_client.utils.exceptions import (
+    UiPathAPIError,
+    UiPathRateLimitError,
+    UiPathTooManyRequestsError,
+)
 
 # Default retry configuration values
-_DEFAULT_RETRY_ON_EXCEPTIONS: tuple[type[Exception], ...] = (UiPathRateLimitError,)
+_DEFAULT_RETRY_ON_EXCEPTIONS: tuple[type[Exception], ...] = (
+    UiPathRateLimitError,
+    UiPathTooManyRequestsError,
+)
 _DEFAULT_INITIAL_DELAY: float = 2.0
 _DEFAULT_MAX_DELAY: float = 60.0
 _DEFAULT_EXP_BASE: float = 2.0
@@ -147,7 +147,7 @@ class RetryConfig(TypedDict):
         ... }
     """
 
-    retry_on_exceptions: NotRequired[tuple[type[UiPathAPIError], ...]]
+    retry_on_exceptions: NotRequired[tuple[type[Exception], ...]]
     initial_delay: NotRequired[float]
     max_delay: NotRequired[float]
     exp_base: NotRequired[float]
@@ -164,7 +164,7 @@ def _build_retryer(
     """Build a tenacity retryer from configuration.
 
     Args:
-        max_retries: Maximum number of retry attempts. Returns None if <= 1.
+        max_retries: Maximum number of retry attempts. Returns None if < 1 (i.e., 0 or negative).
         retry_config: Configuration for retry behavior. Uses defaults if not provided.
         logger: Logger for retry attempt warnings.
         async_mode: If True, returns AsyncRetrying; otherwise returns Retrying.
@@ -224,7 +224,7 @@ class RetryableHTTPTransport(HTTPTransport):
         """Initialize the retryable transport.
 
         Args:
-            max_retries: Maximum number of retry attempts. Set to 1 to disable retries.
+            max_retries: Maximum number of retry attempts. Set to 0 (default) to disable retries.
             retry_config: Configuration for retry behavior. Uses defaults if not provided.
             logger: Logger for retry attempt warnings.
             *args: Positional arguments passed to HTTPTransport.
@@ -288,7 +288,7 @@ class RetryableAsyncHTTPTransport(AsyncHTTPTransport):
         """Initialize the retryable async transport.
 
         Args:
-            max_retries: Maximum number of retry attempts. Set to 1 to disable retries.
+            max_retries: Maximum number of retry attempts. Set to 0 (default) to disable retries.
             retry_config: Configuration for retry behavior. Uses defaults if not provided.
             logger: Logger for retry attempt warnings.
             *args: Positional arguments passed to AsyncHTTPTransport.
@@ -327,3 +327,10 @@ class RetryableAsyncHTTPTransport(AsyncHTTPTransport):
                 return await _send()
         except UiPathAPIError as e:
             return e.response
+
+
+__all__ = [
+    "RetryConfig",
+    "RetryableHTTPTransport",
+    "RetryableAsyncHTTPTransport",
+]

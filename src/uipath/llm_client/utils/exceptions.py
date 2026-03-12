@@ -70,6 +70,7 @@ class UiPathAPIError(HTTPStatusError):
 
         Args:
             response: The httpx Response object.
+            request: The original httpx Request object. Falls back to response.request if None.
 
         Returns:
             A UiPathAPIError instance (or subclass) matching the response status code.

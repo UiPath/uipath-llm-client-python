@@ -75,9 +75,11 @@ class LLMGatewayBaseSettings(UiPathBaseSettings):
     ) -> str:
         base_url = f"{self.base_url}/{self.org_id}/{self.tenant_id}"
         if api_config is not None and api_config.client_type == "normalized":
-            url = f"{base_url}/{LLMGatewayEndpoints.NORMALIZED_ENDPOOINT.value.format(api_type='chat/completions' if api_config.api_type == 'completions' else 'embeddings')}"
+            url = f"{base_url}/{LLMGatewayEndpoints.NORMALIZED_ENDPOINT.value.format(api_type='chat/completions' if api_config.api_type == 'completions' else 'embeddings')}"
         else:
-            url = f"{base_url}/{LLMGatewayEndpoints.PASSTHROUGH_ENDPOOINT.value.format(vendor=api_config.vendor_type if api_config is not None else None, model=model_name, api_type=api_config.api_type if api_config is not None else None)}"
+            if api_config is None:
+                raise ValueError("api_config is required for passthrough client_type")
+            url = f"{base_url}/{LLMGatewayEndpoints.PASSTHROUGH_ENDPOINT.value.format(vendor=api_config.vendor_type, model=model_name, api_type=api_config.api_type)}"
         return url
 
     @override
@@ -115,16 +117,16 @@ class LLMGatewayBaseSettings(UiPathBaseSettings):
     @override
     def validate_byo_model(self, model_info: dict[str, Any]) -> None:
         byom_details = model_info.get("byomDetails", {})
-        operaion_codes = byom_details.get("operationCodes", [])
-        if self.operation_code and self.operation_code not in operaion_codes:
+        operation_codes = byom_details.get("operationCodes", [])
+        if self.operation_code and self.operation_code not in operation_codes:
             raise ValueError(
                 f"The operation code {self.operation_code} is not allowed for the model {model_info['modelName']}"
             )
-        if not self.operation_code and len(operaion_codes) > 0:
-            if len(operaion_codes) > 1:
+        if not self.operation_code and len(operation_codes) > 0:
+            if len(operation_codes) > 1:
                 logging.warning(
                     "Multiple operation codes are allowed for the model %s, but no operation code was provided, picking the first one available: %s",
                     model_info["modelName"],
-                    operaion_codes[0],
+                    operation_codes[0],
                 )
-            self.operation_code = operaion_codes[0]
+            self.operation_code = operation_codes[0]

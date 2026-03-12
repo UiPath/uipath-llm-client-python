@@ -102,7 +102,7 @@ class UiPathBaseLLMClient(BaseModel, ABC):
     )
 
     default_headers: Mapping[str, str] | None = Field(
-        default={
+        default_factory=lambda: {
             "X-UiPath-LLMGateway-TimeoutSeconds": "295",  # server side timeout, default is 10, maximum is 300
             "X-UiPath-LLMGateway-AllowFull4xxResponse": "true",  # allow full 4xx responses (default is false)
         },
@@ -210,7 +210,7 @@ class UiPathBaseLLMClient(BaseModel, ABC):
     async def uipath_arequest(
         self,
         method: Literal["POST", "GET"] = "POST",
-        url: str = "/",
+        url: URL | str = "/",
         *,
         request_body: dict[str, Any] | None = None,
         **kwargs: Any,

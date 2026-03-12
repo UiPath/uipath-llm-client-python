@@ -189,6 +189,7 @@ class UiPathBaseLLMClient(BaseModel, ABC):
         url: URL | str = "/",
         *,
         request_body: dict[str, Any] | None = None,
+        raise_status_error: bool = False,
         **kwargs: Any,
     ) -> Response:
         """Make a synchronous HTTP request to the UiPath API.
@@ -205,7 +206,10 @@ class UiPathBaseLLMClient(BaseModel, ABC):
         Raises:
             UiPathAPIError: On HTTP 4xx/5xx responses (raised by transport layer).
         """
-        return self.uipath_sync_client.request(method, url, json=request_body, **kwargs)
+        response = self.uipath_sync_client.request(method, url, json=request_body, **kwargs)
+        if raise_status_error:
+            response.raise_for_status()
+        return response
 
     async def uipath_arequest(
         self,
@@ -213,10 +217,14 @@ class UiPathBaseLLMClient(BaseModel, ABC):
         url: URL | str = "/",
         *,
         request_body: dict[str, Any] | None = None,
+        raise_status_error: bool = False,
         **kwargs: Any,
     ) -> Response:
         """Make an asynchronous HTTP request to the UiPath API."""
-        return await self.uipath_async_client.request(method, url, json=request_body, **kwargs)
+        response = await self.uipath_async_client.request(method, url, json=request_body, **kwargs)
+        if raise_status_error:
+            response.raise_for_status()
+        return response
 
     def uipath_stream(
         self,
@@ -225,6 +233,7 @@ class UiPathBaseLLMClient(BaseModel, ABC):
         *,
         request_body: dict[str, Any] | None = None,
         stream_type: Literal["text", "bytes", "lines", "raw"] = "lines",
+        raise_status_error: bool = False,
         **kwargs: Any,
     ) -> Iterator[str | bytes]:
         """Make a synchronous streaming HTTP request to the UiPath API.
@@ -244,6 +253,8 @@ class UiPathBaseLLMClient(BaseModel, ABC):
             str | bytes: Chunks of the streaming response.
         """
         with self.uipath_sync_client.stream(method, url, json=request_body, **kwargs) as response:
+            if raise_status_error:
+                response.raise_for_status()
             match stream_type:
                 case "text":
                     for chunk in response.iter_text():
@@ -265,6 +276,7 @@ class UiPathBaseLLMClient(BaseModel, ABC):
         *,
         request_body: dict[str, Any] | None = None,
         stream_type: Literal["text", "bytes", "lines", "raw"] = "lines",
+        raise_status_error: bool = False,
         **kwargs: Any,
     ) -> AsyncIterator[str | bytes]:
         """Make an asynchronous streaming HTTP request to the UiPath API.
@@ -286,6 +298,8 @@ class UiPathBaseLLMClient(BaseModel, ABC):
         async with self.uipath_async_client.stream(
             method, url, json=request_body, **kwargs
         ) as response:
+            if raise_status_error:
+                response.raise_for_status()
             match stream_type:
                 case "text":
                     async for chunk in response.aiter_text():

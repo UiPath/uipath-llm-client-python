@@ -1,14 +1,15 @@
 from typing import Self
 
-from pydantic import model_validator
+from pydantic import Field, model_validator
 
 from uipath_langchain_client.base_client import UiPathBaseEmbeddings
 from uipath_langchain_client.settings import UiPathAPIConfig
 
 try:
-    from azure.ai.inference import EmbeddingsClient
-    from azure.ai.inference.aio import EmbeddingsClient as EmbeddingsClientAsync
-    from langchain_azure_ai.embeddings import AzureAIEmbeddingsModel
+    from azure.core.credentials import AzureKeyCredential, TokenCredential
+    from azure.core.credentials_async import AsyncTokenCredential
+    from langchain_azure_ai.embeddings import AzureAIOpenAIApiEmbeddingsModel
+    from openai import AsyncOpenAI, OpenAI
 except ImportError as e:
     raise ImportError(
         "The 'azure' extra is required to use UiPathAzureAIEmbeddingsModel. "
@@ -16,7 +17,7 @@ except ImportError as e:
     ) from e
 
 
-class UiPathAzureAIEmbeddingsModel(UiPathBaseEmbeddings, AzureAIEmbeddingsModel):  # type: ignore[override]
+class UiPathAzureAIEmbeddingsModel(UiPathBaseEmbeddings, AzureAIOpenAIApiEmbeddingsModel):  # type: ignore[override]
     api_config: UiPathAPIConfig = UiPathAPIConfig(
         api_type="embeddings",
         client_type="passthrough",
@@ -24,23 +25,21 @@ class UiPathAzureAIEmbeddingsModel(UiPathBaseEmbeddings, AzureAIEmbeddingsModel)
         freeze_base_url=True,
     )
 
-    # Override fields to avoid errors when instantiating the class
-    endpoint: str | None = "PLACEHOLDER"
-    credentials: str | None = "PLACEHOLDER"
+    # Override fields to avoid env var lookup / validation errors at instantiation
+    model: str = Field(default="", alias="model_name")
+    endpoint: str | None = Field(default="PLACEHOLDER")
+    credential: str | AzureKeyCredential | TokenCredential | AsyncTokenCredential | None = Field(default="PLACEHOLDER")
 
     @model_validator(mode="after")
     def setup_uipath_client(self) -> Self:
-        # TODO: finish implementation once we have a proper model in UiPath API
-        self._client = EmbeddingsClient(
-            endpoint="PLACEHOLDER",
-            credentials="PLACEHOLDER",
-            model=self.model_name,
-            **self.client_kwargs,
-        )
-        self._async_client = EmbeddingsClientAsync(
-            endpoint="PLACEHOLDER",
-            credentials="PLACEHOLDER",
-            model=self.model_name,
-            **self.client_kwargs,
-        )
+        self.client = OpenAI(
+            api_key="PLACEHOLDER",
+            max_retries=0,  # handled by the UiPath client
+            http_client=self.uipath_sync_client,
+        ).embeddings
+        self.async_client = AsyncOpenAI(
+            api_key="PLACEHOLDER",
+            max_retries=0,  # handled by the UiPath client
+            http_client=self.uipath_async_client,
+        ).embeddings
         return self

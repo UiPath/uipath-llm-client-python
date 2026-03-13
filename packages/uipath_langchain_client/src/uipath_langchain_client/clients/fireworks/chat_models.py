@@ -3,7 +3,13 @@ from typing import Self
 from pydantic import Field, SecretStr, model_validator
 
 from uipath_langchain_client.base_client import UiPathBaseChatModel
-from uipath_langchain_client.settings import UiPathAPIConfig
+from uipath_langchain_client.settings import (
+    ApiFlavor,
+    ApiType,
+    RoutingMode,
+    UiPathAPIConfig,
+    VendorType,
+)
 
 try:
     from fireworks.client.api_client import FireworksClient as FireworksClientV1
@@ -17,10 +23,10 @@ except ImportError as e:
 
 class UiPathChatFireworks(UiPathBaseChatModel, ChatFireworks):  # type: ignore[override]
     api_config: UiPathAPIConfig = UiPathAPIConfig(
-        api_type="completions",
-        client_type="passthrough",
-        vendor_type="openai",
-        api_flavor="chat-completions",
+        api_type=ApiType.COMPLETIONS,
+        routing_mode=RoutingMode.PASSTHROUGH,
+        vendor_type=VendorType.OPENAI,
+        api_flavor=ApiFlavor.CHAT_COMPLETIONS,
         api_version="2025-03-01-preview",
         freeze_base_url=True,
     )

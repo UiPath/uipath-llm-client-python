@@ -7,11 +7,13 @@ Concrete implementations are provided in the `agenthub` and `llmgateway` submodu
 
 from abc import ABC, abstractmethod
 from collections.abc import Mapping
-from typing import Any, Literal, Self
+from typing import Any, Self
 
 from httpx import Auth
 from pydantic import BaseModel, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+from uipath.llm_client.settings.constants import ApiFlavor, ApiType, RoutingMode, VendorType
 
 
 class UiPathAPIConfig(BaseModel):
@@ -20,12 +22,12 @@ class UiPathAPIConfig(BaseModel):
     This model defines how requests are routed to the appropriate API endpoint.
 
     Attributes:
-        api_type: The type of API call - "completions" for chat or "embeddings".
-        client_type: API mode - "passthrough" for vendor-specific APIs or
-            "normalized" for UiPath's provider-agnostic API.
-        vendor_type: The LLM vendor (e.g., "openai", "vertexai", "awsbedrock").
-            Required when client_type is "passthrough".
-        api_flavor: Vendor-specific API flavor (e.g., "chat-completions", "responses").
+        api_type: The type of API call (e.g., ApiType.COMPLETIONS, ApiType.EMBEDDINGS).
+        routing_mode: API routing mode - RoutingMode.PASSTHROUGH for vendor-specific APIs or
+            RoutingMode.NORMALIZED for UiPath's provider-agnostic API.
+        vendor_type: The LLM vendor (e.g., VendorType.OPENAI, VendorType.VERTEXAI).
+            Required when routing_mode is PASSTHROUGH.
+        api_flavor: Vendor-specific API flavor (e.g., ApiFlavor.CHAT_COMPLETIONS).
         api_version: Vendor-specific API version (e.g., "2025-03-01-preview").
         freeze_base_url: If True, prevents httpx from modifying the base URL.
             Used when the URL must remain exactly as configured.
@@ -33,31 +35,31 @@ class UiPathAPIConfig(BaseModel):
     Example:
         >>> # For OpenAI passthrough
         >>> settings = UiPathAPIConfig(
-        ...     api_type="completions",
-        ...     client_type="passthrough",
-        ...     vendor_type="openai",
+        ...     api_type=ApiType.COMPLETIONS,
+        ...     routing_mode=RoutingMode.PASSTHROUGH,
+        ...     vendor_type=VendorType.OPENAI,
         ... )
         >>>
         >>> # For normalized API
         >>> settings = UiPathAPIConfig(
-        ...     api_type="completions",
-        ...     client_type="normalized",
+        ...     api_type=ApiType.COMPLETIONS,
+        ...     routing_mode=RoutingMode.NORMALIZED,
         ... )
     """
 
-    api_type: Literal["completions", "embeddings"] | None = None
-    client_type: Literal["passthrough", "normalized"] | None = None
-    vendor_type: str | None = None
-    api_flavor: str | None = None
+    api_type: ApiType | str | None = None
+    api_flavor: ApiFlavor | str | None = None
     api_version: str | None = None
+    vendor_type: VendorType | str | None = None
+    routing_mode: RoutingMode | str | None = None
     freeze_base_url: bool = False
 
     @model_validator(mode="after")
     def validate_api_config(self) -> Self:
         """Validate that vendor_type is provided for passthrough mode."""
-        if self.client_type == "passthrough":
+        if self.routing_mode == RoutingMode.PASSTHROUGH:
             if self.vendor_type is None:
-                raise ValueError("vendor_type required when client_type='passthrough'")
+                raise ValueError("vendor_type required when routing_mode='passthrough'")
         return self
 
 

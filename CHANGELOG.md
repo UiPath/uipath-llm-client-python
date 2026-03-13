@@ -2,6 +2,19 @@
 
 All notable changes to `uipath_llm_client` (core package) will be documented in this file.
 
+## [1.4.0] - 2026-03-13
+
+### New client
+- Added UiPathChatAnthropicBedrock
+
+### Tests
+- added sqlite serializer
+- test updates
+- new cassettes
+
+### Fixes
+- Added constants for VendorType and ApiFlavor
+
 ## [1.3.0] - 2026-03-10
 
 ### Version Bump

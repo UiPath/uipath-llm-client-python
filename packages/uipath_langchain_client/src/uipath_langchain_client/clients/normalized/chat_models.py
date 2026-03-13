@@ -61,7 +61,7 @@ from uipath.llm_client.utils.headers import (
     set_captured_response_headers,
 )
 from uipath_langchain_client.base_client import UiPathBaseChatModel
-from uipath_langchain_client.settings import UiPathAPIConfig
+from uipath_langchain_client.settings import ApiType, RoutingMode, UiPathAPIConfig
 
 
 class UiPathChat(UiPathBaseChatModel):
@@ -100,8 +100,8 @@ class UiPathChat(UiPathBaseChatModel):
     """
 
     api_config: UiPathAPIConfig = UiPathAPIConfig(
-        api_type="completions",
-        client_type="normalized",
+        api_type=ApiType.COMPLETIONS,
+        routing_mode=RoutingMode.NORMALIZED,
         freeze_base_url=True,
     )
 

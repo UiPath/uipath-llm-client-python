@@ -2,6 +2,14 @@
 
 All notable changes to `uipath_langchain_client` will be documented in this file.
 
+## [1.4.0] - 2026-03-13
+
+### New client
+- Added UiPathChatAnthropicBedrock
+- refactored factory function to se the new client
+- brought the enums from the base client
+
+
 ## [1.3.1] - 2026-03-12
 
 ### Fix

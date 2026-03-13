@@ -1,7 +1,7 @@
 from langchain_core.embeddings import Embeddings
 
 from uipath_langchain_client.base_client import UiPathBaseEmbeddings
-from uipath_langchain_client.settings import UiPathAPIConfig
+from uipath_langchain_client.settings import ApiType, RoutingMode, UiPathAPIConfig
 
 
 class UiPathEmbeddings(UiPathBaseEmbeddings, Embeddings):
@@ -12,8 +12,8 @@ class UiPathEmbeddings(UiPathBaseEmbeddings, Embeddings):
     """
 
     api_config: UiPathAPIConfig = UiPathAPIConfig(
-        api_type="embeddings",
-        client_type="normalized",
+        api_type=ApiType.EMBEDDINGS,
+        routing_mode=RoutingMode.NORMALIZED,
         freeze_base_url=True,
     )
 

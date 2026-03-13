@@ -1,12 +1,21 @@
+from functools import cached_property
 from typing import Any, Self
 
-from pydantic import model_validator
+from pydantic import Field, model_validator
 
 from uipath_langchain_client.base_client import UiPathBaseChatModel
-from uipath_langchain_client.settings import UiPathAPIConfig
+from uipath_langchain_client.settings import (
+    ApiFlavor,
+    ApiType,
+    RoutingMode,
+    UiPathAPIConfig,
+    VendorType,
+)
 
 try:
+    from anthropic import AnthropicBedrock, AsyncAnthropicBedrock
     from langchain_aws.chat_models import ChatBedrock, ChatBedrockConverse
+    from langchain_aws.chat_models.anthropic import ChatAnthropicBedrock
 
     from uipath_langchain_client.clients.bedrock.utils import WrappedBotoClient
 except ImportError as e:
@@ -18,10 +27,10 @@ except ImportError as e:
 
 class UiPathChatBedrockConverse(UiPathBaseChatModel, ChatBedrockConverse):
     api_config: UiPathAPIConfig = UiPathAPIConfig(
-        api_type="completions",
-        client_type="passthrough",
-        vendor_type="awsbedrock",
-        api_flavor="converse",
+        api_type=ApiType.COMPLETIONS,
+        routing_mode=RoutingMode.PASSTHROUGH,
+        vendor_type=VendorType.AWSBEDROCK,
+        api_flavor=ApiFlavor.CONVERSE,
         freeze_base_url=True,
     )
 
@@ -47,10 +56,10 @@ class UiPathChatBedrockConverse(UiPathBaseChatModel, ChatBedrockConverse):
 
 class UiPathChatBedrock(UiPathBaseChatModel, ChatBedrock):
     api_config: UiPathAPIConfig = UiPathAPIConfig(
-        api_type="completions",
-        client_type="passthrough",
-        vendor_type="awsbedrock",
-        api_flavor="invoke",
+        api_type=ApiType.COMPLETIONS,
+        routing_mode=RoutingMode.PASSTHROUGH,
+        vendor_type=VendorType.AWSBEDROCK,
+        api_flavor=ApiFlavor.INVOKE,
         freeze_base_url=True,
     )
 
@@ -76,3 +85,42 @@ class UiPathChatBedrock(UiPathBaseChatModel, ChatBedrock):
     @property
     def _as_converse(self) -> UiPathChatBedrockConverse:
         raise NotImplementedError("You must instantiate the converse client directly")
+
+
+class UiPathChatAnthropicBedrock(UiPathBaseChatModel, ChatAnthropicBedrock):
+    api_config: UiPathAPIConfig = UiPathAPIConfig(
+        api_type=ApiType.COMPLETIONS,
+        routing_mode=RoutingMode.PASSTHROUGH,
+        vendor_type=VendorType.AWSBEDROCK,
+        api_flavor=ApiFlavor.INVOKE,
+        freeze_base_url=True,
+    )
+
+    # Override fields to avoid typing issues and fix stuff
+    stop_sequences: list[str] | None = Field(default=None, alias="stop")
+    model: str = Field(default="", alias="model_name")
+    default_request_timeout: float | None = None
+
+    @cached_property
+    def _client(self) -> AnthropicBedrock:
+        return AnthropicBedrock(
+            aws_access_key="PLACEHOLDER",
+            aws_secret_key="PLACEHOLDER",
+            aws_region="PLACEHOLDER",
+            base_url=str(self.uipath_sync_client.base_url),
+            default_headers=dict(self.uipath_sync_client.headers),
+            max_retries=0,  # handled by the UiPathBaseChatModel
+            http_client=self.uipath_sync_client,
+        )
+
+    @cached_property
+    def _async_client(self) -> AsyncAnthropicBedrock:
+        return AsyncAnthropicBedrock(
+            aws_access_key="PLACEHOLDER",
+            aws_secret_key="PLACEHOLDER",
+            aws_region="PLACEHOLDER",
+            base_url=str(self.uipath_async_client.base_url),
+            default_headers=dict(self.uipath_async_client.headers),
+            max_retries=0,  # handled by the UiPathBaseChatModel
+            http_client=self.uipath_async_client,
+        )

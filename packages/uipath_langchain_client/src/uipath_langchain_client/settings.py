@@ -22,6 +22,7 @@ from uipath.llm_client.settings import (
     UiPathBaseSettings,
     get_default_client_settings,
 )
+from uipath.llm_client.settings.constants import ApiFlavor, ApiType, RoutingMode, VendorType
 
 __all__ = [
     "get_default_client_settings",
@@ -29,4 +30,8 @@ __all__ = [
     "AgentHubSettings",
     "UiPathAPIConfig",
     "UiPathBaseSettings",
+    "ApiType",
+    "RoutingMode",
+    "ApiFlavor",
+    "VendorType",
 ]

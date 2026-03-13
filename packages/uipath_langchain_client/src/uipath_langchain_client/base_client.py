@@ -14,8 +14,8 @@ Example:
     >>> client = UiPathBaseLLMClient(
     ...     model="gpt-4o-2024-11-20",
     ...     api_config=UiPathAPIConfig(
-    ...         api_type="completions",
-    ...         client_type="passthrough",
+    ...         api_type=ApiType.COMPLETIONS,
+    ...         routing_mode=RoutingMode.PASSTHROUGH,
     ...         vendor_type="openai",
     ...     ),
     ...     client_settings=get_default_client_settings(),
@@ -67,7 +67,7 @@ class UiPathBaseLLMClient(BaseModel, ABC):
         model_name: Name of the LLM model to use (aliased as "model")
         byo_connection_id: Optional connection ID for Bring Your Own (BYO) models enrolled
             in LLMGateway. When provided, routes requests to your custom-enrolled model.
-        api_config: API configuration (api_type, client_type, vendor_type, etc.)
+        api_config: API configuration (api_type, routing_mode, vendor_type, etc.)
         client_settings: Client configuration (base URL, auth headers, etc.)
         default_headers: Additional headers to include in requests
         request_timeout: Client-side request timeout in seconds

@@ -49,6 +49,12 @@ def vcr_config():
     }
 
 
+def pytest_recording_configure(config, vcr):
+    from tests.sqlite_persister import SQLitePersister
+
+    vcr.register_persister(SQLitePersister)
+
+
 @pytest.fixture(scope="session", params=["llmgw"])
 def client_settings(request: pytest.FixtureRequest) -> UiPathBaseSettings:
     match request.param:

@@ -46,9 +46,7 @@ class SQLitePersister:
             conn.close()
 
     @classmethod
-    def save_cassette(
-        cls, cassette_path: str, cassette_dict: dict, serializer: str
-    ) -> None:
+    def save_cassette(cls, cassette_path: str, cassette_dict: dict, serializer: str) -> None:
         key = str(Path(cassette_path))
         data = serialize(cassette_dict, serializer)
         conn = cls._get_connection()

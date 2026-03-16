@@ -2,6 +2,13 @@
 
 All notable changes to `uipath_langchain_client` will be documented in this file.
 
+## [1.5.0] - 2026-03-16
+
+### Stable Version 1.5.0
+- removed dependencies from 'uipath'
+- StrEnum fix for python version 3.11
+- More test fixes
+
 ## [1.4.0] - 2026-03-13
 
 ### New client

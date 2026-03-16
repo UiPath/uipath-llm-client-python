@@ -4,7 +4,13 @@ from httpx import URL, Request
 from pydantic import Field, model_validator
 
 from uipath_langchain_client.base_client import UiPathBaseChatModel
-from uipath_langchain_client.settings import UiPathAPIConfig
+from uipath_langchain_client.settings import (
+    ApiFlavor,
+    ApiType,
+    RoutingMode,
+    UiPathAPIConfig,
+    VendorType,
+)
 
 try:
     from google.genai.client import Client
@@ -19,10 +25,10 @@ except ImportError as e:
 
 class UiPathChatGoogleGenerativeAI(UiPathBaseChatModel, ChatGoogleGenerativeAI):
     api_config: UiPathAPIConfig = UiPathAPIConfig(
-        api_type="completions",
-        client_type="passthrough",
-        vendor_type="vertexai",
-        api_flavor="generate-content",
+        api_type=ApiType.COMPLETIONS,
+        routing_mode=RoutingMode.PASSTHROUGH,
+        vendor_type=VendorType.VERTEXAI,
+        api_flavor=ApiFlavor.GENERATE_CONTENT,
         api_version="v1beta1",
         freeze_base_url=True,
     )

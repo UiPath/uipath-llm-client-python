@@ -16,8 +16,8 @@ Quick Start:
     >>> client = UiPathBaseLLMClient(
     ...     model="gpt-4o-2024-11-20",
     ...     api_config=UiPathAPIConfig(
-    ...         api_type="completions",
-    ...         client_type="passthrough",
+    ...         api_type=ApiType.COMPLETIONS,
+    ...         routing_mode=RoutingMode.PASSTHROUGH,
     ...         vendor_type="openai",
     ...     ),
     ...     settings=settings,

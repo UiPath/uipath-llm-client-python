@@ -3,7 +3,7 @@ from typing import Self
 from pydantic import Field, model_validator
 
 from uipath_langchain_client.base_client import UiPathBaseEmbeddings
-from uipath_langchain_client.settings import UiPathAPIConfig
+from uipath_langchain_client.settings import ApiType, RoutingMode, UiPathAPIConfig, VendorType
 
 try:
     from azure.core.credentials import AzureKeyCredential, TokenCredential
@@ -19,9 +19,9 @@ except ImportError as e:
 
 class UiPathAzureAIEmbeddingsModel(UiPathBaseEmbeddings, AzureAIOpenAIApiEmbeddingsModel):  # type: ignore[override]
     api_config: UiPathAPIConfig = UiPathAPIConfig(
-        api_type="embeddings",
-        client_type="passthrough",
-        vendor_type="azure",
+        api_type=ApiType.EMBEDDINGS,
+        routing_mode=RoutingMode.PASSTHROUGH,
+        vendor_type=VendorType.AZURE,
         freeze_base_url=True,
     )
 

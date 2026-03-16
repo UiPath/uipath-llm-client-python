@@ -3,7 +3,13 @@ from typing import Self
 from pydantic import model_validator
 
 from uipath_langchain_client.base_client import UiPathBaseChatModel
-from uipath_langchain_client.settings import UiPathAPIConfig
+from uipath_langchain_client.settings import (
+    ApiFlavor,
+    ApiType,
+    RoutingMode,
+    UiPathAPIConfig,
+    VendorType,
+)
 
 try:
     from anthropic import AnthropicVertex, AsyncAnthropicVertex
@@ -17,10 +23,10 @@ except ImportError as e:
 
 class UiPathChatAnthropicVertex(UiPathBaseChatModel, ChatAnthropicVertex):  # type: ignore[override]
     api_config: UiPathAPIConfig = UiPathAPIConfig(
-        api_type="completions",
-        client_type="passthrough",
-        vendor_type="vertexai",
-        api_flavor="anthropic-claude",
+        api_type=ApiType.COMPLETIONS,
+        routing_mode=RoutingMode.PASSTHROUGH,
+        vendor_type=VendorType.VERTEXAI,
+        api_flavor=ApiFlavor.ANTHROPIC_CLAUDE,
         freeze_base_url=True,
     )
 

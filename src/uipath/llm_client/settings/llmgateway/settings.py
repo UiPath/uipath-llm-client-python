@@ -74,11 +74,11 @@ class LLMGatewayBaseSettings(UiPathBaseSettings):
         api_config: UiPathAPIConfig | None = None,
     ) -> str:
         base_url = f"{self.base_url}/{self.org_id}/{self.tenant_id}"
-        if api_config is not None and api_config.client_type == "normalized":
+        if api_config is not None and api_config.routing_mode == "normalized":
             url = f"{base_url}/{LLMGatewayEndpoints.NORMALIZED_ENDPOINT.value.format(api_type='chat/completions' if api_config.api_type == 'completions' else 'embeddings')}"
         else:
             if api_config is None:
-                raise ValueError("api_config is required for passthrough client_type")
+                raise ValueError("api_config is required for passthrough routing_mode")
             url = f"{base_url}/{LLMGatewayEndpoints.PASSTHROUGH_ENDPOINT.value.format(vendor=api_config.vendor_type, model=model_name, api_type=api_config.api_type)}"
         return url
 

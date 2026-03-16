@@ -23,6 +23,7 @@ from uipath.llm_client.settings import (
     UiPathBaseSettings,
     get_default_client_settings,
 )
+from uipath.llm_client.settings.constants import ApiType, RoutingMode, VendorType
 from uipath.llm_client.utils.retry import RetryConfig
 
 try:
@@ -43,11 +44,11 @@ except ImportError as e:
     ) from e
 
 
-def _build_api_config(vendor_type: str = "anthropic") -> UiPathAPIConfig:
+def _build_api_config(vendor_type: str | VendorType = VendorType.ANTHROPIC) -> UiPathAPIConfig:
     """Build standard API config for Anthropic clients."""
     return UiPathAPIConfig(
-        api_type="completions",
-        client_type="passthrough",
+        api_type=ApiType.COMPLETIONS,
+        routing_mode=RoutingMode.PASSTHROUGH,
         vendor_type=vendor_type,
         freeze_base_url=True,
     )
@@ -179,7 +180,7 @@ class UiPathAnthropicBedrock(AnthropicBedrock):
         **kwargs: Any,
     ):
         client_settings = client_settings or get_default_client_settings()
-        api_config = _build_api_config(vendor_type="awsbedrock")
+        api_config = _build_api_config(vendor_type=VendorType.AWSBEDROCK)
         httpx_client = UiPathHttpxClient(
             model_name=model_name,
             byo_connection_id=byo_connection_id,
@@ -231,7 +232,7 @@ class UiPathAsyncAnthropicBedrock(AsyncAnthropicBedrock):
         **kwargs: Any,
     ):
         client_settings = client_settings or get_default_client_settings()
-        api_config = _build_api_config(vendor_type="awsbedrock")
+        api_config = _build_api_config(vendor_type=VendorType.AWSBEDROCK)
         httpx_client = UiPathHttpxAsyncClient(
             model_name=model_name,
             byo_connection_id=byo_connection_id,
@@ -283,7 +284,7 @@ class UiPathAnthropicVertex(AnthropicVertex):
         **kwargs: Any,
     ):
         client_settings = client_settings or get_default_client_settings()
-        api_config = _build_api_config(vendor_type="vertexai")
+        api_config = _build_api_config(vendor_type=VendorType.VERTEXAI)
         httpx_client = UiPathHttpxClient(
             model_name=model_name,
             byo_connection_id=byo_connection_id,
@@ -335,7 +336,7 @@ class UiPathAsyncAnthropicVertex(AsyncAnthropicVertex):
         **kwargs: Any,
     ):
         client_settings = client_settings or get_default_client_settings()
-        api_config = _build_api_config(vendor_type="vertexai")
+        api_config = _build_api_config(vendor_type=VendorType.VERTEXAI)
         httpx_client = UiPathHttpxAsyncClient(
             model_name=model_name,
             byo_connection_id=byo_connection_id,
@@ -387,7 +388,7 @@ class UiPathAnthropicFoundry(AnthropicFoundry):
         **kwargs: Any,
     ):
         client_settings = client_settings or get_default_client_settings()
-        api_config = _build_api_config(vendor_type="azure")
+        api_config = _build_api_config(vendor_type=VendorType.AZURE)
         httpx_client = UiPathHttpxClient(
             model_name=model_name,
             byo_connection_id=byo_connection_id,
@@ -437,7 +438,7 @@ class UiPathAsyncAnthropicFoundry(AsyncAnthropicFoundry):
         **kwargs: Any,
     ):
         client_settings = client_settings or get_default_client_settings()
-        api_config = _build_api_config(vendor_type="azure")
+        api_config = _build_api_config(vendor_type=VendorType.AZURE)
         httpx_client = UiPathHttpxAsyncClient(
             model_name=model_name,
             byo_connection_id=byo_connection_id,

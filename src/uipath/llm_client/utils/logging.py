@@ -75,7 +75,7 @@ class LoggingConfig(BaseModel):
             return
 
         duration = time.monotonic() - start_time
-        client_type = self.api_config.client_type if self.api_config is not None else "unknown"
+        client_type = self.api_config.routing_mode if self.api_config is not None else "unknown"
         api_type = self.api_config.api_type if self.api_config is not None else "unknown"
         request_type = f"{client_type} - {api_type}"
 

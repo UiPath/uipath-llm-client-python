@@ -57,9 +57,9 @@ def build_routing_headers(
     """
     headers: dict[str, str] = {}
     if api_config is not None:
-        if api_config.client_type == "normalized" and model_name is not None:
+        if api_config.routing_mode == "normalized" and model_name is not None:
             headers["X-UiPath-LlmGateway-NormalizedApi-ModelName"] = model_name
-        elif api_config.client_type == "passthrough" and api_config.api_type == "completions":
+        elif api_config.routing_mode == "passthrough" and api_config.api_type == "completions":
             if api_config.api_flavor is not None:
                 headers["X-UiPath-LlmGateway-ApiFlavor"] = api_config.api_flavor
             if api_config.api_version is not None:

@@ -2,6 +2,7 @@ from httpx import URL, Request
 
 from uipath.llm_client.httpx_client import build_routing_headers
 from uipath.llm_client.settings.base import UiPathAPIConfig, UiPathBaseSettings
+from uipath.llm_client.settings.constants import ApiFlavor, ApiType, RoutingMode, VendorType
 
 
 class OpenAIRequestHandler:
@@ -15,8 +16,8 @@ class OpenAIRequestHandler:
         self.client_settings = client_settings
         self.byo_connection_id = byo_connection_id
         self.base_api_config = UiPathAPIConfig(
-            client_type="passthrough",
-            vendor_type="openai",
+            routing_mode=RoutingMode.PASSTHROUGH,
+            vendor_type=VendorType.OPENAI,
             api_version="2025-03-01-preview",
             freeze_base_url=False,
         )
@@ -24,7 +25,7 @@ class OpenAIRequestHandler:
     def fix_url_and_headers(self, request: Request):
         if request.url.path.endswith("/completions"):
             api_config = self.base_api_config.model_copy(
-                update={"api_flavor": "chat-completions", "api_type": "completions"}
+                update={"api_flavor": ApiFlavor.CHAT_COMPLETIONS, "api_type": ApiType.COMPLETIONS}
             )
             request.headers.update(
                 build_routing_headers(
@@ -40,7 +41,7 @@ class OpenAIRequestHandler:
             )
         elif request.url.path.endswith("/responses"):
             api_config = self.base_api_config.model_copy(
-                update={"api_flavor": "responses", "api_type": "completions"}
+                update={"api_flavor": ApiFlavor.RESPONSES, "api_type": ApiType.COMPLETIONS}
             )
             request.headers.update(
                 build_routing_headers(
@@ -55,7 +56,7 @@ class OpenAIRequestHandler:
                 )
             )
         elif request.url.path.endswith("/embeddings"):
-            api_config = self.base_api_config.model_copy(update={"api_type": "embeddings"})
+            api_config = self.base_api_config.model_copy(update={"api_type": ApiType.EMBEDDINGS})
             request.headers.update(
                 build_routing_headers(
                     model_name=self.model_name,

@@ -419,32 +419,33 @@ def test_uipath_api_config():
     print("Testing UiPathAPIConfig instantiation...")
 
     from uipath.llm_client.settings import UiPathAPIConfig
+    from uipath.llm_client.settings.constants import ApiType, RoutingMode
 
     # Test passthrough config (requires vendor_type)
     passthrough_config = UiPathAPIConfig(
-        api_type="completions",
-        client_type="passthrough",
+        api_type=ApiType.COMPLETIONS,
+        routing_mode=RoutingMode.PASSTHROUGH,
         vendor_type="openai",
     )
-    assert passthrough_config.api_type == "completions"
-    assert passthrough_config.client_type == "passthrough"
+    assert passthrough_config.api_type == ApiType.COMPLETIONS
+    assert passthrough_config.routing_mode == RoutingMode.PASSTHROUGH
     assert passthrough_config.vendor_type == "openai"
 
     # Test normalized config (no vendor_type required)
     normalized_config = UiPathAPIConfig(
-        api_type="completions",
-        client_type="normalized",
+        api_type=ApiType.COMPLETIONS,
+        routing_mode=RoutingMode.NORMALIZED,
     )
-    assert normalized_config.api_type == "completions"
-    assert normalized_config.client_type == "normalized"
+    assert normalized_config.api_type == ApiType.COMPLETIONS
+    assert normalized_config.routing_mode == RoutingMode.NORMALIZED
 
     # Test embeddings config
     embeddings_config = UiPathAPIConfig(
-        api_type="embeddings",
-        client_type="passthrough",
+        api_type=ApiType.EMBEDDINGS,
+        routing_mode=RoutingMode.PASSTHROUGH,
         vendor_type="vertexai",
     )
-    assert embeddings_config.api_type == "embeddings"
+    assert embeddings_config.api_type == ApiType.EMBEDDINGS
 
     print("  UiPathAPIConfig instantiation OK")
 

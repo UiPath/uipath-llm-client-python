@@ -5,7 +5,13 @@ from httpx import URL, Request
 from pydantic import Field, SecretStr, model_validator
 
 from uipath_langchain_client.base_client import UiPathBaseChatModel
-from uipath_langchain_client.settings import UiPathAPIConfig
+from uipath_langchain_client.settings import (
+    ApiFlavor,
+    ApiType,
+    RoutingMode,
+    UiPathAPIConfig,
+    VendorType,
+)
 
 try:
     from langchain_openai.chat_models import AzureChatOpenAI, ChatOpenAI
@@ -19,9 +25,9 @@ except ImportError as e:
 
 class UiPathChatOpenAI(UiPathBaseChatModel, ChatOpenAI):  # type: ignore[override]
     api_config: UiPathAPIConfig = UiPathAPIConfig(
-        api_type="completions",
-        client_type="passthrough",
-        vendor_type="openai",
+        api_type=ApiType.COMPLETIONS,
+        routing_mode=RoutingMode.PASSTHROUGH,
+        vendor_type=VendorType.OPENAI,
         api_version="2025-03-01-preview",
         freeze_base_url=False,
     )
@@ -38,17 +44,17 @@ class UiPathChatOpenAI(UiPathBaseChatModel, ChatOpenAI):  # type: ignore[overrid
         def fix_url_and_api_flavor_header(request: Request):
             url_suffix = str(request.url).split(base_url)[-1]
             if "responses" in url_suffix:
-                request.headers["X-UiPath-LlmGateway-ApiFlavor"] = "responses"
+                request.headers["X-UiPath-LlmGateway-ApiFlavor"] = ApiFlavor.RESPONSES.value
             else:
-                request.headers["X-UiPath-LlmGateway-ApiFlavor"] = "chat-completions"
+                request.headers["X-UiPath-LlmGateway-ApiFlavor"] = ApiFlavor.CHAT_COMPLETIONS.value
             request.url = URL(base_url)
 
         async def fix_url_and_api_flavor_header_async(request: Request):
             url_suffix = str(request.url).split(base_url)[-1]
             if "responses" in url_suffix:
-                request.headers["X-UiPath-LlmGateway-ApiFlavor"] = "responses"
+                request.headers["X-UiPath-LlmGateway-ApiFlavor"] = ApiFlavor.RESPONSES.value
             else:
-                request.headers["X-UiPath-LlmGateway-ApiFlavor"] = "chat-completions"
+                request.headers["X-UiPath-LlmGateway-ApiFlavor"] = ApiFlavor.CHAT_COMPLETIONS.value
             request.url = URL(base_url)
 
         self.uipath_sync_client.event_hooks["request"].append(fix_url_and_api_flavor_header)
@@ -71,9 +77,9 @@ class UiPathChatOpenAI(UiPathBaseChatModel, ChatOpenAI):  # type: ignore[overrid
 
 class UiPathAzureChatOpenAI(UiPathBaseChatModel, AzureChatOpenAI):  # type: ignore[override]
     api_config: UiPathAPIConfig = UiPathAPIConfig(
-        api_type="completions",
-        client_type="passthrough",
-        vendor_type="openai",
+        api_type=ApiType.COMPLETIONS,
+        routing_mode=RoutingMode.PASSTHROUGH,
+        vendor_type=VendorType.OPENAI,
         api_version="2025-03-01-preview",
         freeze_base_url=False,
     )
@@ -90,17 +96,17 @@ class UiPathAzureChatOpenAI(UiPathBaseChatModel, AzureChatOpenAI):  # type: igno
         def fix_url_and_api_flavor_header(request: Request):
             url_suffix = str(request.url).split(base_url)[-1]
             if "responses" in url_suffix:
-                request.headers["X-UiPath-LlmGateway-ApiFlavor"] = "responses"
+                request.headers["X-UiPath-LlmGateway-ApiFlavor"] = ApiFlavor.RESPONSES.value
             else:
-                request.headers["X-UiPath-LlmGateway-ApiFlavor"] = "chat-completions"
+                request.headers["X-UiPath-LlmGateway-ApiFlavor"] = ApiFlavor.CHAT_COMPLETIONS.value
             request.url = URL(base_url)
 
         async def fix_url_and_api_flavor_header_async(request: Request):
             url_suffix = str(request.url).split(base_url)[-1]
             if "responses" in url_suffix:
-                request.headers["X-UiPath-LlmGateway-ApiFlavor"] = "responses"
+                request.headers["X-UiPath-LlmGateway-ApiFlavor"] = ApiFlavor.RESPONSES.value
             else:
-                request.headers["X-UiPath-LlmGateway-ApiFlavor"] = "chat-completions"
+                request.headers["X-UiPath-LlmGateway-ApiFlavor"] = ApiFlavor.CHAT_COMPLETIONS.value
             request.url = URL(base_url)
 
         self.uipath_sync_client.event_hooks["request"].append(fix_url_and_api_flavor_header)

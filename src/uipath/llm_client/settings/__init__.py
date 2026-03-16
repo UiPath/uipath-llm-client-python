@@ -30,6 +30,7 @@ from typing import Literal
 
 from uipath.llm_client.settings.agenthub import AgentHubSettings
 from uipath.llm_client.settings.base import UiPathAPIConfig, UiPathBaseSettings
+from uipath.llm_client.settings.constants import ApiFlavor, ApiType, RoutingMode, VendorType
 from uipath.llm_client.settings.llmgateway import LLMGatewaySettings
 
 # Environment variable to determine which backend to use
@@ -86,4 +87,9 @@ __all__ = [
     # Constants
     "UIPATH_LLM_BACKEND_ENV",
     "BackendType",
+    # Enums
+    "ApiType",
+    "RoutingMode",
+    "VendorType",
+    "ApiFlavor",
 ]

@@ -7,6 +7,7 @@ from uipath.llm_client.settings import (
     UiPathBaseSettings,
     get_default_client_settings,
 )
+from uipath.llm_client.settings.constants import ApiFlavor, ApiType, RoutingMode, VendorType
 from uipath.llm_client.utils.retry import RetryConfig
 
 try:
@@ -32,10 +33,10 @@ class UiPathGoogle(Client):
     ):
         client_settings = client_settings or get_default_client_settings()
         api_config = UiPathAPIConfig(
-            api_type="completions",
-            client_type="passthrough",
-            vendor_type="vertexai",
-            api_flavor="generate-content",
+            api_type=ApiType.COMPLETIONS,
+            routing_mode=RoutingMode.PASSTHROUGH,
+            vendor_type=VendorType.VERTEXAI,
+            api_flavor=ApiFlavor.GENERATE_CONTENT,
             api_version="v1beta1",
             freeze_base_url=True,
         )

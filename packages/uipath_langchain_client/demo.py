@@ -19,6 +19,8 @@ from langchain_core.tools import tool
 from uipath_langchain_client import get_chat_model, get_embedding_model
 from uipath_langchain_client.settings import get_default_client_settings
 
+from uipath.llm_client.settings.constants import RoutingMode
+
 
 def demo_basic_chat():
     """Demonstrate basic chat completion using the factory function."""
@@ -199,7 +201,7 @@ def demo_normalized_api():
     chat_model = get_chat_model(
         model_name="gpt-4o-2024-11-20",
         client_settings=settings,
-        client_type="normalized",  # Use normalized API
+        routing_mode=RoutingMode.NORMALIZED,  # Use normalized API
     )
 
     response = chat_model.invoke("What is machine learning in one sentence?")

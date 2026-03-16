@@ -5,7 +5,6 @@ from langchain_core.embeddings import Embeddings
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import AIMessageChunk
 from langchain_tests.integration_tests import ChatModelIntegrationTests, EmbeddingsIntegrationTests
-
 from uipath_langchain_client.clients.anthropic.chat_models import UiPathChatAnthropic
 from uipath_langchain_client.clients.bedrock.chat_models import (
     UiPathChatAnthropicBedrock,
@@ -66,30 +65,40 @@ class TestIntegrationChatModel(ChatModelIntegrationTests):
             pytest.skip(f"Skipping {test_name}: not relevant")
 
         # Claude + thinking: tool_choice forces tool use, incompatible with thinking
-        if is_claude and has_thinking and test_name in [
-            "test_structured_few_shot_examples",
-            "test_tool_calling",
-            "test_tool_calling_async",
-            "test_tool_calling_with_no_arguments",
-            "test_tool_choice",
-            "test_tool_message_error_status",
-            "test_bind_runnables_as_tools",
-            "test_structured_output",
-            "test_structured_output_async",
-            "test_structured_output_optional_param",
-            "test_structured_output_pydantic_2_v1",
-            "test_parallel_and_sequential_tool_calling",
-            "test_parallel_and_sequential_tool_calling_async",
-        ]:
+        if (
+            is_claude
+            and has_thinking
+            and test_name
+            in [
+                "test_structured_few_shot_examples",
+                "test_tool_calling",
+                "test_tool_calling_async",
+                "test_tool_calling_with_no_arguments",
+                "test_tool_choice",
+                "test_tool_message_error_status",
+                "test_bind_runnables_as_tools",
+                "test_structured_output",
+                "test_structured_output_async",
+                "test_structured_output_optional_param",
+                "test_structured_output_pydantic_2_v1",
+                "test_parallel_and_sequential_tool_calling",
+                "test_parallel_and_sequential_tool_calling_async",
+            ]
+        ):
             pytest.skip(
                 f"Skipping {test_name}: thinking may not be enabled when tool_choice forces tool use"
             )
 
         # Claude + thinking: extended thinking requires specific conversation history
-        if is_claude and has_thinking and test_name in [
-            "test_tool_message_histories_list_content",
-            "test_tool_message_histories_string_content",
-        ]:
+        if (
+            is_claude
+            and has_thinking
+            and test_name
+            in [
+                "test_tool_message_histories_list_content",
+                "test_tool_message_histories_string_content",
+            ]
+        ):
             pytest.skip(
                 f"Skipping {test_name}: extended thinking requires a specific conversation history"
             )
@@ -113,7 +122,9 @@ class TestIntegrationChatModel(ChatModelIntegrationTests):
         if model_class == UiPathChatAnthropicVertex and test_name in [
             "test_double_messages_conversation",
         ]:
-            pytest.skip(f"Skipping {test_name}: system message must be at beginning of message list")
+            pytest.skip(
+                f"Skipping {test_name}: system message must be at beginning of message list"
+            )
 
         # UiPathChatAnthropicVertex: agent_loop fails with non_standard content tag
         if model_class == UiPathChatAnthropicVertex and test_name in [
@@ -142,23 +153,35 @@ class TestIntegrationChatModel(ChatModelIntegrationTests):
             pytest.skip(f"Skipping {test_name}: currently bugged on Vertex AI")
 
         # Claude via Vertex/Bedrock (Anthropic SDK): image URL sources not supported
-        if is_claude and model_class in [
-            UiPathChatAnthropicVertex,
-            UiPathChatAnthropic,
-            UiPathChatAnthropicBedrock,
-            UiPathChatBedrock,
-        ] and test_name in [
-            "test_image_inputs",
-        ]:
+        if (
+            is_claude
+            and model_class
+            in [
+                UiPathChatAnthropicVertex,
+                UiPathChatAnthropic,
+                UiPathChatAnthropicBedrock,
+                UiPathChatBedrock,
+            ]
+            and test_name
+            in [
+                "test_image_inputs",
+            ]
+        ):
             pytest.skip(f"Skipping {test_name}: URL image sources not supported via gateway")
 
         # Claude via Vertex/Bedrock: PDF/file inputs not supported
-        if is_claude and model_class in [
-            UiPathChatAnthropicVertex,
-            UiPathChatBedrock,
-        ] and test_name in [
-            "test_pdf_inputs",
-        ]:
+        if (
+            is_claude
+            and model_class
+            in [
+                UiPathChatAnthropicVertex,
+                UiPathChatBedrock,
+            ]
+            and test_name
+            in [
+                "test_pdf_inputs",
+            ]
+        ):
             pytest.skip(f"Skipping {test_name}: file blocks not supported on this client")
 
         # UiPathChatAnthropicVertex: image/pdf tool message
@@ -185,72 +208,107 @@ class TestIntegrationChatModel(ChatModelIntegrationTests):
             pytest.skip(f"Skipping {test_name}: serialization not supported on Bedrock Converse")
 
         # Gemini GoogleGenerativeAI: tool_message_histories / tool_message_error_status
-        if model_class == UiPathChatGoogleGenerativeAI and is_gemini_3 and test_name in [
-            "test_tool_message_histories_string_content",
-            "test_tool_message_histories_list_content",
-            "test_tool_message_error_status",
-        ]:
+        if (
+            model_class == UiPathChatGoogleGenerativeAI
+            and is_gemini_3
+            and test_name
+            in [
+                "test_tool_message_histories_string_content",
+                "test_tool_message_histories_list_content",
+                "test_tool_message_error_status",
+            ]
+        ):
             pytest.skip(f"Skipping {test_name}: not supported for Gemini 3 models")
 
         # Gemini GoogleGenerativeAI: thought signature invalid in multi-turn with thinking
-        if model_class == UiPathChatGoogleGenerativeAI and is_gemini and test_name in [
-            "test_image_tool_message",
-            "test_pdf_tool_message",
-        ]:
+        if (
+            model_class == UiPathChatGoogleGenerativeAI
+            and is_gemini
+            and test_name
+            in [
+                "test_image_tool_message",
+                "test_pdf_tool_message",
+            ]
+        ):
             pytest.skip(f"Skipping {test_name}: thought signature invalid in multi-turn")
 
         # Gemini GoogleGenerativeAI: parallel tool calling
-        if model_class == UiPathChatGoogleGenerativeAI and is_gemini and test_name in [
-            "test_parallel_and_sequential_tool_calling",
-            "test_parallel_and_sequential_tool_calling_async",
-        ]:
+        if (
+            model_class == UiPathChatGoogleGenerativeAI
+            and is_gemini
+            and test_name
+            in [
+                "test_parallel_and_sequential_tool_calling",
+                "test_parallel_and_sequential_tool_calling_async",
+            ]
+        ):
             pytest.skip(f"Skipping {test_name}: not supported for Gemini models")
 
         # UiPathChat (normalized) + Gemini: tool operations fail
-        if model_class == UiPathChat and is_gemini and test_name in [
-            "test_tool_calling",
-            "test_tool_calling_async",
-            "test_tool_choice",
-            "test_structured_few_shot_examples",
-            "test_tool_message_error_status",
-            "test_tool_message_histories_list_content",
-            "test_tool_message_histories_string_content",
-            "test_pdf_inputs",
-            "test_image_tool_message",
-            "test_pdf_tool_message",
-            "test_parallel_and_sequential_tool_calling",
-            "test_parallel_and_sequential_tool_calling_async",
-        ]:
+        if (
+            model_class == UiPathChat
+            and is_gemini
+            and test_name
+            in [
+                "test_tool_calling",
+                "test_tool_calling_async",
+                "test_tool_choice",
+                "test_structured_few_shot_examples",
+                "test_tool_message_error_status",
+                "test_tool_message_histories_list_content",
+                "test_tool_message_histories_string_content",
+                "test_pdf_inputs",
+                "test_image_tool_message",
+                "test_pdf_tool_message",
+                "test_parallel_and_sequential_tool_calling",
+                "test_parallel_and_sequential_tool_calling_async",
+            ]
+        ):
             pytest.skip(f"Skipping {test_name}: not supported for Gemini on normalized API")
 
         # UiPathChat (normalized) + Gemini 3: agent_loop
-        if model_class == UiPathChat and is_gemini_3 and test_name in [
-            "test_agent_loop",
-        ]:
+        if (
+            model_class == UiPathChat
+            and is_gemini_3
+            and test_name
+            in [
+                "test_agent_loop",
+            ]
+        ):
             pytest.skip(f"Skipping {test_name}: not supported for Gemini 3 on normalized API")
 
         # UiPathChat (normalized) + Claude via Vertex: structured output / tool calling
-        if model_class == UiPathChat and is_vertex_claude and test_name in [
-            "test_tool_calling",
-            "test_tool_calling_async",
-            "test_tool_calling_with_no_arguments",
-            "test_structured_output",
-            "test_structured_output_async",
-            "test_structured_output_pydantic_2_v1",
-            "test_pdf_inputs",
-            "test_image_inputs",
-            "test_parallel_and_sequential_tool_calling",
-            "test_parallel_and_sequential_tool_calling_async",
-        ]:
+        if (
+            model_class == UiPathChat
+            and is_vertex_claude
+            and test_name
+            in [
+                "test_tool_calling",
+                "test_tool_calling_async",
+                "test_tool_calling_with_no_arguments",
+                "test_structured_output",
+                "test_structured_output_async",
+                "test_structured_output_pydantic_2_v1",
+                "test_pdf_inputs",
+                "test_image_inputs",
+                "test_parallel_and_sequential_tool_calling",
+                "test_parallel_and_sequential_tool_calling_async",
+            ]
+        ):
             pytest.skip(f"Skipping {test_name}: not supported for Claude via Vertex on normalized")
 
         # UiPathChat (normalized) + Claude via Bedrock: image/pdf/parallel
-        if model_class == UiPathChat and "anthropic." in model_name.lower() and test_name in [
-            "test_image_inputs",
-            "test_pdf_inputs",
-            "test_parallel_and_sequential_tool_calling",
-            "test_parallel_and_sequential_tool_calling_async",
-        ]:
+        if (
+            model_class == UiPathChat
+            and "anthropic." in model_name.lower()
+            and test_name
+            in [
+                "test_image_inputs",
+                "test_pdf_inputs",
+                "test_parallel_and_sequential_tool_calling",
+                "test_parallel_and_sequential_tool_calling_async",
+            ]
+        ):
             pytest.skip(f"Skipping {test_name}: not supported for Claude via Bedrock on normalized")
 
         # GPT-5 / responses_api: stop_sequence not supported

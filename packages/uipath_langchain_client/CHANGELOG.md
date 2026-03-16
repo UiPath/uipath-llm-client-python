@@ -6,7 +6,6 @@ All notable changes to `uipath_langchain_client` will be documented in this file
 
 ### Stable Version 1.5.0
 - removed dependencies from 'uipath'
-- StrEnum fix for python version 3.11
 - More test fixes
 
 ## [1.4.0] - 2026-03-13

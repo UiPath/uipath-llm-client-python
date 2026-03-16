@@ -1189,7 +1189,7 @@ class TestHeaderUtilities:
             set_captured_response_headers,
         )
 
-        token = set_captured_response_headers({"x-uipath-test": "value"})
+        _ = set_captured_response_headers({"x-uipath-test": "value"})
         result = get_captured_response_headers()
         assert result == {"x-uipath-test": "value"}
         # Returns a copy

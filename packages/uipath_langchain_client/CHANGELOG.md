@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_langchain_client` will be documented in this file.
 
+## [1.5.1] - 2026-03-17
+
+### Fixes
+- Fixes to core package, version bump
+
 ## [1.5.0] - 2026-03-16
 
 ### Stable Version 1.5.0

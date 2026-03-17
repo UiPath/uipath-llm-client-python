@@ -73,6 +73,20 @@ class PlatformBaseSettings(UiPathBaseSettings):
         self.client_id = parsed_token_data.get("client_id", None)
         return self
 
+    @staticmethod
+    def _format_endpoint(endpoint: str, **kwargs: str | None) -> str:
+        """Format an endpoint template, stripping query params with None values."""
+        # Remove query parameters whose values are None
+        if "?" in endpoint:
+            base, query = endpoint.split("?", 1)
+            params = [
+                p
+                for p in query.split("&")
+                if not any(f"{{{k}}}" in p for k, v in kwargs.items() if v is None)
+            ]
+            endpoint = f"{base}?{'&'.join(params)}" if params else base
+        return endpoint.format(**{k: v for k, v in kwargs.items() if v is not None})
+
     @override
     def build_base_url(
         self,
@@ -85,12 +99,24 @@ class PlatformBaseSettings(UiPathBaseSettings):
         assert api_config is not None
         if api_config.routing_mode == "normalized" and api_config.api_type == "completions":
             url = f"{self.base_url}/{EndpointManager.get_normalized_endpoint()}"
+        elif api_config.routing_mode == "normalized" and api_config.api_type == "embeddings":
+            raise ValueError(
+                "Normalized embeddings are not supported on UiPath Platform (AgentHub/Orchestrator). "
+                "Use passthrough routing mode for embeddings instead."
+            )
+        elif api_config.routing_mode == "passthrough" and api_config.api_type == "completions":
+            endpoint = EndpointManager.get_vendor_endpoint()
+            url = f"{self.base_url}/{self._format_endpoint(endpoint, model=model_name, vendor=api_config.vendor_type, api_version=api_config.api_version)}"
         elif api_config.routing_mode == "passthrough" and api_config.api_type == "embeddings":
-            assert api_config.api_version is not None
-            url = f"{self.base_url}/{EndpointManager.get_embeddings_endpoint().format(model=model_name, api_version=api_config.api_version)}"
+            if api_config.vendor_type is not None and api_config.vendor_type != "openai":
+                raise ValueError(
+                    f"Platform embeddings endpoint only supports OpenAI-compatible models, "
+                    f"got vendor_type='{api_config.vendor_type}'."
+                )
+            endpoint = EndpointManager.get_embeddings_endpoint()
+            url = f"{self.base_url}/{self._format_endpoint(endpoint, model=model_name, api_version=api_config.api_version)}"
         else:
-            assert api_config.vendor_type is not None
-            url = f"{self.base_url}/{EndpointManager.get_vendor_endpoint().format(model=model_name, vendor=api_config.vendor_type)}"
+            raise ValueError(f"Invalid API configuration: {api_config}")
         return url
 
     @override

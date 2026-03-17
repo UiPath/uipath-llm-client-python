@@ -8,11 +8,7 @@ from typing_extensions import override
 from uipath.platform.common import EndpointManager
 
 from uipath.llm_client.settings.base import UiPathAPIConfig, UiPathBaseSettings
-from uipath.llm_client.settings.platform.utils import (
-    get_auth_data,
-    is_token_expired,
-    parse_access_token,
-)
+from uipath.llm_client.settings.platform.utils import is_token_expired, parse_access_token
 
 
 class PlatformBaseSettings(UiPathBaseSettings):
@@ -43,9 +39,7 @@ class PlatformBaseSettings(UiPathBaseSettings):
 
     # Credentials used for refreshing the access token
     client_id: str | None = Field(default=None)
-    refresh_token: SecretStr | None = Field(
-        default=None,
-    )
+    refresh_token: SecretStr | None = Field(default=None, validation_alias="UIPATH_REFRESH_TOKEN")
 
     # AgentHub configuration (used for discovery)
     agenthub_config: str | None = Field(
@@ -68,16 +62,14 @@ class PlatformBaseSettings(UiPathBaseSettings):
             raise ValueError(
                 "Base URL, access token, tenant ID, and organization ID are required. Try running `uipath auth` to authenticate."
             )
-        auth_data = get_auth_data()
-        if auth_data.access_token != self.access_token.get_secret_value():
-            raise ValueError("Access token mismatch between .auth.json and environment variables")
-        if is_token_expired(auth_data.access_token):
+
+        access_token = self.access_token.get_secret_value()
+        if is_token_expired(access_token):
             raise ValueError(
                 "Access token is expired. Try running `uipath auth` to refresh the token."
             )
-        if auth_data.refresh_token is not None:
-            self.refresh_token = SecretStr(auth_data.refresh_token)
-        parsed_token_data = parse_access_token(auth_data.access_token)
+
+        parsed_token_data = parse_access_token(access_token)
         self.client_id = parsed_token_data.get("client_id", None)
         return self
 

@@ -1,16 +1,6 @@
 import base64
 import json
 import time
-from pathlib import Path
-
-from uipath.platform.common.auth import TokenData
-
-
-def get_auth_data() -> TokenData:
-    auth_file = Path.cwd() / ".uipath" / ".auth.json"
-    if not auth_file.exists():
-        raise FileNotFoundError("No authentication file found")
-    return TokenData.model_validate(json.load(open(auth_file)))
 
 
 def parse_access_token(access_token: str):

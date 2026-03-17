@@ -37,12 +37,18 @@ class PlatformAuth(Auth, metaclass=SingletonMeta):
 
         assert self.settings.base_url is not None
         assert self.settings.client_id is not None
-        assert self.settings.refresh_token is not None
+        if self.settings.refresh_token is None:
+            return access_token
 
-        identity_service = IdentityService(self.settings.base_url)
-        new_token_data = identity_service.refresh_access_token(
-            self.settings.refresh_token.get_secret_value(), self.settings.client_id
-        )
+        try:
+            identity_service = IdentityService(self.settings.base_url)
+            new_token_data = identity_service.refresh_access_token(
+                refresh_token=self.settings.refresh_token.get_secret_value(),
+                client_id=self.settings.client_id,
+            )
+        except Exception:
+            return access_token
+
         self.settings.access_token = SecretStr(new_token_data.access_token)
         self.settings.refresh_token = SecretStr(
             new_token_data.refresh_token or self.settings.refresh_token.get_secret_value()
@@ -50,9 +56,17 @@ class PlatformAuth(Auth, metaclass=SingletonMeta):
         return new_token_data.access_token
 
     def auth_flow(self, request: Request) -> Generator[Request, Response, None]:
-        """HTTPX auth flow that handles token refresh on authentication failures."""
-        request.headers["Authorization"] = f"Bearer {self.get_access_token()}"
+        """HTTPX auth flow that handles token refresh on authentication failures.
+
+        On 401, attempts to refresh the token. If refresh succeeds (new token differs
+        from the old one), retries the request. Otherwise, returns the 401 response
+        as-is so the client receives the actual error.
+        """
+        old_token = self.get_access_token()
+        request.headers["Authorization"] = f"Bearer {old_token}"
         response = yield request
         if response.status_code == 401:
-            request.headers["Authorization"] = f"Bearer {self.get_access_token(refresh=True)}"
-            yield request
+            new_token = self.get_access_token(refresh=True)
+            if new_token != old_token:
+                request.headers["Authorization"] = f"Bearer {new_token}"
+                yield request

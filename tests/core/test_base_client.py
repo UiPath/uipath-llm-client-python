@@ -11,7 +11,7 @@ This module tests:
 8. Header utilities (extract_matching_headers, context vars)
 9. Logging config (LoggingConfig)
 10. SSL config (expand_path, get_httpx_ssl_client_kwargs)
-11. LLMGateway S2S auth (get_llmgw_token_header)
+11. LLMGateway S2S auth (get_llmgw_token)
 12. LLMGateway BYOM validation (validate_byo_model)
 13. Wait strategy (wait_retry_after_with_fallback)
 14. HTTPX client send() behavior (streaming header, URL freezing, header capture)
@@ -105,23 +105,15 @@ def platform_env_vars():
 
 @pytest.fixture
 def mock_platform_auth():
-    """Context manager that patches get_auth_data and parse_access_token for PlatformSettings tests."""
-    mock_auth_data = MagicMock()
-    mock_auth_data.access_token = "test-access-token"
-    mock_auth_data.refresh_token = None
-
+    """Patches is_token_expired and parse_access_token for PlatformSettings tests."""
     with (
         patch(
-            "uipath.llm_client.settings.platform.settings.get_auth_data",
-            return_value=mock_auth_data,
+            "uipath.llm_client.settings.platform.settings.is_token_expired",
+            return_value=False,
         ),
         patch(
             "uipath.llm_client.settings.platform.settings.parse_access_token",
             return_value={"client_id": "test-client-id"},
-        ),
-        patch(
-            "uipath.llm_client.settings.platform.settings.is_token_expired",
-            return_value=False,
         ),
     ):
         yield
@@ -439,7 +431,7 @@ class TestLLMGatewayAuthRefresh:
 
             # Mock the token retrieval
             with patch.object(
-                LLMGatewayS2SAuth, "get_llmgw_token_header", return_value="new-token"
+                LLMGatewayS2SAuth, "get_llmgw_token", return_value="new-token"
             ) as mock_get_token:
                 auth = LLMGatewayS2SAuth(settings=settings)
                 # First call is during __init__
@@ -1702,7 +1694,7 @@ class TestUiPathHttpxClientSend:
 
 
 class TestLLMGatewayS2STokenAcquisition:
-    """Tests for LLMGatewayS2SAuth.get_llmgw_token_header."""
+    """Tests for LLMGatewayS2SAuth.get_llmgw_token."""
 
     def test_s2s_token_success(self, llmgw_s2s_env_vars):
         from uipath.llm_client.settings.llmgateway.auth import LLMGatewayS2SAuth
@@ -1718,42 +1710,35 @@ class TestLLMGatewayS2STokenAcquisition:
                 auth = LLMGatewayS2SAuth(settings=settings)
                 assert auth.access_token == "s2s-token-value"
 
-    def test_s2s_token_client_error_raises_auth_error(self, llmgw_s2s_env_vars):
+    def test_s2s_token_client_error_returns_none(self, llmgw_s2s_env_vars):
         from uipath.llm_client.settings.llmgateway.auth import LLMGatewayS2SAuth
 
         mock_response = MagicMock()
-        mock_response.is_client_error = True
-        mock_response.json.return_value = {"error": "invalid_client"}
-        mock_response.request = MagicMock(spec=Request)
+        mock_response.is_error = True
         mock_response.status_code = 401
         mock_response.reason_phrase = "Unauthorized"
-        mock_response.headers = {}
 
         with patch.dict(os.environ, llmgw_s2s_env_vars, clear=True):
             settings = LLMGatewaySettings()
             with patch.object(Client, "post", return_value=mock_response):
-                with pytest.raises(UiPathAuthenticationError, match="invalid credentials"):
-                    LLMGatewayS2SAuth(settings=settings)
+                auth = LLMGatewayS2SAuth(settings=settings)
+                assert auth.access_token is None
 
-    def test_s2s_token_server_error_raises_api_error(self, llmgw_s2s_env_vars):
+    def test_s2s_token_server_error_returns_none(self, llmgw_s2s_env_vars):
         from uipath.llm_client.settings.llmgateway.auth import LLMGatewayS2SAuth
 
         mock_response = MagicMock()
-        mock_response.is_client_error = False
         mock_response.is_error = True
         mock_response.status_code = 500
         mock_response.reason_phrase = "Server Error"
-        mock_response.json.return_value = {"error": "internal"}
-        mock_response.request = MagicMock(spec=Request)
-        mock_response.headers = {}
 
         with patch.dict(os.environ, llmgw_s2s_env_vars, clear=True):
             settings = LLMGatewaySettings()
             with patch.object(Client, "post", return_value=mock_response):
-                with pytest.raises(UiPathAPIError):
-                    LLMGatewayS2SAuth(settings=settings)
+                auth = LLMGatewayS2SAuth(settings=settings)
+                assert auth.access_token is None
 
-    def test_s2s_missing_credentials_raises_value_error(self, llmgw_env_vars):
+    def test_s2s_missing_credentials_returns_none(self, llmgw_env_vars):
         from uipath.llm_client.settings.llmgateway.auth import LLMGatewayS2SAuth
 
         with patch.dict(os.environ, llmgw_env_vars, clear=True):
@@ -1761,10 +1746,9 @@ class TestLLMGatewayS2STokenAcquisition:
             # Clear access_token to force S2S flow, but credentials are missing
             settings.access_token = None
             settings.client_id = None
-            with pytest.raises(ValueError, match="client_id and client_secret are required"):
-                auth = LLMGatewayS2SAuth.__new__(LLMGatewayS2SAuth)
-                auth.settings = settings
-                auth.get_llmgw_token_header()
+            auth = LLMGatewayS2SAuth.__new__(LLMGatewayS2SAuth)
+            auth.settings = settings
+            assert auth.get_llmgw_token() is None
 
 
 # ============================================================================

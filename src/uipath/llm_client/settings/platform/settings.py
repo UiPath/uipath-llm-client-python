@@ -1,27 +1,26 @@
-"""Base settings for UiPath AgentHub client."""
+"""Base settings for UiPath Platform (AgentHub/Orchestrator) client."""
 
-import os
 from collections.abc import Mapping
 from typing import Any, Self
 
-from dotenv import load_dotenv
 from pydantic import Field, SecretStr, model_validator
 from typing_extensions import override
-from uipath._cli._auth._auth_service import AuthService
-from uipath.utils import EndpointManager
+from uipath.platform.common import EndpointManager
 
 from uipath.llm_client.settings.base import UiPathAPIConfig, UiPathBaseSettings
+from uipath.llm_client.settings.platform.utils import get_auth_data, parse_access_token
 
 
-class AgentHubBaseSettings(UiPathBaseSettings):
-    """Configuration settings for UiPath AgentHub client requests.
+class PlatformBaseSettings(UiPathBaseSettings):
+    """Configuration settings for UiPath Platform (AgentHub/Orchestrator) client requests.
 
-    These settings control routing, authentication, and tracking for requests to AgentHub.
+    These settings handle routing, authentication, and tracking for requests to UiPath's
+    LLM services. The EndpointManager transparently selects between AgentHub and Orchestrator
+    endpoints based on service availability and the UIPATH_LLM_SERVICE environment variable.
 
     Attributes:
-        environment: The UiPath environment ("cloud", "staging", "alpha").
         access_token: Access token for authentication.
-        base_url: Base URL of the AgentHub API.
+        base_url: Base URL of the UiPath Platform API.
         tenant_id: Tenant ID for request routing.
         organization_id: Organization ID for request routing.
         client_id: Client ID for OAuth authentication.
@@ -32,22 +31,22 @@ class AgentHubBaseSettings(UiPathBaseSettings):
         job_key: Job key for tracing.
     """
 
-    # Environment configuration: alpha, staging, cloud
-    environment: str | None = Field(default=None, validation_alias="UIPATH_ENVIRONMENT")
-
     # Authentication fields - retrieved from uipath auth as well
     access_token: SecretStr | None = Field(default=None, validation_alias="UIPATH_ACCESS_TOKEN")
     base_url: str | None = Field(default=None, validation_alias="UIPATH_URL")
     tenant_id: str | None = Field(default=None, validation_alias="UIPATH_TENANT_ID")
     organization_id: str | None = Field(default=None, validation_alias="UIPATH_ORGANIZATION_ID")
 
-    # OAuth credentials
-    client_id: SecretStr | None = Field(default=None, validation_alias="UIPATH_CLIENT_ID")
-    client_secret: SecretStr | None = Field(default=None, validation_alias="UIPATH_CLIENT_SECRET")
-    client_scope: str | None = Field(default=None, validation_alias="UIPATH_CLIENT_SCOPE")
+    # Credentials used for refreshing the access token
+    client_id: str | None = Field(default=None)
+    refresh_token: SecretStr | None = Field(
+        default=None,
+    )
 
     # AgentHub configuration (used for discovery)
-    agenthub_config: str = Field(default="agentsruntime", validation_alias="UIPATH_AGENTHUB_CONFIG")
+    agenthub_config: str | None = Field(
+        default="agentsruntime", validation_alias="UIPATH_AGENTHUB_CONFIG"
+    )
 
     # Tracing configuration
     process_key: str | None = Field(default=None, validation_alias="UIPATH_PROCESS_KEY")
@@ -56,41 +55,23 @@ class AgentHubBaseSettings(UiPathBaseSettings):
     @model_validator(mode="after")
     def validate_environment(self) -> Self:
         """Validate environment and trigger authentication."""
-        self.authenticate()
+        if (
+            self.access_token is None
+            or self.base_url is None
+            or self.tenant_id is None
+            or self.organization_id is None
+        ):
+            raise ValueError(
+                "Base URL, access token, tenant ID, and organization ID are required. Try running `uipath auth` to authenticate."
+            )
+        auth_data = get_auth_data()
+        if auth_data.access_token != self.access_token.get_secret_value():
+            raise ValueError("Access token mismatch between .auth.json and environment variables")
+        if auth_data.refresh_token is not None:
+            self.refresh_token = SecretStr(auth_data.refresh_token)
+        parsed_token_data = parse_access_token(auth_data.access_token)
+        self.client_id = parsed_token_data.get("client_id", None)
         return self
-
-    def credentials_available(self) -> bool:
-        """Check if all required credentials are present."""
-        return (
-            self.access_token is not None
-            and self.base_url is not None
-            and self.tenant_id is not None
-            and self.organization_id is not None
-        )
-
-    def load_credentials(self) -> None:
-        """Load credentials from environment variables."""
-        load_dotenv(override=True)
-        self.access_token = SecretStr(os.getenv("UIPATH_ACCESS_TOKEN", ""))
-        self.base_url = os.getenv("UIPATH_URL")
-        self.tenant_id = os.getenv("UIPATH_TENANT_ID")
-        self.organization_id = os.getenv("UIPATH_ORGANIZATION_ID")
-
-    def authenticate(self, force: bool = False) -> None:
-        """Authenticate with UiPath using the configured credentials."""
-        auth_service = AuthService(
-            environment=self.environment,
-            force=force or not self.credentials_available(),
-            client_id=self.client_id.get_secret_value() if self.client_id is not None else None,
-            client_secret=self.client_secret.get_secret_value()
-            if self.client_secret is not None
-            else None,
-            base_url=self.base_url,
-            tenant=self.tenant_id,
-            scope=self.client_scope,
-        )
-        auth_service.authenticate()
-        self.load_credentials()
 
     @override
     def build_base_url(

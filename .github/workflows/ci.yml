@@ -47,7 +47,7 @@ jobs:
     needs: type_check
     environment: LLMGW_SETTINGS
     env:
-      UIPATH_LLM_BACKEND: ${{ vars.UIPATH_LLM_BACKEND }}
+      UIPATH_LLM_SERVICE: ${{ vars.UIPATH_LLM_SERVICE }}
       LLMGW_URL: ${{ vars.LLMGW_URL }}
       LLMGW_SEMANTIC_ORG_ID: ${{ secrets.LLMGW_SEMANTIC_ORG_ID }}
       LLMGW_SEMANTIC_USER_ID: ${{ secrets.LLMGW_SEMANTIC_USER_ID }}

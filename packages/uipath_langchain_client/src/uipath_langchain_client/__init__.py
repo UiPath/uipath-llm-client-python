@@ -24,7 +24,7 @@ Quick Start:
 
 Settings:
     - get_default_client_settings(): Auto-detect backend from environment
-    - AgentHubSettings: UiPath AgentHub backend (CLI-based auth)
+    - PlatformSettings: UiPath Platform backend (AgentHub/Orchestrator, CLI-based auth)
     - LLMGatewaySettings: UiPath LLM Gateway backend (S2S auth)
 
 Factory Functions:
@@ -36,8 +36,8 @@ from uipath_langchain_client.__version__ import __version__
 from uipath_langchain_client.clients import UiPathChat, UiPathEmbeddings
 from uipath_langchain_client.factory import get_chat_model, get_embedding_model
 from uipath_langchain_client.settings import (
-    AgentHubSettings,
     LLMGatewaySettings,
+    PlatformSettings,
     get_default_client_settings,
 )
 
@@ -49,5 +49,5 @@ __all__ = [
     "UiPathEmbeddings",
     "get_default_client_settings",
     "LLMGatewaySettings",
-    "AgentHubSettings",
+    "PlatformSettings",
 ]

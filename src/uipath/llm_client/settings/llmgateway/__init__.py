@@ -4,7 +4,6 @@ LLM Gateway Settings Module.
 This module provides configuration and authentication for UiPath LLM Gateway.
 """
 
-from httpx import Auth
 from typing_extensions import override
 
 from uipath.llm_client.settings.llmgateway.auth import LLMGatewayS2SAuth
@@ -28,7 +27,7 @@ class LLMGatewaySettings(LLMGatewayBaseSettings):
     """
 
     @override
-    def build_auth_pipeline(self) -> Auth:
+    def build_auth_pipeline(self) -> LLMGatewayS2SAuth:
         """Build an httpx Auth pipeline for LLM Gateway authentication.
 
         Returns:

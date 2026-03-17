@@ -16,8 +16,8 @@ Example:
 """
 
 from uipath.llm_client.settings import (
-    AgentHubSettings,
     LLMGatewaySettings,
+    PlatformSettings,
     UiPathAPIConfig,
     UiPathBaseSettings,
     get_default_client_settings,
@@ -27,7 +27,7 @@ from uipath.llm_client.settings.constants import ApiFlavor, ApiType, RoutingMode
 __all__ = [
     "get_default_client_settings",
     "LLMGatewaySettings",
-    "AgentHubSettings",
+    "PlatformSettings",
     "UiPathAPIConfig",
     "UiPathBaseSettings",
     "ApiType",

@@ -15,8 +15,8 @@ def test_main_package_imports():
     print("Testing main package imports...")
 
     from uipath_langchain_client import (
-        AgentHubSettings,
         LLMGatewaySettings,
+        PlatformSettings,
         __version__,
         get_chat_model,
         get_default_client_settings,
@@ -35,7 +35,7 @@ def test_main_package_imports():
     print("  Factory functions are callable")
 
     # Verify settings classes exist and are types
-    assert isinstance(AgentHubSettings, type), "AgentHubSettings should be a class"
+    assert isinstance(PlatformSettings, type), "PlatformSettings should be a class"
     assert isinstance(LLMGatewaySettings, type), "LLMGatewaySettings should be a class"
     print("  Settings classes are importable")
 
@@ -47,15 +47,15 @@ def test_settings_module_imports():
     print("Testing settings module imports...")
 
     from uipath_langchain_client.settings import (
-        AgentHubSettings,
         LLMGatewaySettings,
+        PlatformSettings,
         UiPathAPIConfig,
         UiPathBaseSettings,
         get_default_client_settings,
     )
 
     # Verify settings classes are types
-    assert isinstance(AgentHubSettings, type), "AgentHubSettings should be a class"
+    assert isinstance(PlatformSettings, type), "PlatformSettings should be a class"
     assert isinstance(LLMGatewaySettings, type), "LLMGatewaySettings should be a class"
     assert isinstance(UiPathAPIConfig, type), "UiPathAPIConfig should be a class"
     assert isinstance(UiPathBaseSettings, type), "UiPathBaseSettings should be a class"
@@ -64,8 +64,8 @@ def test_settings_module_imports():
     assert callable(get_default_client_settings), "get_default_client_settings should be callable"
 
     # Verify inheritance - settings should inherit from UiPathBaseSettings
-    assert issubclass(AgentHubSettings, UiPathBaseSettings), (
-        "AgentHubSettings should inherit from UiPathBaseSettings"
+    assert issubclass(PlatformSettings, UiPathBaseSettings), (
+        "PlatformSettings should inherit from UiPathBaseSettings"
     )
     assert issubclass(LLMGatewaySettings, UiPathBaseSettings), (
         "LLMGatewaySettings should inherit from UiPathBaseSettings"

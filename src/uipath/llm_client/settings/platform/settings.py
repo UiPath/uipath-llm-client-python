@@ -85,6 +85,11 @@ class PlatformBaseSettings(UiPathBaseSettings):
         assert api_config is not None
         if api_config.routing_mode == "normalized" and api_config.api_type == "completions":
             url = f"{self.base_url}/{EndpointManager.get_normalized_endpoint()}"
+        elif api_config.routing_mode == "normalized" and api_config.api_type == "embeddings":
+            raise ValueError(
+                "Normalized embeddings are not supported on UiPath Platform (AgentHub/Orchestrator). "
+                "Use passthrough routing mode for embeddings instead."
+            )
         elif api_config.routing_mode == "passthrough" and api_config.api_type == "embeddings":
             assert api_config.api_version is not None
             url = f"{self.base_url}/{EndpointManager.get_embeddings_endpoint().format(model=model_name, api_version=api_config.api_version)}"

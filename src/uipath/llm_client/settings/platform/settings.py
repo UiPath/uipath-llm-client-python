@@ -8,7 +8,11 @@ from typing_extensions import override
 from uipath.platform.common import EndpointManager
 
 from uipath.llm_client.settings.base import UiPathAPIConfig, UiPathBaseSettings
-from uipath.llm_client.settings.platform.utils import get_auth_data, parse_access_token
+from uipath.llm_client.settings.platform.utils import (
+    get_auth_data,
+    is_token_expired,
+    parse_access_token,
+)
 
 
 class PlatformBaseSettings(UiPathBaseSettings):
@@ -67,6 +71,10 @@ class PlatformBaseSettings(UiPathBaseSettings):
         auth_data = get_auth_data()
         if auth_data.access_token != self.access_token.get_secret_value():
             raise ValueError("Access token mismatch between .auth.json and environment variables")
+        if is_token_expired(auth_data.access_token):
+            raise ValueError(
+                "Access token is expired. Try running `uipath auth` to refresh the token."
+            )
         if auth_data.refresh_token is not None:
             self.refresh_token = SecretStr(auth_data.refresh_token)
         parsed_token_data = parse_access_token(auth_data.access_token)

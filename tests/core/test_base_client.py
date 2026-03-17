@@ -119,6 +119,10 @@ def mock_platform_auth():
             "uipath.llm_client.settings.platform.settings.parse_access_token",
             return_value={"client_id": "test-client-id"},
         ),
+        patch(
+            "uipath.llm_client.settings.platform.settings.is_token_expired",
+            return_value=False,
+        ),
     ):
         yield
 

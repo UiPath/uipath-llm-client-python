@@ -108,6 +108,11 @@ class PlatformBaseSettings(UiPathBaseSettings):
             endpoint = EndpointManager.get_passthrough_endpoint()
             url = f"{self.base_url}/{self._format_endpoint(endpoint, model=model_name, vendor=api_config.vendor_type, api_version=api_config.api_version)}"
         elif api_config.routing_mode == "passthrough" and api_config.api_type == "embeddings":
+            if api_config.vendor_type is not None and api_config.vendor_type != "openai":
+                raise ValueError(
+                    f"Platform embeddings endpoint only supports OpenAI-compatible models, "
+                    f"got vendor_type='{api_config.vendor_type}'."
+                )
             endpoint = EndpointManager.get_embeddings_endpoint()
             url = f"{self.base_url}/{self._format_endpoint(endpoint, model=model_name, api_version=api_config.api_version)}"
         else:

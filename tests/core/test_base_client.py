@@ -480,14 +480,33 @@ class TestPlatformSettings:
     def test_build_base_url_passthrough(
         self, platform_env_vars, mock_platform_auth, passthrough_api_config
     ):
-        """Test build_base_url for passthrough mode."""
+        """Test build_base_url for passthrough completions mode."""
         with patch.dict(os.environ, platform_env_vars, clear=True):
             settings = PlatformSettings()
             url = settings.build_base_url(
                 model_name="gpt-4o",
                 api_config=passthrough_api_config,
             )
-            assert "agenthub_/llm/raw/vendor/openai/model/gpt-4o/completions" in url
+            assert "llm/openai/deployments/gpt-4o/chat/completions" in url
+
+    def test_build_base_url_passthrough_with_api_version(
+        self, platform_env_vars, mock_platform_auth
+    ):
+        """Test build_base_url for passthrough completions with api_version."""
+        api_config = UiPathAPIConfig(
+            api_type=ApiType.COMPLETIONS,
+            routing_mode=RoutingMode.PASSTHROUGH,
+            vendor_type="openai",
+            api_version="2025-03-01",
+        )
+        with patch.dict(os.environ, platform_env_vars, clear=True):
+            settings = PlatformSettings()
+            url = settings.build_base_url(
+                model_name="gpt-4o",
+                api_config=api_config,
+            )
+            assert "llm/openai/deployments/gpt-4o/chat/completions" in url
+            assert "api-version=2025-03-01" in url
 
     def test_build_base_url_normalized(
         self, platform_env_vars, mock_platform_auth, normalized_api_config
@@ -541,35 +560,59 @@ class TestPlatformSettings:
             auth = settings.build_auth_pipeline()
             assert isinstance(auth, PlatformAuth)
 
-    def test_build_base_url_passthrough_embeddings(
-        self, platform_env_vars, mock_platform_auth, embeddings_api_config
-    ):
+    def test_build_base_url_passthrough_embeddings(self, platform_env_vars, mock_platform_auth):
         """Test build_base_url for passthrough embeddings with api_version."""
+        api_config = UiPathAPIConfig(
+            api_type=ApiType.EMBEDDINGS,
+            routing_mode=RoutingMode.PASSTHROUGH,
+            vendor_type="openai",
+            api_version="2024-02-01",
+        )
         with patch.dict(os.environ, platform_env_vars, clear=True):
             settings = PlatformSettings()
-            embeddings_api_config.api_version = "2024-02-01"
             url = settings.build_base_url(
                 model_name="text-embedding-3-large",
-                api_config=embeddings_api_config,
+                api_config=api_config,
             )
             assert "embeddings" in url
             assert "text-embedding-3-large" in url
             assert "api-version=2024-02-01" in url
 
     def test_build_base_url_passthrough_embeddings_no_api_version(
-        self, platform_env_vars, mock_platform_auth, embeddings_api_config
+        self, platform_env_vars, mock_platform_auth
     ):
         """Test build_base_url for passthrough embeddings without api_version."""
+        api_config = UiPathAPIConfig(
+            api_type=ApiType.EMBEDDINGS,
+            routing_mode=RoutingMode.PASSTHROUGH,
+            vendor_type="openai",
+        )
         with patch.dict(os.environ, platform_env_vars, clear=True):
             settings = PlatformSettings()
-            embeddings_api_config.api_version = None
             url = settings.build_base_url(
                 model_name="text-embedding-3-large",
-                api_config=embeddings_api_config,
+                api_config=api_config,
             )
             assert "embeddings" in url
             assert "text-embedding-3-large" in url
             assert "api-version" not in url
+
+    def test_build_base_url_passthrough_embeddings_non_openai_raises(
+        self, platform_env_vars, mock_platform_auth
+    ):
+        """Test build_base_url raises for non-OpenAI passthrough embeddings."""
+        api_config = UiPathAPIConfig(
+            api_type=ApiType.EMBEDDINGS,
+            routing_mode=RoutingMode.PASSTHROUGH,
+            vendor_type="vertexai",
+        )
+        with patch.dict(os.environ, platform_env_vars, clear=True):
+            settings = PlatformSettings()
+            with pytest.raises(ValueError, match="only supports OpenAI-compatible models"):
+                settings.build_base_url(
+                    model_name="gemini-embedding-001",
+                    api_config=api_config,
+                )
 
     def test_build_base_url_normalized_embeddings_raises(
         self, platform_env_vars, mock_platform_auth

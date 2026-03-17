@@ -487,12 +487,12 @@ class TestPlatformSettings:
                 model_name="gpt-4o",
                 api_config=passthrough_api_config,
             )
-            assert "llm/openai/deployments/gpt-4o/chat/completions" in url
+            assert "llm/raw/vendor/openai/model/gpt-4o/completions" in url
 
     def test_build_base_url_passthrough_with_api_version(
         self, platform_env_vars, mock_platform_auth
     ):
-        """Test build_base_url for passthrough completions with api_version."""
+        """Test build_base_url for passthrough completions with api_version (vendor endpoint ignores it)."""
         api_config = UiPathAPIConfig(
             api_type=ApiType.COMPLETIONS,
             routing_mode=RoutingMode.PASSTHROUGH,
@@ -505,8 +505,8 @@ class TestPlatformSettings:
                 model_name="gpt-4o",
                 api_config=api_config,
             )
-            assert "llm/openai/deployments/gpt-4o/chat/completions" in url
-            assert "api-version=2025-03-01" in url
+            assert "llm/raw/vendor/openai/model/gpt-4o/completions" in url
+            assert "api-version" not in url
 
     def test_build_base_url_normalized(
         self, platform_env_vars, mock_platform_auth, normalized_api_config

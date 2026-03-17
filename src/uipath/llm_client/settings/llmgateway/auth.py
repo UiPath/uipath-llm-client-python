@@ -21,11 +21,18 @@ class LLMGatewayS2SAuth(Auth, metaclass=SingletonMeta):
         self,
         settings: LLMGatewayBaseSettings,
     ):
-        self.settings = settings
-        if self.settings.access_token is None:
-            self.access_token = self.get_llmgw_token()
-        else:
-            self.access_token = self.settings.access_token.get_secret_value()
+        self.base_url = settings.base_url
+        self.client_id: str | None = (
+            settings.client_id.get_secret_value() if settings.client_id else None
+        )
+        self.client_secret: str | None = (
+            settings.client_secret.get_secret_value() if settings.client_secret else None
+        )
+        self.access_token: str | None = (
+            settings.access_token.get_secret_value()
+            if settings.access_token
+            else self.get_llmgw_token()
+        )
 
     def get_llmgw_token(
         self,
@@ -35,13 +42,12 @@ class LLMGatewayS2SAuth(Auth, metaclass=SingletonMeta):
         Returns None on failure instead of raising, so the request proceeds
         and the client receives the actual error response from the server.
         """
-        if self.settings.client_id is None or self.settings.client_secret is None:
-
+        if self.client_id is None or self.client_secret is None:
             return None
-        url_get_token = f"{self.settings.base_url}/{LLMGatewayEndpoints.IDENTITY_ENDPOINT.value}"
+        url_get_token = f"{self.base_url}/{LLMGatewayEndpoints.IDENTITY_ENDPOINT.value}"
         token_credentials = dict(
-            client_id=self.settings.client_id.get_secret_value(),
-            client_secret=self.settings.client_secret.get_secret_value(),
+            client_id=self.client_id,
+            client_secret=self.client_secret,
             grant_type="client_credentials",
         )
         try:

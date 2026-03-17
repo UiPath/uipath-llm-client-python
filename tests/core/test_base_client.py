@@ -1741,14 +1741,11 @@ class TestLLMGatewayS2STokenAcquisition:
     def test_s2s_missing_credentials_returns_none(self, llmgw_env_vars):
         from uipath.llm_client.settings.llmgateway.auth import LLMGatewayS2SAuth
 
-        with patch.dict(os.environ, llmgw_env_vars, clear=True):
-            settings = LLMGatewaySettings()
-            # Clear access_token to force S2S flow, but credentials are missing
-            settings.access_token = None
-            settings.client_id = None
-            auth = LLMGatewayS2SAuth.__new__(LLMGatewayS2SAuth)
-            auth.settings = settings
-            assert auth.get_llmgw_token() is None
+        auth = LLMGatewayS2SAuth.__new__(LLMGatewayS2SAuth)
+        auth.client_id = None
+        auth.client_secret = None
+        auth.base_url = "https://cloud.uipath.com"
+        assert auth.get_llmgw_token() is None
 
 
 # ============================================================================

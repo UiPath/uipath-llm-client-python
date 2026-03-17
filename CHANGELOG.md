@@ -2,6 +2,14 @@
 
 All notable changes to `uipath_llm_client` (core package) will be documented in this file.
 
+## [1.5.0] - 2026-03-16
+
+### Stable Version 1.5.0
+- added also backend for orchestrator and renamed AgentHubSettings to PlatformSetting (contains both agenthub and orchestrator)
+- removed dependencies from 'uipath', now the repo depends on uipath.platform
+- renamed var UIPATH_LLM_BACKEND with UIPATH_LLM_SERVICE in order to match uipath.platform
+- More test fixes and documentation update
+
 ## [1.4.0] - 2026-03-13
 
 ### New client

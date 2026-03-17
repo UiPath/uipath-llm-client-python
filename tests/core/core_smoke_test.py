@@ -15,8 +15,8 @@ def test_main_package_imports():
     print("Testing main package imports...")
 
     from uipath.llm_client import (
-        AgentHubSettings,
         LLMGatewaySettings,
+        PlatformSettings,
         RetryConfig,
         UiPathHttpxAsyncClient,
         UiPathHttpxClient,
@@ -34,7 +34,7 @@ def test_main_package_imports():
     print("  Factory function is callable")
 
     # Verify settings classes are types
-    assert isinstance(AgentHubSettings, type), "AgentHubSettings should be a class"
+    assert isinstance(PlatformSettings, type), "PlatformSettings should be a class"
     assert isinstance(LLMGatewaySettings, type), "LLMGatewaySettings should be a class"
     print("  Settings classes are importable")
 
@@ -99,17 +99,17 @@ def test_settings_module_imports():
     print("Testing settings module imports...")
 
     from uipath.llm_client.settings import (
-        UIPATH_LLM_BACKEND_ENV,
-        AgentHubSettings,
+        UIPATH_LLM_SERVICE_ENV,
         BackendType,
         LLMGatewaySettings,
+        PlatformSettings,
         UiPathAPIConfig,
         UiPathBaseSettings,
         get_default_client_settings,
     )
 
     # Verify settings classes are types
-    assert isinstance(AgentHubSettings, type), "AgentHubSettings should be a class"
+    assert isinstance(PlatformSettings, type), "PlatformSettings should be a class"
     assert isinstance(LLMGatewaySettings, type), "LLMGatewaySettings should be a class"
     assert isinstance(UiPathAPIConfig, type), "UiPathAPIConfig should be a class"
     assert isinstance(UiPathBaseSettings, type), "UiPathBaseSettings should be a class"
@@ -118,12 +118,12 @@ def test_settings_module_imports():
     assert callable(get_default_client_settings), "get_default_client_settings should be callable"
 
     # Verify constants
-    assert isinstance(UIPATH_LLM_BACKEND_ENV, str), "UIPATH_LLM_BACKEND_ENV should be a string"
+    assert isinstance(UIPATH_LLM_SERVICE_ENV, str), "UIPATH_LLM_SERVICE_ENV should be a string"
     assert BackendType is not None, "BackendType should be importable"
 
     # Verify inheritance
-    assert issubclass(AgentHubSettings, UiPathBaseSettings), (
-        "AgentHubSettings should inherit from UiPathBaseSettings"
+    assert issubclass(PlatformSettings, UiPathBaseSettings), (
+        "PlatformSettings should inherit from UiPathBaseSettings"
     )
     assert issubclass(LLMGatewaySettings, UiPathBaseSettings), (
         "LLMGatewaySettings should inherit from UiPathBaseSettings"

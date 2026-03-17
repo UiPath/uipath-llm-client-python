@@ -29,7 +29,7 @@ The factory functions automatically detect the model vendor and return the appro
 from uipath_langchain_client import get_chat_model, get_embedding_model
 from uipath_langchain_client.settings import get_default_client_settings
 
-# Get default settings (uses UIPATH_LLM_BACKEND env var or defaults to AgentHub)
+# Get default settings (uses UIPATH_LLM_SERVICE env var or defaults to AgentHub)
 settings = get_default_client_settings()
 
 # Chat model - vendor auto-detected from model name

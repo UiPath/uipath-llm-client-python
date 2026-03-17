@@ -31,8 +31,8 @@ from uipath.llm_client.httpx_client import (
     UiPathHttpxClient,
 )
 from uipath.llm_client.settings import (
-    AgentHubSettings,
     LLMGatewaySettings,
+    PlatformSettings,
     get_default_client_settings,
 )
 from uipath.llm_client.utils.exceptions import (
@@ -56,7 +56,7 @@ __all__ = [
     "__version__",
     # Settings
     "get_default_client_settings",
-    "AgentHubSettings",
+    "PlatformSettings",
     "LLMGatewaySettings",
     # HTTPX clients
     "UiPathHttpxClient",

@@ -2,7 +2,7 @@
 
 This module tests:
 1. Retry logic (RetryConfig, RetryableHTTPTransport, RetryableAsyncHTTPTransport)
-2. AgentHubSettings (build_base_url, build_auth_headers, build_auth_pipeline, get_available_models)
+2. PlatformSettings (build_base_url, build_auth_headers, build_auth_pipeline, get_available_models)
 3. LLMGatewaySettings (build_base_url, build_auth_headers, build_auth_pipeline, get_available_models)
 4. Settings factory (get_default_client_settings) with environment variables
 5. HTTPX client functionality (UiPathHttpxClient, UiPathHttpxAsyncClient)
@@ -11,7 +11,7 @@ This module tests:
 8. Header utilities (extract_matching_headers, context vars)
 9. Logging config (LoggingConfig)
 10. SSL config (expand_path, get_httpx_ssl_client_kwargs)
-11. LLMGateway S2S auth (get_llmgw_token_header)
+11. LLMGateway S2S auth (get_llmgw_token)
 12. LLMGateway BYOM validation (validate_byo_model)
 13. Wait strategy (wait_retry_after_with_fallback)
 14. HTTPX client send() behavior (streaming header, URL freezing, header capture)
@@ -26,8 +26,8 @@ import pytest
 from httpx import Client, Headers, Request, Response
 
 from uipath.llm_client.settings import (
-    AgentHubSettings,
     LLMGatewaySettings,
+    PlatformSettings,
     UiPathAPIConfig,
     get_default_client_settings,
 )
@@ -93,14 +93,30 @@ def llmgw_s2s_env_vars():
 
 
 @pytest.fixture
-def agenthub_env_vars():
-    """Environment variables for AgentHubSettings."""
+def platform_env_vars():
+    """Environment variables for PlatformSettings."""
     return {
         "UIPATH_ACCESS_TOKEN": "test-access-token",
         "UIPATH_URL": "https://cloud.uipath.com/org/tenant",
         "UIPATH_TENANT_ID": "test-tenant-id",
         "UIPATH_ORGANIZATION_ID": "test-org-id",
     }
+
+
+@pytest.fixture
+def mock_platform_auth():
+    """Patches is_token_expired and parse_access_token for PlatformSettings tests."""
+    with (
+        patch(
+            "uipath.llm_client.settings.platform.settings.is_token_expired",
+            return_value=False,
+        ),
+        patch(
+            "uipath.llm_client.settings.platform.settings.parse_access_token",
+            return_value={"client_id": "test-client-id"},
+        ),
+    ):
+        yield
 
 
 @pytest.fixture
@@ -197,23 +213,19 @@ class TestUiPathAPIConfig:
 class TestSettingsFactory:
     """Tests for get_default_client_settings factory function."""
 
-    def test_default_returns_agenthub(self, agenthub_env_vars):
+    def test_default_returns_agenthub(self, platform_env_vars, mock_platform_auth):
         """Test that default backend is agenthub."""
-        with patch.dict(os.environ, agenthub_env_vars, clear=False):
-            # Remove UIPATH_LLM_BACKEND if set
-            env = {**agenthub_env_vars}
-            env.pop("UIPATH_LLM_BACKEND", None)
-            with patch.dict(os.environ, env, clear=True):
-                with patch("uipath.llm_client.settings.agenthub.settings.AuthService"):
-                    settings = get_default_client_settings()
-                    assert isinstance(settings, AgentHubSettings)
+        env = {**platform_env_vars}
+        env.pop("UIPATH_LLM_SERVICE", None)
+        with patch.dict(os.environ, env, clear=True):
+            settings = get_default_client_settings()
+            assert isinstance(settings, PlatformSettings)
 
-    def test_explicit_agenthub(self, agenthub_env_vars):
+    def test_explicit_agenthub(self, platform_env_vars, mock_platform_auth):
         """Test explicit agenthub backend."""
-        with patch.dict(os.environ, agenthub_env_vars, clear=True):
-            with patch("uipath.llm_client.settings.agenthub.settings.AuthService"):
-                settings = get_default_client_settings(backend="agenthub")
-                assert isinstance(settings, AgentHubSettings)
+        with patch.dict(os.environ, platform_env_vars, clear=True):
+            settings = get_default_client_settings(backend="agenthub")
+            assert isinstance(settings, PlatformSettings)
 
     def test_explicit_llmgateway(self, llmgw_env_vars):
         """Test explicit llmgateway backend."""
@@ -221,17 +233,16 @@ class TestSettingsFactory:
             settings = get_default_client_settings(backend="llmgateway")
             assert isinstance(settings, LLMGatewaySettings)
 
-    def test_env_var_agenthub(self, agenthub_env_vars):
-        """Test UIPATH_LLM_BACKEND=agenthub from environment."""
-        env = {**agenthub_env_vars, "UIPATH_LLM_BACKEND": "agenthub"}
+    def test_env_var_agenthub(self, platform_env_vars, mock_platform_auth):
+        """Test UIPATH_LLM_SERVICE=agenthub from environment."""
+        env = {**platform_env_vars, "UIPATH_LLM_SERVICE": "agenthub"}
         with patch.dict(os.environ, env, clear=True):
-            with patch("uipath.llm_client.settings.agenthub.settings.AuthService"):
-                settings = get_default_client_settings()
-                assert isinstance(settings, AgentHubSettings)
+            settings = get_default_client_settings()
+            assert isinstance(settings, PlatformSettings)
 
     def test_env_var_llmgateway(self, llmgw_env_vars):
-        """Test UIPATH_LLM_BACKEND=llmgateway from environment."""
-        env = {**llmgw_env_vars, "UIPATH_LLM_BACKEND": "llmgateway"}
+        """Test UIPATH_LLM_SERVICE=llmgateway from environment."""
+        env = {**llmgw_env_vars, "UIPATH_LLM_SERVICE": "llmgateway"}
         with patch.dict(os.environ, env, clear=True):
             settings = get_default_client_settings()
             assert isinstance(settings, LLMGatewaySettings)
@@ -420,7 +431,7 @@ class TestLLMGatewayAuthRefresh:
 
             # Mock the token retrieval
             with patch.object(
-                LLMGatewayS2SAuth, "get_llmgw_token_header", return_value="new-token"
+                LLMGatewayS2SAuth, "get_llmgw_token", return_value="new-token"
             ) as mock_get_token:
                 auth = LLMGatewayS2SAuth(settings=settings)
                 # First call is during __init__
@@ -459,151 +470,139 @@ class TestLLMGatewayAuthRefresh:
 
 
 # ============================================================================
-# Test AgentHubSettings
+# Test PlatformSettings
 # ============================================================================
 
 
-class TestAgentHubSettings:
-    """Tests for AgentHubSettings."""
+class TestPlatformSettings:
+    """Tests for PlatformSettings."""
 
-    def test_build_base_url_passthrough(self, agenthub_env_vars, passthrough_api_config):
+    def test_build_base_url_passthrough(
+        self, platform_env_vars, mock_platform_auth, passthrough_api_config
+    ):
         """Test build_base_url for passthrough mode."""
-        with patch.dict(os.environ, agenthub_env_vars, clear=True):
-            with patch("uipath.llm_client.settings.agenthub.settings.AuthService"):
-                settings = AgentHubSettings()
-                url = settings.build_base_url(
-                    model_name="gpt-4o",
-                    api_config=passthrough_api_config,
-                )
-                assert "agenthub_/llm/raw/vendor/openai/model/gpt-4o/completions" in url
+        with patch.dict(os.environ, platform_env_vars, clear=True):
+            settings = PlatformSettings()
+            url = settings.build_base_url(
+                model_name="gpt-4o",
+                api_config=passthrough_api_config,
+            )
+            assert "agenthub_/llm/raw/vendor/openai/model/gpt-4o/completions" in url
 
-    def test_build_base_url_normalized(self, agenthub_env_vars, normalized_api_config):
+    def test_build_base_url_normalized(
+        self, platform_env_vars, mock_platform_auth, normalized_api_config
+    ):
         """Test build_base_url for normalized mode."""
-        with patch.dict(os.environ, agenthub_env_vars, clear=True):
-            with patch("uipath.llm_client.settings.agenthub.settings.AuthService"):
-                settings = AgentHubSettings()
-                url = settings.build_base_url(
-                    model_name="gpt-4o",
-                    api_config=normalized_api_config,
-                )
-                assert "agenthub_/llm/api/chat/completions" in url
+        with patch.dict(os.environ, platform_env_vars, clear=True):
+            settings = PlatformSettings()
+            url = settings.build_base_url(
+                model_name="gpt-4o",
+                api_config=normalized_api_config,
+            )
+            assert "agenthub_/llm/api/chat/completions" in url
 
-    def test_build_auth_headers_has_default_config(self, agenthub_env_vars):
+    def test_build_auth_headers_has_default_config(self, platform_env_vars, mock_platform_auth):
         """Test build_auth_headers includes default agenthub_config."""
-        with patch.dict(os.environ, agenthub_env_vars, clear=True):
-            with patch("uipath.llm_client.settings.agenthub.settings.AuthService"):
-                settings = AgentHubSettings()
-                headers = settings.build_auth_headers()
-                assert headers == {"X-UiPath-AgentHub-Config": "agentsruntime"}
+        with patch.dict(os.environ, platform_env_vars, clear=True):
+            settings = PlatformSettings()
+            headers = settings.build_auth_headers()
+            assert headers == {"X-UiPath-AgentHub-Config": "agentsruntime"}
 
-    def test_build_auth_headers_with_tracing(self, agenthub_env_vars):
+    def test_build_auth_headers_with_tracing(self, platform_env_vars, mock_platform_auth):
         """Test build_auth_headers includes tracing headers when set."""
         env = {
-            **agenthub_env_vars,
+            **platform_env_vars,
             "UIPATH_AGENTHUB_CONFIG": "test-config",
             "UIPATH_PROCESS_KEY": "test-process",
             "UIPATH_JOB_KEY": "test-job",
         }
         with patch.dict(os.environ, env, clear=True):
-            with patch("uipath.llm_client.settings.agenthub.settings.AuthService"):
-                settings = AgentHubSettings()
-                headers = settings.build_auth_headers()
-                assert headers["X-UiPath-AgentHub-Config"] == "test-config"
-                assert headers["X-UiPath-ProcessKey"] == "test-process"
-                assert headers["X-UiPath-JobKey"] == "test-job"
+            settings = PlatformSettings()
+            headers = settings.build_auth_headers()
+            assert headers["X-UiPath-AgentHub-Config"] == "test-config"
+            assert headers["X-UiPath-ProcessKey"] == "test-process"
+            assert headers["X-UiPath-JobKey"] == "test-job"
 
-    def test_build_auth_pipeline_returns_auth(self, agenthub_env_vars):
+    def test_build_auth_pipeline_returns_auth(self, platform_env_vars, mock_platform_auth):
         """Test build_auth_pipeline returns an Auth instance."""
         from httpx import Auth
 
-        with patch.dict(os.environ, agenthub_env_vars, clear=True):
-            with patch("uipath.llm_client.settings.agenthub.settings.AuthService"):
-                settings = AgentHubSettings()
-                auth = settings.build_auth_pipeline()
-                assert isinstance(auth, Auth)
-
-    def test_credentials_available(self, agenthub_env_vars):
-        """Test credentials_available returns True when all credentials present."""
-        with patch.dict(os.environ, agenthub_env_vars, clear=True):
-            with patch("uipath.llm_client.settings.agenthub.settings.AuthService"):
-                settings = AgentHubSettings()
-                assert settings.credentials_available() is True
+        with patch.dict(os.environ, platform_env_vars, clear=True):
+            settings = PlatformSettings()
+            auth = settings.build_auth_pipeline()
+            assert isinstance(auth, Auth)
 
 
 # ============================================================================
-# Test AgentHub Auth Refresh Logic
+# Test Platform Auth Refresh Logic
 # ============================================================================
 
 
-class TestAgentHubAuthRefresh:
-    """Tests for AgentHubAuth token refresh logic."""
+class TestPlatformAuthRefresh:
+    """Tests for PlatformAuth token refresh logic."""
 
     @pytest.fixture(autouse=True)
     def clear_auth_singleton(self):
-        """Clear AgentHubAuth singleton before each test."""
-        from uipath.llm_client.settings.agenthub.auth import AgentHubAuth
+        """Clear PlatformAuth singleton before each test."""
+        from uipath.llm_client.settings.platform.auth import PlatformAuth
         from uipath.llm_client.settings.utils import SingletonMeta
 
-        SingletonMeta._instances.pop(AgentHubAuth, None)
+        SingletonMeta._instances.pop(PlatformAuth, None)
         yield
-        SingletonMeta._instances.pop(AgentHubAuth, None)
+        SingletonMeta._instances.pop(PlatformAuth, None)
 
-    def test_auth_flow_adds_bearer_token(self, agenthub_env_vars):
+    def test_auth_flow_adds_bearer_token(self, platform_env_vars, mock_platform_auth):
         """Test auth_flow adds Authorization header."""
-        from uipath.llm_client.settings.agenthub.auth import AgentHubAuth
+        from uipath.llm_client.settings.platform.auth import PlatformAuth
 
-        with patch.dict(os.environ, agenthub_env_vars, clear=True):
-            with patch("uipath.llm_client.settings.agenthub.settings.AuthService"):
-                with patch("uipath.llm_client.settings.agenthub.settings.load_dotenv"):
-                    settings = AgentHubSettings()
-                    auth = AgentHubAuth(settings=settings)
-                    request = Request("GET", "https://example.com")
-                    flow = auth.auth_flow(request)
-                    modified_request = next(flow)
-                    assert "Authorization" in modified_request.headers
-                    assert modified_request.headers["Authorization"] == "Bearer test-access-token"
+        with patch.dict(os.environ, platform_env_vars, clear=True):
+            settings = PlatformSettings()
+            auth = PlatformAuth(settings=settings)
+            request = Request("GET", "https://example.com")
+            flow = auth.auth_flow(request)
+            modified_request = next(flow)
+            assert "Authorization" in modified_request.headers
+            assert modified_request.headers["Authorization"] == "Bearer test-access-token"
 
-    def test_auth_flow_refreshes_on_401(self, agenthub_env_vars):
+    def test_auth_flow_refreshes_on_401(self, platform_env_vars, mock_platform_auth):
         """Test auth_flow refreshes token on 401 response."""
-        from uipath.llm_client.settings.agenthub.auth import AgentHubAuth
+        from uipath.llm_client.settings.platform.auth import PlatformAuth
 
-        with patch.dict(os.environ, agenthub_env_vars, clear=True):
-            with patch("uipath.llm_client.settings.agenthub.settings.AuthService"):
-                settings = AgentHubSettings()
+        with patch.dict(os.environ, platform_env_vars, clear=True):
+            settings = PlatformSettings()
 
-                # Mock get_access_token to return a new token on refresh
-                with patch.object(AgentHubAuth, "get_access_token", return_value="initial-token"):
-                    auth = AgentHubAuth(settings=settings)
+            # Mock get_access_token to return a new token on refresh
+            with patch.object(PlatformAuth, "get_access_token", return_value="initial-token"):
+                auth = PlatformAuth(settings=settings)
 
-                request = Request("GET", "https://example.com")
-                flow = auth.auth_flow(request)
+            request = Request("GET", "https://example.com")
+            flow = auth.auth_flow(request)
 
-                # First yield - initial request
-                modified_request = next(flow)
-                assert "Bearer" in modified_request.headers["Authorization"]
+            # First yield - initial request
+            modified_request = next(flow)
+            assert "Bearer" in modified_request.headers["Authorization"]
 
-                # Simulate 401 response
-                mock_response = MagicMock(spec=Response)
-                mock_response.status_code = 401
+            # Simulate 401 response
+            mock_response = MagicMock(spec=Response)
+            mock_response.status_code = 401
 
-                # Mock the get_access_token method to return a new token
-                with patch.object(AgentHubAuth, "get_access_token", return_value="refreshed-token"):
-                    try:
-                        retry_request = flow.send(mock_response)
-                        assert retry_request.headers["Authorization"] == "Bearer refreshed-token"
-                    except StopIteration:
-                        pass
+            # Mock the get_access_token method to return a new token
+            with patch.object(PlatformAuth, "get_access_token", return_value="refreshed-token"):
+                try:
+                    retry_request = flow.send(mock_response)
+                    assert retry_request.headers["Authorization"] == "Bearer refreshed-token"
+                except StopIteration:
+                    pass
 
-    def test_auth_singleton_reuses_instance(self, agenthub_env_vars):
-        """Test that AgentHubAuth is a singleton."""
-        from uipath.llm_client.settings.agenthub.auth import AgentHubAuth
+    def test_auth_singleton_reuses_instance(self, platform_env_vars, mock_platform_auth):
+        """Test that PlatformAuth is a singleton."""
+        from uipath.llm_client.settings.platform.auth import PlatformAuth
 
-        with patch.dict(os.environ, agenthub_env_vars, clear=True):
-            with patch("uipath.llm_client.settings.agenthub.settings.AuthService"):
-                settings = AgentHubSettings()
-                auth1 = AgentHubAuth(settings=settings)
-                auth2 = AgentHubAuth(settings=settings)
-                assert auth1 is auth2
+        with patch.dict(os.environ, platform_env_vars, clear=True):
+            settings = PlatformSettings()
+            auth1 = PlatformAuth(settings=settings)
+            auth2 = PlatformAuth(settings=settings)
+            assert auth1 is auth2
 
 
 # ============================================================================
@@ -1695,7 +1694,7 @@ class TestUiPathHttpxClientSend:
 
 
 class TestLLMGatewayS2STokenAcquisition:
-    """Tests for LLMGatewayS2SAuth.get_llmgw_token_header."""
+    """Tests for LLMGatewayS2SAuth.get_llmgw_token."""
 
     def test_s2s_token_success(self, llmgw_s2s_env_vars):
         from uipath.llm_client.settings.llmgateway.auth import LLMGatewayS2SAuth
@@ -1711,53 +1710,42 @@ class TestLLMGatewayS2STokenAcquisition:
                 auth = LLMGatewayS2SAuth(settings=settings)
                 assert auth.access_token == "s2s-token-value"
 
-    def test_s2s_token_client_error_raises_auth_error(self, llmgw_s2s_env_vars):
+    def test_s2s_token_client_error_returns_none(self, llmgw_s2s_env_vars):
         from uipath.llm_client.settings.llmgateway.auth import LLMGatewayS2SAuth
 
         mock_response = MagicMock()
-        mock_response.is_client_error = True
-        mock_response.json.return_value = {"error": "invalid_client"}
-        mock_response.request = MagicMock(spec=Request)
+        mock_response.is_error = True
         mock_response.status_code = 401
         mock_response.reason_phrase = "Unauthorized"
-        mock_response.headers = {}
 
         with patch.dict(os.environ, llmgw_s2s_env_vars, clear=True):
             settings = LLMGatewaySettings()
             with patch.object(Client, "post", return_value=mock_response):
-                with pytest.raises(UiPathAuthenticationError, match="invalid credentials"):
-                    LLMGatewayS2SAuth(settings=settings)
+                auth = LLMGatewayS2SAuth(settings=settings)
+                assert auth.access_token is None
 
-    def test_s2s_token_server_error_raises_api_error(self, llmgw_s2s_env_vars):
+    def test_s2s_token_server_error_returns_none(self, llmgw_s2s_env_vars):
         from uipath.llm_client.settings.llmgateway.auth import LLMGatewayS2SAuth
 
         mock_response = MagicMock()
-        mock_response.is_client_error = False
         mock_response.is_error = True
         mock_response.status_code = 500
         mock_response.reason_phrase = "Server Error"
-        mock_response.json.return_value = {"error": "internal"}
-        mock_response.request = MagicMock(spec=Request)
-        mock_response.headers = {}
 
         with patch.dict(os.environ, llmgw_s2s_env_vars, clear=True):
             settings = LLMGatewaySettings()
             with patch.object(Client, "post", return_value=mock_response):
-                with pytest.raises(UiPathAPIError):
-                    LLMGatewayS2SAuth(settings=settings)
+                auth = LLMGatewayS2SAuth(settings=settings)
+                assert auth.access_token is None
 
-    def test_s2s_missing_credentials_raises_value_error(self, llmgw_env_vars):
+    def test_s2s_missing_credentials_returns_none(self, llmgw_env_vars):
         from uipath.llm_client.settings.llmgateway.auth import LLMGatewayS2SAuth
 
-        with patch.dict(os.environ, llmgw_env_vars, clear=True):
-            settings = LLMGatewaySettings()
-            # Clear access_token to force S2S flow, but credentials are missing
-            settings.access_token = None
-            settings.client_id = None
-            with pytest.raises(ValueError, match="client_id and client_secret are required"):
-                auth = LLMGatewayS2SAuth.__new__(LLMGatewayS2SAuth)
-                auth.settings = settings
-                auth.get_llmgw_token_header()
+        auth = LLMGatewayS2SAuth.__new__(LLMGatewayS2SAuth)
+        auth.client_id = None
+        auth.client_secret = None
+        auth.base_url = "https://cloud.uipath.com"
+        assert auth.get_llmgw_token() is None
 
 
 # ============================================================================

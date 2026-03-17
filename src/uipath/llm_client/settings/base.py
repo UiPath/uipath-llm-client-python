@@ -67,7 +67,7 @@ class UiPathBaseSettings(BaseSettings, ABC):
     """Abstract base class for UiPath client settings.
 
     This class defines the interface that all backend-specific settings must implement.
-    Subclasses (AgentHubSettings, LLMGatewaySettings) provide
+    Subclasses (PlatformSettings, LLMGatewaySettings) provide
     concrete implementations for their respective backends.
 
     The settings are loaded from environment variables using pydantic-settings,

@@ -98,7 +98,7 @@ class UiPathBaseLLMClient(BaseModel, ABC):
     client_settings: UiPathBaseSettings = Field(
         alias="settings",
         default_factory=get_default_client_settings,
-        description="Settings for the UiPath client (defaults based on UIPATH_LLM_BACKEND env var)",
+        description="Settings for the UiPath client (defaults based on UIPATH_LLM_SERVICE env var)",
     )
 
     default_headers: Mapping[str, str] | None = Field(

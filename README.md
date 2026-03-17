@@ -70,25 +70,22 @@ uv add "uipath-langchain-client[all]"
 
 ## Configuration
 
-### AgentHub Backend (Default)
+### Platform Backend (AgentHub / Orchestrator)
 
-The AgentHub backend uses the UiPath CLI for authentication. On first use, it will prompt you to log in via browser.
+The Platform backend uses the UiPath CLI for authentication. Both `"agenthub"` (default) and `"orchestrator"` share the same settings — the `EndpointManager` selects the correct URL paths automatically.
 
 ```bash
-# Optional: Pre-authenticate via CLI
+# Authenticate via CLI (populates .uipath/.auth.json)
 uv run uipath auth login
 
 # Or set environment variables directly
-export UIPATH_ENVIRONMENT="cloud"              # Environment: "cloud", "staging", or "alpha" (default: "cloud")
-export UIPATH_URL="https://cloud.uipath.com"
+export UIPATH_URL="https://cloud.uipath.com/org/tenant"
 export UIPATH_ORGANIZATION_ID="your-org-id"
 export UIPATH_TENANT_ID="your-tenant-id"
-export UIPATH_ACCESS_TOKEN="your-access-token"  # Optional if using CLI auth
+export UIPATH_ACCESS_TOKEN="your-access-token"
 
-# For S2S authentication (alternative to CLI)
-export UIPATH_CLIENT_ID="your-client-id"
-export UIPATH_CLIENT_SECRET="your-client-secret"
-export UIPATH_CLIENT_SCOPE="your-scope"         # Optional: custom OAuth scope
+# Optional: select backend (default: "agenthub")
+export UIPATH_LLM_SERVICE="agenthub"   # or "orchestrator"
 ```
 
 ### LLMGateway Backend
@@ -97,7 +94,7 @@ To use the LLMGateway backend, set the following environment variables:
 
 ```bash
 # Select the backend
-export UIPATH_LLM_BACKEND="llmgateway"
+export UIPATH_LLM_SERVICE="llmgateway"
 
 # Required configuration
 export LLMGW_URL="https://your-llmgw-url.com"
@@ -118,40 +115,91 @@ export LLMGW_SEMANTIC_USER_ID="your-user-id"
 
 ## Settings Reference
 
-### AgentHubSettings
+### PlatformSettings
 
-Configuration settings for UiPath AgentHub client requests. These settings control routing, authentication, and tracking for requests to AgentHub.
+Configuration settings for UiPath Platform client requests. `PlatformSettings` is a unified settings class that serves both **AgentHub** and **Orchestrator** backends — the `EndpointManager` transparently selects the correct endpoints based on service availability.
+
+You choose between them via the `UIPATH_LLM_SERVICE` environment variable (or the `backend` parameter in `get_default_client_settings()`):
+
+| Value | Description |
+|-------|-------------|
+| `"agenthub"` (default) | Routes requests through AgentHub endpoints |
+| `"orchestrator"` | Routes requests through Orchestrator endpoints |
+
+Both values create a `PlatformSettings` instance — the difference is in how `EndpointManager` resolves the URL paths.
 
 ```python
-from uipath.llm_client.settings import AgentHubSettings
+from uipath.llm_client.settings import get_default_client_settings, PlatformSettings
 
-settings = AgentHubSettings(
-    environment="cloud",        # UiPath environment
-    access_token="...",         # Optional: pre-set access token
-    base_url="...",             # Optional: custom base URL
-    tenant_id="...",            # Optional: tenant ID
-    organization_id="...",      # Optional: organization ID
-)
+# Option 1: Factory (reads UIPATH_LLM_SERVICE, defaults to "agenthub")
+settings = get_default_client_settings()
+
+# Option 2: Explicit backend
+settings = get_default_client_settings(backend="agenthub")
+settings = get_default_client_settings(backend="orchestrator")
+
+# Option 3: Direct instantiation
+settings = PlatformSettings()
 ```
+
+#### AgentHub
+
+AgentHub is the default backend. It routes LLM requests through UiPath's AgentHub service, which provides model discovery, routing, and tracing capabilities.
+
+```bash
+# Select the backend (default, can be omitted)
+export UIPATH_LLM_SERVICE="agenthub"
+
+# Core settings (populated automatically by `uipath auth login`)
+export UIPATH_URL="https://cloud.uipath.com/org/tenant"
+export UIPATH_ORGANIZATION_ID="your-org-id"
+export UIPATH_TENANT_ID="your-tenant-id"
+export UIPATH_ACCESS_TOKEN="your-access-token"
+
+# Optional: AgentHub configuration for discovery (default: "agentsruntime")
+export UIPATH_AGENTHUB_CONFIG="agentsruntime"
+
+# Optional: tracing
+export UIPATH_PROCESS_KEY="your-process-key"
+export UIPATH_JOB_KEY="your-job-key"
+```
+
+#### Orchestrator
+
+Orchestrator uses the same `PlatformSettings` and authentication as AgentHub, but routes requests through Orchestrator endpoints instead.
+
+```bash
+# Select the backend
+export UIPATH_LLM_SERVICE="orchestrator"
+
+# Core settings (same as AgentHub)
+export UIPATH_URL="https://cloud.uipath.com/org/tenant"
+export UIPATH_ORGANIZATION_ID="your-org-id"
+export UIPATH_TENANT_ID="your-tenant-id"
+export UIPATH_ACCESS_TOKEN="your-access-token"
+
+# Optional: tracing
+export UIPATH_PROCESS_KEY="your-process-key"
+export UIPATH_JOB_KEY="your-job-key"
+```
+
+#### PlatformSettings Attributes
 
 | Attribute | Environment Variable | Type | Default | Description |
 |-----------|---------------------|------|---------|-------------|
-| `environment` | `UIPATH_ENVIRONMENT` | `"cloud"` \| `"staging"` \| `"alpha"` | `"cloud"` | The UiPath environment to connect to |
-| `access_token` | `UIPATH_ACCESS_TOKEN` | `SecretStr \| None` | `None` | Access token for authentication (auto-populated via CLI if not set) |
-| `base_url` | `UIPATH_URL` | `str \| None` | `None` | Base URL of the AgentHub API (auto-populated via CLI if not set) |
-| `tenant_id` | `UIPATH_TENANT_ID` | `str \| None` | `None` | Tenant ID for request routing (auto-populated via CLI if not set) |
-| `organization_id` | `UIPATH_ORGANIZATION_ID` | `str \| None` | `None` | Organization ID for request routing (auto-populated via CLI if not set) |
-| `client_id` | `UIPATH_CLIENT_ID` | `SecretStr \| None` | `None` | Client ID for OAuth/S2S authentication |
-| `client_secret` | `UIPATH_CLIENT_SECRET` | `SecretStr \| None` | `None` | Client secret for OAuth/S2S authentication |
-| `client_scope` | `UIPATH_CLIENT_SCOPE` | `str \| None` | `None` | Custom OAuth scope for authentication |
-| `agenthub_config` | `UIPATH_AGENTHUB_CONFIG` | `str` | `"agentsruntime"` | AgentHub configuration for tracing |
+| `access_token` | `UIPATH_ACCESS_TOKEN` | `SecretStr \| None` | `None` | Access token for authentication (populated by `uipath auth login`) |
+| `base_url` | `UIPATH_URL` | `str \| None` | `None` | Base URL of the UiPath Platform API |
+| `tenant_id` | `UIPATH_TENANT_ID` | `str \| None` | `None` | Tenant ID for request routing |
+| `organization_id` | `UIPATH_ORGANIZATION_ID` | `str \| None` | `None` | Organization ID for request routing |
+| `agenthub_config` | `UIPATH_AGENTHUB_CONFIG` | `str \| None` | `"agentsruntime"` | AgentHub configuration for discovery |
 | `process_key` | `UIPATH_PROCESS_KEY` | `str \| None` | `None` | Process key for tracing |
 | `job_key` | `UIPATH_JOB_KEY` | `str \| None` | `None` | Job key for tracing |
 
 **Authentication behavior:**
-- If `access_token`, `base_url`, `tenant_id`, and `organization_id` are all provided, they are used directly
-- Otherwise, the client uses the UiPath CLI (`uipath auth`) to authenticate automatically
-- For S2S authentication, provide `client_id` and `client_secret`
+- All four core fields (`access_token`, `base_url`, `tenant_id`, `organization_id`) are required
+- Run `uipath auth login` to populate them automatically via the UiPath CLI
+- The access token is validated against the local `.uipath/.auth.json` file
+- Token refresh is handled automatically using the refresh token from the auth file
 
 ### LLMGatewaySettings
 
@@ -463,11 +511,11 @@ Pass custom settings when you need more control:
 
 ```python
 from uipath_langchain_client.clients.openai.chat_models import UiPathAzureChatOpenAI
-from uipath.llm_client.settings import AgentHubSettings
+from uipath.llm_client.settings import PlatformSettings
 from uipath.llm_client.utils.retry import RetryConfig
 
-# Custom settings for AgentHub
-settings = AgentHubSettings(environment="cloud")  # or "staging", "alpha"
+# Custom settings for Platform (AgentHub/Orchestrator)
+settings = PlatformSettings()
 
 # With retry configuration
 retry_config: RetryConfig = {
@@ -498,7 +546,7 @@ llmgw_settings = get_default_client_settings(backend="llmgateway")
 chat = UiPathAzureChatOpenAI(model="gpt-4o-2024-11-20", client_settings=llmgw_settings)
 
 # Or use environment variable (no code changes needed)
-# export UIPATH_LLM_BACKEND="llmgateway"
+# export UIPATH_LLM_SERVICE="llmgateway"
 ```
 
 ### Using LLMGatewaySettings Directly
@@ -810,7 +858,7 @@ uipath-llm-client/
 │   │   └── google/                     # UiPathGoogle
 │   ├── settings/                       # Backend-specific settings & auth
 │   │   ├── base.py                     # UiPathBaseSettings, UiPathAPIConfig
-│   │   ├── agenthub/                   # AgentHubSettings, AgentHubAuth
+│   │   ├── platform/                   # PlatformSettings, PlatformAuth
 │   │   └── llmgateway/                 # LLMGatewaySettings, LLMGatewayS2SAuth
 │   └── utils/                          # Exceptions, retry, logging, SSL
 │       ├── exceptions.py               # UiPathAPIError hierarchy (12 classes)

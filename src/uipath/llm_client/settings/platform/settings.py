@@ -105,7 +105,7 @@ class PlatformBaseSettings(UiPathBaseSettings):
                 "Use passthrough routing mode for embeddings instead."
             )
         elif api_config.routing_mode == "passthrough" and api_config.api_type == "completions":
-            endpoint = EndpointManager.get_passthrough_endpoint()
+            endpoint = EndpointManager.get_vendor_endpoint()
             url = f"{self.base_url}/{self._format_endpoint(endpoint, model=model_name, vendor=api_config.vendor_type, api_version=api_config.api_version)}"
         elif api_config.routing_mode == "passthrough" and api_config.api_type == "embeddings":
             if api_config.vendor_type is not None and api_config.vendor_type != "openai":

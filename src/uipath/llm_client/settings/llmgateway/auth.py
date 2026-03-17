@@ -1,4 +1,3 @@
-import logging
 from collections.abc import Generator
 
 from httpx import Auth, Client, Request, Response
@@ -6,8 +5,6 @@ from httpx import Auth, Client, Request, Response
 from uipath.llm_client.settings.llmgateway.settings import LLMGatewayBaseSettings
 from uipath.llm_client.settings.llmgateway.utils import LLMGatewayEndpoints
 from uipath.llm_client.settings.utils import SingletonMeta
-
-logger = logging.getLogger(__name__)
 
 
 class LLMGatewayS2SAuth(Auth, metaclass=SingletonMeta):
@@ -39,7 +36,7 @@ class LLMGatewayS2SAuth(Auth, metaclass=SingletonMeta):
         and the client receives the actual error response from the server.
         """
         if self.settings.client_id is None or self.settings.client_secret is None:
-            logger.warning("client_id and client_secret are required for S2S authentication")
+
             return None
         url_get_token = f"{self.settings.base_url}/{LLMGatewayEndpoints.IDENTITY_ENDPOINT.value}"
         token_credentials = dict(
@@ -51,15 +48,9 @@ class LLMGatewayS2SAuth(Auth, metaclass=SingletonMeta):
             with Client() as http_client:
                 response = http_client.post(url_get_token, data=token_credentials)
                 if response.is_error:
-                    logger.warning(
-                        "Failed to retrieve LLM Gateway token: %s %s",
-                        response.status_code,
-                        response.reason_phrase,
-                    )
                     return None
                 return response.json().get("access_token")
         except Exception:
-            logger.warning("Failed to retrieve LLM Gateway token", exc_info=True)
             return None
 
     def auth_flow(self, request: Request) -> Generator[Request, Response, None]:

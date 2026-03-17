@@ -532,6 +532,128 @@ class TestPlatformSettings:
             auth = settings.build_auth_pipeline()
             assert isinstance(auth, Auth)
 
+    def test_build_auth_pipeline_with_access_token(self, platform_env_vars, mock_platform_auth):
+        """Test auth pipeline uses access_token when provided."""
+        from uipath.llm_client.settings.platform.auth import PlatformAuth
+
+        with patch.dict(os.environ, platform_env_vars, clear=True):
+            settings = PlatformSettings()
+            auth = settings.build_auth_pipeline()
+            assert isinstance(auth, PlatformAuth)
+
+    def test_build_base_url_passthrough_embeddings(
+        self, platform_env_vars, mock_platform_auth, embeddings_api_config
+    ):
+        """Test build_base_url for passthrough embeddings with api_version."""
+        with patch.dict(os.environ, platform_env_vars, clear=True):
+            settings = PlatformSettings()
+            embeddings_api_config.api_version = "2024-02-01"
+            url = settings.build_base_url(
+                model_name="text-embedding-3-large",
+                api_config=embeddings_api_config,
+            )
+            assert "embeddings" in url
+            assert "text-embedding-3-large" in url
+            assert "api-version=2024-02-01" in url
+
+    def test_build_base_url_passthrough_embeddings_no_api_version(
+        self, platform_env_vars, mock_platform_auth, embeddings_api_config
+    ):
+        """Test build_base_url for passthrough embeddings without api_version."""
+        with patch.dict(os.environ, platform_env_vars, clear=True):
+            settings = PlatformSettings()
+            embeddings_api_config.api_version = None
+            url = settings.build_base_url(
+                model_name="text-embedding-3-large",
+                api_config=embeddings_api_config,
+            )
+            assert "embeddings" in url
+            assert "text-embedding-3-large" in url
+            assert "api-version" not in url
+
+    def test_build_base_url_normalized_embeddings_raises(
+        self, platform_env_vars, mock_platform_auth
+    ):
+        """Test build_base_url raises ValueError for normalized embeddings."""
+        normalized_embeddings_config = UiPathAPIConfig(
+            api_type=ApiType.EMBEDDINGS,
+            routing_mode=RoutingMode.NORMALIZED,
+        )
+        with patch.dict(os.environ, platform_env_vars, clear=True):
+            settings = PlatformSettings()
+            with pytest.raises(ValueError, match="Normalized embeddings are not supported"):
+                settings.build_base_url(
+                    model_name="text-embedding-3-large",
+                    api_config=normalized_embeddings_config,
+                )
+
+    def test_build_base_url_requires_model_name(
+        self, platform_env_vars, mock_platform_auth, normalized_api_config
+    ):
+        """Test build_base_url asserts model_name is not None."""
+        with patch.dict(os.environ, platform_env_vars, clear=True):
+            settings = PlatformSettings()
+            with pytest.raises(AssertionError):
+                settings.build_base_url(model_name=None, api_config=normalized_api_config)
+
+    def test_build_base_url_requires_api_config(self, platform_env_vars, mock_platform_auth):
+        """Test build_base_url asserts api_config is not None."""
+        with patch.dict(os.environ, platform_env_vars, clear=True):
+            settings = PlatformSettings()
+            with pytest.raises(AssertionError):
+                settings.build_base_url(model_name="gpt-4o", api_config=None)
+
+    def test_build_auth_headers_empty_when_no_optional(self, platform_env_vars, mock_platform_auth):
+        """Test build_auth_headers with no optional tracing fields set."""
+        env = {**platform_env_vars, "UIPATH_AGENTHUB_CONFIG": ""}
+        with patch.dict(os.environ, env, clear=True):
+            settings = PlatformSettings()
+            # Override to empty to test the falsy path
+            settings.agenthub_config = ""
+            settings.process_key = None
+            settings.job_key = None
+            headers = settings.build_auth_headers()
+            assert headers == {}
+
+    def test_validation_requires_all_fields(self, mock_platform_auth):
+        """Test validation fails without required fields."""
+        env = {
+            "UIPATH_ACCESS_TOKEN": "test-access-token",
+            # Missing base_url, tenant_id, organization_id
+        }
+        with patch.dict(os.environ, env, clear=True):
+            with pytest.raises(ValueError, match="Base URL, access token, tenant ID"):
+                PlatformSettings()
+
+    def test_validation_fails_on_expired_token(self):
+        """Test validation fails when access token is expired."""
+        with (
+            patch(
+                "uipath.llm_client.settings.platform.settings.is_token_expired",
+                return_value=True,
+            ),
+            patch(
+                "uipath.llm_client.settings.platform.settings.parse_access_token",
+                return_value={"client_id": "test-client-id"},
+            ),
+        ):
+            env = {
+                "UIPATH_ACCESS_TOKEN": "test-access-token",
+                "UIPATH_URL": "https://cloud.uipath.com/org/tenant",
+                "UIPATH_TENANT_ID": "test-tenant-id",
+                "UIPATH_ORGANIZATION_ID": "test-org-id",
+            }
+            with patch.dict(os.environ, env, clear=True):
+                with pytest.raises(ValueError, match="Access token is expired"):
+                    PlatformSettings()
+
+    def test_validate_byo_model_is_noop(self, platform_env_vars, mock_platform_auth):
+        """Test validate_byo_model does nothing (no-op)."""
+        with patch.dict(os.environ, platform_env_vars, clear=True):
+            settings = PlatformSettings()
+            result = settings.validate_byo_model({"modelName": "custom-model"})
+            assert result is None
+
 
 # ============================================================================
 # Test Platform Auth Refresh Logic

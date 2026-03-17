@@ -13,9 +13,11 @@ from uipath_langchain_client.clients.bedrock.chat_models import (
 )
 from uipath_langchain_client.clients.google.chat_models import UiPathChatGoogleGenerativeAI
 from uipath_langchain_client.clients.normalized.chat_models import UiPathChat
+from uipath_langchain_client.clients.normalized.embeddings import UiPathEmbeddings
 from uipath_langchain_client.clients.vertexai.chat_models import UiPathChatAnthropicVertex
 
 from tests.langchain.utils import search_accommodation, search_attractions, search_flights
+from uipath.llm_client.settings import PlatformSettings
 
 
 @pytest.mark.asyncio
@@ -502,6 +504,18 @@ class TestIntegrationEmbeddings(EmbeddingsIntegrationTests):
     @pytest.fixture(autouse=True)
     def setup_models(self, embeddings_config: tuple[type[Embeddings], dict[str, Any]]):
         self._embeddings_class, self._embeddings_kwargs = embeddings_config
+
+    @pytest.fixture(autouse=True)
+    def skip_on_specific_configs(
+        self,
+        embeddings_config: tuple[type[Embeddings], dict[str, Any]],
+    ) -> None:
+        model_class, model_kwargs = embeddings_config
+        client_settings = model_kwargs.get("client_settings")
+        if model_class == UiPathEmbeddings and isinstance(client_settings, PlatformSettings):
+            pytest.skip(
+                "Normalized embeddings are not supported on UiPath Platform (AgentHub/Orchestrator)"
+            )
 
     @property
     def embeddings_class(self) -> type[Embeddings]:

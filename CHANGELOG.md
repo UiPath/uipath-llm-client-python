@@ -2,6 +2,12 @@
 
 All notable changes to `uipath_llm_client` (core package) will be documented in this file.
 
+## [1.5.1] - 2026-03-17
+
+### Fix
+- Added error message for normalized embeddings on UiPath Platform (AgentHub/Orchestrator) as there is no supported endpoint
+- Fix endpoints for platform to remove api version
+
 ## [1.5.0] - 2026-03-16
 
 ### Stable Version 1.5.0

@@ -2,6 +2,7 @@ import pytest
 
 from uipath.llm_client.settings import UiPathBaseSettings
 from uipath.llm_client.settings.llmgateway import LLMGatewaySettings
+from uipath.llm_client.settings.platform import PlatformSettings
 
 
 @pytest.fixture(autouse=True, scope="session")
@@ -55,10 +56,12 @@ def pytest_recording_configure(config, vcr):
     vcr.register_persister(SQLitePersister)
 
 
-@pytest.fixture(scope="session", params=["llmgw"])
+@pytest.fixture(scope="session", params=["llmgw", "agenthub"])
 def client_settings(request: pytest.FixtureRequest) -> UiPathBaseSettings:
     match request.param:
         case "llmgw":
             return LLMGatewaySettings()
+        case "agenthub":
+            return PlatformSettings()
         case _:
             raise ValueError(f"Invalid client type: {request.param}")

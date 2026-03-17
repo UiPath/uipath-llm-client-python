@@ -481,7 +481,9 @@ class TestLLMGatewayAuthRefresh:
 class TestPlatformSettings:
     """Tests for PlatformSettings."""
 
-    def test_build_base_url_passthrough(self, platform_env_vars, mock_platform_auth, passthrough_api_config):
+    def test_build_base_url_passthrough(
+        self, platform_env_vars, mock_platform_auth, passthrough_api_config
+    ):
         """Test build_base_url for passthrough mode."""
         with patch.dict(os.environ, platform_env_vars, clear=True):
             settings = PlatformSettings()
@@ -491,7 +493,9 @@ class TestPlatformSettings:
             )
             assert "agenthub_/llm/raw/vendor/openai/model/gpt-4o/completions" in url
 
-    def test_build_base_url_normalized(self, platform_env_vars, mock_platform_auth, normalized_api_config):
+    def test_build_base_url_normalized(
+        self, platform_env_vars, mock_platform_auth, normalized_api_config
+    ):
         """Test build_base_url for normalized mode."""
         with patch.dict(os.environ, platform_env_vars, clear=True):
             settings = PlatformSettings()

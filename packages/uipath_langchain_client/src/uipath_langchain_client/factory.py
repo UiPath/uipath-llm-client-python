@@ -190,7 +190,7 @@ def get_chat_model(
                 **model_kwargs,
             )
         case VendorType.AWSBEDROCK:
-            if model_family == "anthropicclaude":
+            if model_family == "anthropicclaude" and api_flavor is None:
                 from uipath_langchain_client.clients.bedrock.chat_models import (
                     UiPathChatAnthropicBedrock,
                 )

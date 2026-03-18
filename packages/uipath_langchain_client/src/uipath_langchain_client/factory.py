@@ -121,6 +121,7 @@ def get_chat_model(
         vendor_type=vendor_type,
     )
     is_uipath_owned = model_info.get("modelSubscriptionType") == "UiPathOwned"
+    model_family = model_info.get("modelFamily", "").lower()
     if not is_uipath_owned:
         client_settings.validate_byo_model(model_info)
 
@@ -165,47 +166,31 @@ def get_chat_model(
                     **model_kwargs,
                 )
         case VendorType.VERTEXAI:
-            if is_uipath_owned:
-                if "claude" in model_name:
-                    from uipath_langchain_client.clients.anthropic.chat_models import (
-                        UiPathChatAnthropic,
-                    )
-
-                    return UiPathChatAnthropic(
-                        model=model_name,
-                        settings=client_settings,
-                        vendor_type=discovered_vendor,
-                        byo_connection_id=byo_connection_id,
-                        **model_kwargs,
-                    )
-                elif "gemini" in model_name:
-                    from uipath_langchain_client.clients.google.chat_models import (
-                        UiPathChatGoogleGenerativeAI,
-                    )
-
-                    return UiPathChatGoogleGenerativeAI(
-                        model=model_name,
-                        settings=client_settings,
-                        byo_connection_id=byo_connection_id,
-                        **model_kwargs,
-                    )
-                else:
-                    raise ValueError(
-                        f"We don't have a client that currently supports this model: {model_name} on vendor: {discovered_vendor}"
-                    )
-            else:
-                from uipath_langchain_client.clients.google.chat_models import (
-                    UiPathChatGoogleGenerativeAI,
+            if model_family == "anthropicclaude":
+                from uipath_langchain_client.clients.anthropic.chat_models import (
+                    UiPathChatAnthropic,
                 )
 
-                return UiPathChatGoogleGenerativeAI(
+                return UiPathChatAnthropic(
                     model=model_name,
                     settings=client_settings,
+                    vendor_type=discovered_vendor,
                     byo_connection_id=byo_connection_id,
                     **model_kwargs,
                 )
+
+            from uipath_langchain_client.clients.google.chat_models import (
+                UiPathChatGoogleGenerativeAI,
+            )
+
+            return UiPathChatGoogleGenerativeAI(
+                model=model_name,
+                settings=client_settings,
+                byo_connection_id=byo_connection_id,
+                **model_kwargs,
+            )
         case VendorType.AWSBEDROCK:
-            if "claude" in model_name:
+            if model_family == "anthropicclaude":
                 from uipath_langchain_client.clients.bedrock.chat_models import (
                     UiPathChatAnthropicBedrock,
                 )

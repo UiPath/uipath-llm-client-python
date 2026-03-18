@@ -120,8 +120,10 @@ def get_chat_model(
         byo_connection_id=byo_connection_id,
         vendor_type=vendor_type,
     )
+    model_family = model_info.get("modelFamily", None)
+    if model_family is not None:
+        model_family = model_family.lower()
     is_uipath_owned = model_info.get("modelSubscriptionType") == "UiPathOwned"
-    model_family = model_info.get("modelFamily", "").lower()
     if not is_uipath_owned:
         client_settings.validate_byo_model(model_info)
 

@@ -85,11 +85,13 @@ class WrappedBotoClient:
             raise ValueError("httpx_client is not set")
         return self.httpx_client.post(
             "/",
-            json=_serialize_bytes({
-                "messages": messages,
-                "system": system,
-                **params,
-            }),
+            json=_serialize_bytes(
+                {
+                    "messages": messages,
+                    "system": system,
+                    **params,
+                }
+            ),
         ).json()
 
     def converse_stream(

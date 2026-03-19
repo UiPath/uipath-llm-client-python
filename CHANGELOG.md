@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_llm_client` (core package) will be documented in this file.
 
+## [1.5.5] - 2026-03-19
+
+### Fix
+- Fix headers for Platform Settings
+
 ## [1.5.3] - 2026-03-18
 
 ### Fix

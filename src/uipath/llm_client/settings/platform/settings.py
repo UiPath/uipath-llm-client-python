@@ -48,7 +48,9 @@ class PlatformBaseSettings(UiPathBaseSettings):
 
     # Tracing configuration
     process_key: str | None = Field(default=None, validation_alias="UIPATH_PROCESS_KEY")
+    folder_key: str | None = Field(default=None, validation_alias="UIPATH_FOLDER_KEY")
     job_key: str | None = Field(default=None, validation_alias="UIPATH_JOB_KEY")
+    trace_id: str | None = Field(default=None, validation_alias="UIPATH_TRACE_ID")
 
     @model_validator(mode="after")
     def validate_environment(self) -> Self:
@@ -128,12 +130,20 @@ class PlatformBaseSettings(UiPathBaseSettings):
     ) -> Mapping[str, str]:
         """Build authentication and routing headers for API requests."""
         headers: dict[str, str] = {}
+        if self.organization_id:
+            headers["X-UiPath-Internal-AccountId"] = self.organization_id
+        if self.tenant_id:
+            headers["X-UiPath-Internal-TenantId"] = self.tenant_id
         if self.agenthub_config:
             headers["X-UiPath-AgentHub-Config"] = self.agenthub_config
         if self.process_key:
             headers["X-UiPath-ProcessKey"] = self.process_key
+        if self.folder_key:
+            headers["X-UiPath-FolderKey"] = self.folder_key
         if self.job_key:
             headers["X-UiPath-JobKey"] = self.job_key
+        if self.trace_id:
+            headers["X-UiPath-TraceId"] = self.trace_id
         return headers
 
     @override

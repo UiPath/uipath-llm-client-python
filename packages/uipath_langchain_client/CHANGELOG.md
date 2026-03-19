@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_langchain_client` will be documented in this file.
 
+## [1.5.5] - 2026-03-19
+
+### Fix headers
+- Fix headers 
+
 ## [1.5.4] - 2026-03-19
 
 ### Fix

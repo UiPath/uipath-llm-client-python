@@ -15,9 +15,32 @@ from uipath_langchain_client.settings import (
 try:
     from anthropic import AnthropicBedrock, AsyncAnthropicBedrock
     from langchain_aws.chat_models import ChatBedrock, ChatBedrockConverse
+    from langchain_aws.chat_models import bedrock as _bedrock_module
     from langchain_aws.chat_models.anthropic import ChatAnthropicBedrock
 
     from uipath_langchain_client.clients.bedrock.utils import WrappedBotoClient
+
+    _original_format_data_content_block = _bedrock_module._format_data_content_block
+
+    def _patched_format_data_content_block(block: dict) -> dict:
+        """Extended version that also handles file/document blocks for Anthropic API."""
+        if block["type"] == "file":
+            if "base64" not in block and block.get("source_type") != "base64":
+                raise ValueError("File data only supported through in-line base64 format.")
+            if "mime_type" not in block:
+                raise ValueError("mime_type key is required for base64 data.")
+            return {
+                "type": "document",
+                "source": {
+                    "type": "base64",
+                    "media_type": block["mime_type"],
+                    "data": block.get("base64") or block.get("data", ""),
+                },
+            }
+        return _original_format_data_content_block(block)
+
+    _bedrock_module._format_data_content_block = _patched_format_data_content_block
+
 except ImportError as e:
     raise ImportError(
         "The 'aws' extra is required to use UiPathBedrockChatModel and UiPathBedrockChatModelConverse. "

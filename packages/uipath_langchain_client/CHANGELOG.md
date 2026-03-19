@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_langchain_client` will be documented in this file.
 
+## [1.5.4] - 2026-03-19
+
+### Fix
+- Fix bedrock clients with file attachments
+
 ## [1.5.3] - 2026-03-18
 
 ### Fix

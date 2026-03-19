@@ -29,6 +29,22 @@ class _MockClientMeta:
         self.events = _MockEventHooks()
 
 
+def _serialize_bytes(obj: Any) -> Any:
+    """Recursively encode bytes values to base64 strings for JSON serialization.
+
+    This mimics boto3's serializer which re-encodes bytes to base64 before
+    sending as JSON. Needed because LangChain's ChatBedrockConverse decodes
+    base64 content (images, PDFs) into raw bytes objects.
+    """
+    if isinstance(obj, bytes):
+        return base64.b64encode(obj).decode("utf-8")
+    if isinstance(obj, dict):
+        return {k: _serialize_bytes(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_serialize_bytes(item) for item in obj]
+    return obj
+
+
 class WrappedBotoClient:
     def __init__(self, httpx_client: Client | None = None, region_name: str = "PLACEHOLDER"):
         self.httpx_client = httpx_client
@@ -37,7 +53,7 @@ class WrappedBotoClient:
     def _stream_generator(self, request_body: dict[str, Any]) -> Iterator[dict[str, Any]]:
         if self.httpx_client is None:
             raise ValueError("httpx_client is not set")
-        with self.httpx_client.stream("POST", "/", json=request_body) as response:
+        with self.httpx_client.stream("POST", "/", json=_serialize_bytes(request_body)) as response:
             buffer = EventStreamBuffer()
             for chunk in response.iter_bytes():
                 buffer.add_data(chunk)
@@ -69,11 +85,13 @@ class WrappedBotoClient:
             raise ValueError("httpx_client is not set")
         return self.httpx_client.post(
             "/",
-            json={
-                "messages": messages,
-                "system": system,
-                **params,
-            },
+            json=_serialize_bytes(
+                {
+                    "messages": messages,
+                    "system": system,
+                    **params,
+                }
+            ),
         ).json()
 
     def converse_stream(

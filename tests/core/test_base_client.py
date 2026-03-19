@@ -525,7 +525,11 @@ class TestPlatformSettings:
         with patch.dict(os.environ, platform_env_vars, clear=True):
             settings = PlatformSettings()
             headers = settings.build_auth_headers()
-            assert headers == {"X-UiPath-AgentHub-Config": "agentsruntime"}
+            assert headers == {
+                "X-UiPath-Internal-AccountId": "test-org-id",
+                "X-UiPath-Internal-TenantId": "test-tenant-id",
+                "X-UiPath-AgentHub-Config": "agentsruntime",
+            }
 
     def test_build_auth_headers_with_tracing(self, platform_env_vars, mock_platform_auth):
         """Test build_auth_headers includes tracing headers when set."""
@@ -655,6 +659,8 @@ class TestPlatformSettings:
             settings.agenthub_config = ""
             settings.process_key = None
             settings.job_key = None
+            settings.organization_id = None
+            settings.tenant_id = None
             headers = settings.build_auth_headers()
             assert headers == {}
 

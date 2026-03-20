@@ -8,7 +8,6 @@ from langchain_core.callbacks import BaseCallbackHandler
 from langchain_core.messages import BaseMessage
 
 from uipath.llm_client.utils.headers import (
-    clear_dynamic_request_headers,
     set_dynamic_request_headers,
 )
 
@@ -61,7 +60,7 @@ class UiPathDynamicHeadersCallback(BaseCallbackHandler):
         set_dynamic_request_headers(self.get_headers())
 
     def on_llm_end(self, response: Any, *, run_id: UUID, **kwargs: Any) -> None:
-        clear_dynamic_request_headers()
+        set_dynamic_request_headers({})
 
     def on_llm_error(self, error: BaseException, *, run_id: UUID, **kwargs: Any) -> None:
-        clear_dynamic_request_headers()
+        set_dynamic_request_headers({})

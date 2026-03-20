@@ -41,6 +41,7 @@ from uipath.llm_client.utils.exceptions import patch_raise_for_status
 from uipath.llm_client.utils.headers import (
     build_routing_headers,
     extract_matching_headers,
+    get_dynamic_request_headers,
     set_captured_response_headers,
 )
 from uipath.llm_client.utils.logging import LoggingConfig
@@ -174,6 +175,9 @@ class UiPathHttpxClient(Client):
         if self._freeze_base_url:
             request.url = URL(str(self.base_url).rstrip("/"))
         request.headers[self._streaming_header] = str(stream).lower()
+        dynamic_headers = get_dynamic_request_headers()
+        if dynamic_headers:
+            request.headers.update(dynamic_headers)
         response = super().send(request, stream=stream, **kwargs)
         if self._captured_headers:
             captured = extract_matching_headers(response.headers, self._captured_headers)
@@ -304,6 +308,9 @@ class UiPathHttpxAsyncClient(AsyncClient):
         if self._freeze_base_url:
             request.url = URL(str(self.base_url).rstrip("/"))
         request.headers[self._streaming_header] = str(stream).lower()
+        dynamic_headers = get_dynamic_request_headers()
+        if dynamic_headers:
+            request.headers.update(dynamic_headers)
         response = await super().send(request, stream=stream, **kwargs)
         if self._captured_headers:
             captured = extract_matching_headers(response.headers, self._captured_headers)

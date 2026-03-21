@@ -30,6 +30,10 @@ from functools import cached_property
 from typing import Any, Literal
 
 from httpx import URL, Response
+from langchain_core.callbacks import (
+    AsyncCallbackManagerForLLMRun,
+    CallbackManagerForLLMRun,
+)
 from langchain_core.embeddings import Embeddings
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import BaseMessage
@@ -322,6 +326,11 @@ class UiPathBaseChatModel(UiPathBaseLLMClient, BaseChatModel):
     from the ContextVar (populated by the httpx client's send()) and inject them into
     the AIMessage's response_metadata under the 'uipath_llmgateway_headers' key.
 
+    Dynamic request headers are injected via UiPathDynamicHeadersCallback: set
+    ``run_inline = True`` (already the default) so LangChain calls
+    ``on_chat_model_start`` in the same coroutine as ``_agenerate``, ensuring the
+    ContextVar is visible when ``httpx.send()`` fires.
+
     Passthrough clients that delegate to vendor SDKs should inherit from this class
     so that headers are captured transparently.
     """
@@ -329,41 +338,68 @@ class UiPathBaseChatModel(UiPathBaseLLMClient, BaseChatModel):
     def _generate(
         self,
         messages: list[BaseMessage],
-        *args: Any,
+        stop: list[str] | None = None,
+        run_manager: CallbackManagerForLLMRun | None = None,
         **kwargs: Any,
     ) -> ChatResult:
         set_captured_response_headers({})
         try:
-            result = super()._generate(messages, *args, **kwargs)
+            result = self._uipath_generate(messages, stop=stop, run_manager=run_manager, **kwargs)
             self._inject_gateway_headers(result.generations)
             return result
         finally:
             set_captured_response_headers({})
+
+    def _uipath_generate(
+        self,
+        messages: list[BaseMessage],
+        stop: list[str] | None = None,
+        run_manager: CallbackManagerForLLMRun | None = None,
+        **kwargs: Any,
+    ) -> ChatResult:
+        """Override in subclasses to provide the core (non-wrapped) generate logic."""
+        return super()._generate(messages, stop=stop, run_manager=run_manager, **kwargs)
 
     async def _agenerate(
         self,
         messages: list[BaseMessage],
-        *args: Any,
+        stop: list[str] | None = None,
+        run_manager: AsyncCallbackManagerForLLMRun | None = None,
         **kwargs: Any,
     ) -> ChatResult:
         set_captured_response_headers({})
         try:
-            result = await super()._agenerate(messages, *args, **kwargs)
+            result = await self._uipath_agenerate(
+                messages, stop=stop, run_manager=run_manager, **kwargs
+            )
             self._inject_gateway_headers(result.generations)
             return result
         finally:
             set_captured_response_headers({})
 
+    async def _uipath_agenerate(
+        self,
+        messages: list[BaseMessage],
+        stop: list[str] | None = None,
+        run_manager: AsyncCallbackManagerForLLMRun | None = None,
+        **kwargs: Any,
+    ) -> ChatResult:
+        """Override in subclasses to provide the core (non-wrapped) async generate logic."""
+        return await super()._agenerate(messages, stop=stop, run_manager=run_manager, **kwargs)
+
     def _stream(
         self,
         messages: list[BaseMessage],
-        *args: Any,
+        stop: list[str] | None = None,
+        run_manager: CallbackManagerForLLMRun | None = None,
         **kwargs: Any,
     ) -> Iterator[ChatGenerationChunk]:
         set_captured_response_headers({})
         try:
             first = True
-            for chunk in super()._stream(messages, *args, **kwargs):
+            for chunk in self._uipath_stream(
+                messages, stop=stop, run_manager=run_manager, **kwargs
+            ):
                 if first:
                     self._inject_gateway_headers([chunk])
                     first = False
@@ -371,22 +407,46 @@ class UiPathBaseChatModel(UiPathBaseLLMClient, BaseChatModel):
         finally:
             set_captured_response_headers({})
 
+    def _uipath_stream(
+        self,
+        messages: list[BaseMessage],
+        stop: list[str] | None = None,
+        run_manager: CallbackManagerForLLMRun | None = None,
+        **kwargs: Any,
+    ) -> Iterator[ChatGenerationChunk]:
+        """Override in subclasses to provide the core (non-wrapped) stream logic."""
+        yield from super()._stream(messages, stop=stop, run_manager=run_manager, **kwargs)
+
     async def _astream(
         self,
         messages: list[BaseMessage],
-        *args: Any,
+        stop: list[str] | None = None,
+        run_manager: AsyncCallbackManagerForLLMRun | None = None,
         **kwargs: Any,
     ) -> AsyncIterator[ChatGenerationChunk]:
         set_captured_response_headers({})
         try:
             first = True
-            async for chunk in super()._astream(messages, *args, **kwargs):
+            async for chunk in self._uipath_astream(
+                messages, stop=stop, run_manager=run_manager, **kwargs
+            ):
                 if first:
                     self._inject_gateway_headers([chunk])
                     first = False
                 yield chunk
         finally:
             set_captured_response_headers({})
+
+    async def _uipath_astream(
+        self,
+        messages: list[BaseMessage],
+        stop: list[str] | None = None,
+        run_manager: AsyncCallbackManagerForLLMRun | None = None,
+        **kwargs: Any,
+    ) -> AsyncIterator[ChatGenerationChunk]:
+        """Override in subclasses to provide the core (non-wrapped) async stream logic."""
+        async for chunk in super()._astream(messages, stop=stop, run_manager=run_manager, **kwargs):
+            yield chunk
 
     def _inject_gateway_headers(self, generations: Sequence[ChatGeneration]) -> None:
         """Inject captured gateway headers into each generation's response_metadata."""

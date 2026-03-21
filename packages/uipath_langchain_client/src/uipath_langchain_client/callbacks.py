@@ -2,23 +2,19 @@
 
 from abc import abstractmethod
 from typing import Any
-from uuid import UUID
 
 from langchain_core.callbacks import BaseCallbackHandler
-from langchain_core.messages import BaseMessage
 
-from uipath.llm_client.utils.headers import (
-    set_dynamic_request_headers,
-)
+from uipath.llm_client.utils.headers import set_dynamic_request_headers
 
 
 class UiPathDynamicHeadersCallback(BaseCallbackHandler):
     """Base callback for injecting dynamic headers into each LLM gateway request.
 
     Extend this class and implement ``get_headers()`` to return the headers to
-    inject. The headers are stored in a ContextVar before each LLM call and read
-    by the httpx client's ``send()`` method, so they flow transparently through
-    the call stack regardless of which vendor SDK is in use.
+    inject. ``run_inline = True`` ensures ``on_chat_model_start`` is called
+    directly in the caller's coroutine (not via ``asyncio.gather``), so the
+    ContextVar mutation is visible when ``httpx.send()`` fires.
 
     Example (OTEL trace propagation)::
 
@@ -34,6 +30,8 @@ class UiPathDynamicHeadersCallback(BaseCallbackHandler):
         response = chat.invoke("Hello!", config={"callbacks": [OtelHeadersCallback()]})
     """
 
+    run_inline: bool = True  # dispatch in the caller's coroutine, not via asyncio.gather
+
     @abstractmethod
     def get_headers(self) -> dict[str, str]:
         """Return headers to inject into the next LLM gateway request."""
@@ -42,9 +40,7 @@ class UiPathDynamicHeadersCallback(BaseCallbackHandler):
     def on_chat_model_start(
         self,
         serialized: dict[str, Any],
-        messages: list[list[BaseMessage]],
-        *,
-        run_id: UUID,
+        messages: list[list[Any]],
         **kwargs: Any,
     ) -> None:
         set_dynamic_request_headers(self.get_headers())
@@ -53,14 +49,12 @@ class UiPathDynamicHeadersCallback(BaseCallbackHandler):
         self,
         serialized: dict[str, Any],
         prompts: list[str],
-        *,
-        run_id: UUID,
         **kwargs: Any,
     ) -> None:
         set_dynamic_request_headers(self.get_headers())
 
-    def on_llm_end(self, response: Any, *, run_id: UUID, **kwargs: Any) -> None:
+    def on_llm_end(self, response: Any, **kwargs: Any) -> None:
         set_dynamic_request_headers({})
 
-    def on_llm_error(self, error: BaseException, *, run_id: UUID, **kwargs: Any) -> None:
+    def on_llm_error(self, error: BaseException, **kwargs: Any) -> None:
         set_dynamic_request_headers({})

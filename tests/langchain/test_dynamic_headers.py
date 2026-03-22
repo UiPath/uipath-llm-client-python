@@ -332,9 +332,7 @@ class TestHttpxClientDynamicHeaderInjection:
 
 
 class TestOpenInferenceEndToEnd:
-    def test_outer_span_context_injected_into_request(
-        self, otel_exporter, llmgw_settings, tracer
-    ):
+    def test_outer_span_context_injected_into_request(self, otel_exporter, llmgw_settings, tracer):
         """Outer span is the current span; its context is injected into the LLM request.
         openinference creates child spans (same trace_id) but doesn't override the
         current span context, so get_current_span() returns the outer span."""
@@ -361,9 +359,7 @@ class TestOpenInferenceEndToEnd:
             assert format(span.context.trace_id, "032x") == outer_trace_id
 
     @pytest.mark.asyncio
-    async def test_async_outer_span_context_injected(
-        self, otel_exporter, llmgw_settings, tracer
-    ):
+    async def test_async_outer_span_context_injected(self, otel_exporter, llmgw_settings, tracer):
         """Async path: outer span context propagates through ainvoke to the request."""
         transport = AsyncRequestCapturingTransport()
         chat = _make_chat_with_async_transport(llmgw_settings, transport)
@@ -378,9 +374,7 @@ class TestOpenInferenceEndToEnd:
         assert transport.last_request_headers.get("x-trace-id") == outer_trace_id
         assert transport.last_request_headers.get("x-span-id") == outer_span_id
 
-    def test_no_outer_span_no_headers_but_spans_still_created(
-        self, otel_exporter, llmgw_settings
-    ):
+    def test_no_outer_span_no_headers_but_spans_still_created(self, otel_exporter, llmgw_settings):
         """Without an outer span, get_current_span() is invalid → no headers injected.
         openinference still creates its own root spans for observability."""
         transport = RequestCapturingTransport()

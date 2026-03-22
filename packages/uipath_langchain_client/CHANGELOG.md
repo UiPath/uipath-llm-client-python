@@ -2,6 +2,13 @@
 
 All notable changes to `uipath_langchain_client` will be documented in this file.
 
+## [1.5.6] - 2026-03-21
+
+### Feature
+- Added `UiPathDynamicHeadersCallback`: extend and implement `get_headers()` to inject custom headers into each LLM gateway request
+- Uses `run_inline = True` so `on_chat_model_start`/`on_llm_start` run in the caller's coroutine, ensuring ContextVar mutations propagate to `httpx.send()`
+- Cleanup via `on_llm_end`/`on_llm_error`
+
 ## [1.5.5] - 2026-03-19
 
 ### Fix headers

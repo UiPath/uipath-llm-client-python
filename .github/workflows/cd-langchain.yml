@@ -34,7 +34,8 @@ jobs:
             exit 0
           fi
 
-          echo "Core package version also changed — waiting for 'cd' workflow to succeed..."
+          CORE_VERSION=$(grep '^__version__' src/uipath/llm_client/__version__.py | sed -n 's/.*"\([^"]*\)".*/\1/p')
+          echo "Core package version also changed ($CORE_VERSION) — waiting for 'cd' workflow to succeed..."
 
           # Poll the cd workflow for up to 15 minutes
           for i in $(seq 1 30); do
@@ -43,9 +44,17 @@ jobs:
 
             case "$STATUS" in
               completed:success)
-                echo "cd workflow succeeded — waiting 120s for PyPI indexing..."
-                sleep 120
-                exit 0
+                echo "cd workflow succeeded — polling PyPI until uipath-llm-client==$CORE_VERSION is available..."
+                for j in $(seq 1 30); do
+                  if uv pip index versions uipath-llm-client 2>/dev/null | grep -q "$CORE_VERSION"; then
+                    echo "uipath-llm-client==$CORE_VERSION is available on PyPI."
+                    exit 0
+                  fi
+                  echo "  Not yet available, retrying in 30s ($j/30)..."
+                  sleep 30
+                done
+                echo "::error::uipath-llm-client==$CORE_VERSION never appeared on PyPI (15 min)"
+                exit 1
                 ;;
               completed:*)
                 echo "::error::cd workflow finished with: $STATUS"

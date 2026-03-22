@@ -2,6 +2,12 @@
 
 All notable changes to `uipath_llm_client` (core package) will be documented in this file.
 
+## [1.5.6] - 2026-03-21
+
+### Feature
+- Added `_DYNAMIC_REQUEST_HEADERS` ContextVar and helper functions (`get_dynamic_request_headers`, `set_dynamic_request_headers`) to `utils/headers.py`
+- Inject dynamic request headers in httpx `send()` for both sync and async clients
+
 ## [1.5.5] - 2026-03-19
 
 ### Fix

@@ -9,6 +9,10 @@ _CAPTURED_RESPONSE_HEADERS: contextvars.ContextVar[dict[str, str]] = contextvars
     "_captured_response_headers", default={}
 )
 
+_DYNAMIC_REQUEST_HEADERS: contextvars.ContextVar[dict[str, str]] = contextvars.ContextVar(
+    "_dynamic_request_headers", default={}
+)
+
 
 def get_captured_response_headers() -> dict[str, str]:
     """Get response headers captured from the most recent request in this context.
@@ -22,6 +26,19 @@ def get_captured_response_headers() -> dict[str, str]:
 def set_captured_response_headers(headers: dict[str, str]) -> contextvars.Token[dict[str, str]]:
     """Set captured response headers for the current context."""
     return _CAPTURED_RESPONSE_HEADERS.set(headers)
+
+
+def get_dynamic_request_headers() -> dict[str, str]:
+    """Get dynamic headers to be injected into the next outgoing request.
+
+    Returns an empty dict if no dynamic headers have been set in this context.
+    """
+    return dict(_DYNAMIC_REQUEST_HEADERS.get())
+
+
+def set_dynamic_request_headers(headers: dict[str, str]) -> contextvars.Token[dict[str, str]]:
+    """Set headers to be injected into the next outgoing request."""
+    return _DYNAMIC_REQUEST_HEADERS.set(headers)
 
 
 def extract_matching_headers(

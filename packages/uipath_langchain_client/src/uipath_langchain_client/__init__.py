@@ -33,6 +33,7 @@ Factory Functions:
 """
 
 from uipath_langchain_client.__version__ import __version__
+from uipath_langchain_client.callbacks import UiPathDynamicHeadersCallback
 from uipath_langchain_client.clients import UiPathChat, UiPathEmbeddings
 from uipath_langchain_client.factory import get_chat_model, get_embedding_model
 from uipath_langchain_client.settings import (
@@ -47,6 +48,7 @@ __all__ = [
     "get_embedding_model",
     "UiPathChat",
     "UiPathEmbeddings",
+    "UiPathDynamicHeadersCallback",
     "get_default_client_settings",
     "LLMGatewaySettings",
     "PlatformSettings",

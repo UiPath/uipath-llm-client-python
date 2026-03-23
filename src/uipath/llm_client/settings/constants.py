@@ -26,3 +26,13 @@ class ApiFlavor(StrEnum):
     CONVERSE = "converse"
     INVOKE = "invoke"
     ANTHROPIC_CLAUDE = "anthropic-claude"
+
+
+_API_FLAVOR_TO_VENDOR_TYPE: dict[ApiFlavor, VendorType] = {
+    ApiFlavor.CHAT_COMPLETIONS: VendorType.OPENAI,
+    ApiFlavor.RESPONSES: VendorType.OPENAI,
+    ApiFlavor.GENERATE_CONTENT: VendorType.VERTEXAI,
+    ApiFlavor.ANTHROPIC_CLAUDE: VendorType.VERTEXAI,
+    ApiFlavor.CONVERSE: VendorType.AWSBEDROCK,
+    ApiFlavor.INVOKE: VendorType.AWSBEDROCK,
+}

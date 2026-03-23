@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_llm_client` (core package) will be documented in this file.
 
+## [1.5.7] - 2026-03-23
+
+### Fix
+- Added mapping api_flavor to vendor_type
+
 ## [1.5.6] - 2026-03-21
 
 ### Feature

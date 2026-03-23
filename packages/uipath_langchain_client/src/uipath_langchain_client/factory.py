@@ -27,6 +27,7 @@ from uipath_langchain_client.base_client import (
     UiPathBaseEmbeddings,
 )
 from uipath_langchain_client.settings import (
+    _API_FLAVOR_TO_VENDOR_TYPE,
     ApiFlavor,
     RoutingMode,
     UiPathBaseSettings,
@@ -139,8 +140,15 @@ def get_chat_model(
             **model_kwargs,
         )
 
-    discovered_vendor = model_info["vendor"].lower()
-    match discovered_vendor:
+    discovered_vendor_type = model_info.get("vendor", None)
+    discovered_api_flavor = model_info.get("apiFlavor", None)
+    if discovered_vendor_type is None and discovered_api_flavor is not None:
+        discovered_vendor_type = _API_FLAVOR_TO_VENDOR_TYPE.get(discovered_api_flavor, None)
+    if discovered_vendor_type is None:
+        raise ValueError("No vendor type or api flavor found in model info")
+    discovered_vendor_type = discovered_vendor_type.lower()
+
+    match discovered_vendor_type:
         case VendorType.OPENAI:
             if api_flavor == ApiFlavor.RESPONSES:
                 model_kwargs["use_responses_api"] = True
@@ -176,7 +184,7 @@ def get_chat_model(
                 return UiPathChatAnthropic(
                     model=model_name,
                     settings=client_settings,
-                    vendor_type=discovered_vendor,
+                    vendor_type=discovered_vendor_type,
                     byo_connection_id=byo_connection_id,
                     **model_kwargs,
                 )
@@ -229,7 +237,7 @@ def get_chat_model(
 
         case _:
             raise ValueError(
-                f"Invalid vendor type: {discovered_vendor}, we don't currently have clients that support this vendor"
+                f"Invalid vendor type: {discovered_vendor_type}, we don't currently have clients that support this vendor"
             )
 
 
@@ -290,8 +298,8 @@ def get_embedding_model(
             **model_kwargs,
         )
 
-    discovered_vendor = model_info["vendor"].lower()
-    match discovered_vendor:
+    discovered_vendor_type = model_info["vendor"].lower()
+    match discovered_vendor_type:
         case VendorType.OPENAI:
             if is_uipath_owned:
                 from uipath_langchain_client.clients.openai.embeddings import (
@@ -340,5 +348,5 @@ def get_embedding_model(
             )
         case _:
             raise ValueError(
-                f"Invalid vendor type: {discovered_vendor}, we don't currently have clients that support this vendor"
+                f"Invalid vendor type: {discovered_vendor_type}, we don't currently have clients that support this vendor"
             )

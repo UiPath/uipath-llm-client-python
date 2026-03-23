@@ -142,10 +142,11 @@ def get_chat_model(
 
     discovered_vendor_type = model_info.get("vendor", None)
     discovered_api_flavor = model_info.get("apiFlavor", None)
-    if discovered_api_flavor is None and discovered_vendor_type is None:
-        raise ValueError("No vendor type or api flavor found in model info")
     if discovered_vendor_type is None and discovered_api_flavor is not None:
-        discovered_vendor_type = _API_FLAVOR_TO_VENDOR_TYPE[ApiFlavor(discovered_api_flavor)]
+        discovered_vendor_type = _API_FLAVOR_TO_VENDOR_TYPE.get(discovered_api_flavor, None)
+    if discovered_vendor_type is None:
+        raise ValueError("No vendor type or api flavor found in model info")
+    discovered_vendor_type = discovered_vendor_type.lower()
 
     match discovered_vendor_type:
         case VendorType.OPENAI:

@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_langchain_client` will be documented in this file.
 
+## [1.5.7] - 2026-03-23
+
+### Fix
+- Fix factory for BYO to handle the case where vendor_type is None, but api_flavor is discovered
+
 ## [1.5.6] - 2026-03-21
 
 ### Feature

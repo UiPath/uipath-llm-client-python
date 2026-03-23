@@ -45,15 +45,20 @@ jobs:
             case "$STATUS" in
               completed:success)
                 echo "cd workflow succeeded — polling PyPI until uipath-llm-client==$CORE_VERSION is available..."
-                for j in $(seq 1 60); do
-                  if uv pip index versions uipath-llm-client 2>/dev/null | grep -q "$CORE_VERSION"; then
+                for j in $(seq 1 40); do
+                  # Query the simple index directly with Cache-Control: no-cache so Fastly
+                  # revalidates with origin on every request. PyPI purges the per-project
+                  # simple page within seconds of a publish, so uv's local cache (max-age=600)
+                  # would otherwise serve a stale miss for up to 10 minutes.
+                  if curl -sf -H "Cache-Control: no-cache" \
+                      "https://pypi.org/simple/uipath-llm-client/" | grep -q "$CORE_VERSION"; then
                     echo "uipath-llm-client==$CORE_VERSION is available on PyPI."
                     exit 0
                   fi
-                  echo "  Not yet available, retrying in 30s ($j/60)..."
-                  sleep 30
+                  echo "  Not yet available, retrying in 15s ($j/40)..."
+                  sleep 15
                 done
-                echo "::error::uipath-llm-client==$CORE_VERSION never appeared on PyPI (30 min)"
+                echo "::error::uipath-llm-client==$CORE_VERSION never appeared on PyPI (10 min)"
                 exit 1
                 ;;
               completed:*)

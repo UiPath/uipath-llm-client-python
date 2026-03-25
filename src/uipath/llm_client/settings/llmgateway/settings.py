@@ -117,7 +117,7 @@ class LLMGatewayBaseSettings(UiPathBaseSettings):
     @override
     def validate_byo_model(self, model_info: dict[str, Any]) -> None:
         byom_details = model_info.get("byomDetails", {})
-        operation_codes = byom_details.get("operationCodes", [])
+        operation_codes = byom_details.get("availableOperationCodes", [])
         if self.operation_code and self.operation_code not in operation_codes:
             raise ValueError(
                 f"The operation code {self.operation_code} is not allowed for the model {model_info['modelName']}"

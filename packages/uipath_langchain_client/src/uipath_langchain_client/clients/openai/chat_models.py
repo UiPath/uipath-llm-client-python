@@ -60,17 +60,6 @@ class UiPathChatOpenAI(UiPathBaseChatModel, ChatOpenAI):  # type: ignore[overrid
         self.uipath_sync_client.event_hooks["request"].append(fix_url_and_api_flavor_header)
         self.uipath_async_client.event_hooks["request"].append(fix_url_and_api_flavor_header_async)
 
-        correct_host = URL(base_url).host
-
-        def fix_host_header(request: Request) -> None:
-            request.headers["host"] = correct_host
-
-        async def fix_host_header_async(request: Request) -> None:
-            request.headers["host"] = correct_host
-
-        self.uipath_sync_client.event_hooks["request"].append(fix_host_header)
-        self.uipath_async_client.event_hooks["request"].append(fix_host_header_async)
-
         self.root_client = OpenAI(
             api_key="PLACEHOLDER",
             max_retries=0,  # handled by the UiPath client

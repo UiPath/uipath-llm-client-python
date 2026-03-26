@@ -2,10 +2,15 @@
 
 All notable changes to `uipath_llm_client` (core package) will be documented in this file.
 
+## [1.5.9] - 2026-03-26
+
+### Fix
+- Use `availableOperationCodes` field (instead of `operationCodes`) when validating BYOM operation codes
+
 ## [1.5.8] - 2026-03-26
 
 ### Fix
-- Set correct host for BYOM requests which resulted in 403 from cloudflare
+- Pass `base_url` to `OpenAI` and `AsyncOpenAI` constructors in `UiPathOpenAI` and `UiPathAsyncOpenAI` to ensure the correct endpoint is forwarded to the underlying SDK clients
 
 ## [1.5.7] - 2026-03-23
 

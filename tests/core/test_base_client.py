@@ -1933,7 +1933,7 @@ class TestLLMGatewayBYOMValidation:
             settings.operation_code = "code1"
             model_info = {
                 "modelName": "custom-model",
-                "byomDetails": {"availableOperationCodes":["code1", "code2"]},
+                "byomDetails": {"availableOperationCodes": ["code1", "code2"]},
             }
             settings.validate_byo_model(model_info)  # Should not raise
 
@@ -1943,7 +1943,7 @@ class TestLLMGatewayBYOMValidation:
             settings.operation_code = "invalid-code"
             model_info = {
                 "modelName": "custom-model",
-                "byomDetails": {"availableOperationCodes":["code1", "code2"]},
+                "byomDetails": {"availableOperationCodes": ["code1", "code2"]},
             }
             with pytest.raises(ValueError, match="operation code"):
                 settings.validate_byo_model(model_info)
@@ -1954,7 +1954,7 @@ class TestLLMGatewayBYOMValidation:
             settings.operation_code = None
             model_info = {
                 "modelName": "custom-model",
-                "byomDetails": {"availableOperationCodes":["auto-code"]},
+                "byomDetails": {"availableOperationCodes": ["auto-code"]},
             }
             settings.validate_byo_model(model_info)
             assert settings.operation_code == "auto-code"
@@ -1965,7 +1965,7 @@ class TestLLMGatewayBYOMValidation:
             settings.operation_code = None
             model_info = {
                 "modelName": "custom-model",
-                "byomDetails": {"availableOperationCodes":["code1", "code2"]},
+                "byomDetails": {"availableOperationCodes": ["code1", "code2"]},
             }
             with patch("uipath.llm_client.settings.llmgateway.settings.logging") as mock_logging:
                 settings.validate_byo_model(model_info)
@@ -1978,7 +1978,7 @@ class TestLLMGatewayBYOMValidation:
             settings.operation_code = None
             model_info = {
                 "modelName": "custom-model",
-                "byomDetails": {"availableOperationCodes":[]},
+                "byomDetails": {"availableOperationCodes": []},
             }
             settings.validate_byo_model(model_info)
             assert settings.operation_code is None

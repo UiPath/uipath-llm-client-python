@@ -95,12 +95,23 @@ Follow the existing format — newest version first, grouped by date:
 
 ---
 
+## Pre-commit / Pre-PR Checklist
+
+Before every commit and before opening a PR, always run:
+
+```bash
+ruff check && ruff format --check && pytest tests
+```
+
+All three must pass. Fix any lint, format, or test failures before committing. This applies when working as an AI assistant too — run the checks, fix failures, then commit.
+
+---
+
 ## PR Guidelines
 
 ### Before Opening a PR
 
-- Run `ruff check`, `ruff format --check`, and `pyright` — all must pass.
-- Run `pytest tests` — all tests must pass.
+- Run the pre-commit checklist above — all must pass.
 - Apply versioning rules above: the CI workflow (`ci_change_version.yml`) enforces that any changed source files must have a corresponding version bump and changelog entry.
 
 ### PR Scope

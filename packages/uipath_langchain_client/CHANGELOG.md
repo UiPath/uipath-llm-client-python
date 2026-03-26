@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_langchain_client` will be documented in this file.
 
+## [1.5.9] - 2026-03-26
+
+### Fix
+- Remove `fix_host_header` event hooks from `UiPathChatOpenAI`; host header management is handled by the underlying httpx client
+
 ## [1.5.8] - 2026-03-26
 
 ### Fix

@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_llm_client` (core package) will be documented in this file.
 
+## [1.5.9] - 2026-03-26
+
+### Fix
+- Use `availableOperationCodes` field (instead of `operationCodes`) when validating BYOM operation codes
+
 ## [1.5.8] - 2026-03-26
 
 ### Fix

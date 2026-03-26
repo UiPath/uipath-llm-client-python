@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_langchain_client` will be documented in this file.
 
+## [1.5.8] - 2026-03-26
+
+### Fix
+- Pass `base_url` to `OpenAI` and `AsyncOpenAI` constructors in `UiPathChatOpenAI` to ensure the correct endpoint is used by the underlying SDK clients
+
 ## [1.5.7] - 2026-03-23
 
 ### Fix

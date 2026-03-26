@@ -64,11 +64,13 @@ class UiPathChatOpenAI(UiPathBaseChatModel, ChatOpenAI):  # type: ignore[overrid
             api_key="PLACEHOLDER",
             max_retries=0,  # handled by the UiPath client
             http_client=self.uipath_sync_client,
+            base_url=base_url,
         )
         self.root_async_client = AsyncOpenAI(
             api_key="PLACEHOLDER",
             max_retries=0,  # handled by the UiPath client
             http_client=self.uipath_async_client,
+            base_url=base_url,
         )
         self.client = self.root_client.chat.completions
         self.async_client = self.root_async_client.chat.completions
@@ -111,6 +113,7 @@ class UiPathAzureChatOpenAI(UiPathBaseChatModel, AzureChatOpenAI):  # type: igno
 
         self.uipath_sync_client.event_hooks["request"].append(fix_url_and_api_flavor_header)
         self.uipath_async_client.event_hooks["request"].append(fix_url_and_api_flavor_header_async)
+
         self.root_client = AzureOpenAI(
             azure_endpoint="PLACEHOLDER",
             api_version="PLACEHOLDER",

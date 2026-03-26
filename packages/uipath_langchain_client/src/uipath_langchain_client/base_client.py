@@ -108,7 +108,7 @@ class UiPathBaseLLMClient(BaseModel, ABC):
     default_headers: Mapping[str, str] | None = Field(
         default_factory=lambda: {
             "X-UiPath-LLMGateway-TimeoutSeconds": "295",  # server side timeout, default is 10, maximum is 300
-            "X-UiPath-LLMGateway-AllowFull4xxResponse": "true",  # allow full 4xx responses (default is false)
+            # "X-UiPath-LLMGateway-AllowFull4xxResponse": "true",  # allow full 4xx responses (default is false) — removed from default to avoid PII leakage in logs
         },
         description="Default request headers to include in requests",
     )

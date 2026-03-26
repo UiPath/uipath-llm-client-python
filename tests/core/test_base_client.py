@@ -886,7 +886,7 @@ class TestUiPathHttpxClient:
 
         client = UiPathHttpxClient(base_url="https://example.com")
         assert "X-UiPath-LLMGateway-TimeoutSeconds" in client.headers
-        assert "X-UiPath-LLMGateway-AllowFull4xxResponse" in client.headers
+        assert "X-UiPath-LLMGateway-AllowFull4xxResponse" not in client.headers
         client.close()
 
     def test_client_merges_custom_headers(self):
@@ -970,7 +970,7 @@ class TestUiPathHttpxAsyncClient:
 
         client = UiPathHttpxAsyncClient(base_url="https://example.com")
         assert "X-UiPath-LLMGateway-TimeoutSeconds" in client.headers
-        assert "X-UiPath-LLMGateway-AllowFull4xxResponse" in client.headers
+        assert "X-UiPath-LLMGateway-AllowFull4xxResponse" not in client.headers
 
     def test_async_client_with_retry_config(self):
         """Test async client creates retryable async transport."""

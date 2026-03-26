@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_llm_client` (core package) will be documented in this file.
 
+## [1.5.10] - 2026-03-26
+
+### Changed
+- Removed `X-UiPath-LLMGateway-AllowFull4xxResponse` from default request headers to avoid PII leakage in logs
+
 ## [1.5.9] - 2026-03-26
 
 ### Fix

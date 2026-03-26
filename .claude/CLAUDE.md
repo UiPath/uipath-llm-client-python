@@ -103,7 +103,7 @@ Before every commit and before opening a PR, always run:
 ruff check && ruff format --check && pytest tests
 ```
 
-All three must pass. Fix any lint, format, or test failures before committing. This applies when working as an AI assistant too — run the checks, fix failures, then commit.
+All three must pass. Fix any lint, format, or test failures before committing. This applies when working as an AI assistant too — run the checks, fix failures, then commit and push.
 
 ---
 

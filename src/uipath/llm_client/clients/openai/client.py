@@ -52,6 +52,7 @@ class UiPathOpenAI(OpenAI):
             api_key="PLACEHOLDER",
             max_retries=0,
             http_client=httpx_client,
+            base_url=str(httpx_client.base_url).rstrip("/"),
         )
 
 
@@ -91,6 +92,7 @@ class UiPathAsyncOpenAI(AsyncOpenAI):
             api_key="PLACEHOLDER",
             max_retries=0,
             http_client=httpx_client,
+            base_url=str(httpx_client.base_url).rstrip("/"),
         )
 
 

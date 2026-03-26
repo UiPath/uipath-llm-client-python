@@ -4,8 +4,8 @@ All notable changes to `uipath_llm_client` (core package) will be documented in 
 
 ## [1.5.8] - 2026-03-26
 
-### Changed
-- Version bump in sync with `uipath-langchain-client` 1.5.8
+### Fix
+- Pass `base_url` to `OpenAI` and `AsyncOpenAI` constructors in `UiPathOpenAI` and `UiPathAsyncOpenAI` to ensure the correct endpoint is forwarded to the underlying SDK clients
 
 ## [1.5.7] - 2026-03-23
 

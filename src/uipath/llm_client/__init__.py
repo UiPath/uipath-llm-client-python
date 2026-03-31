@@ -26,6 +26,7 @@ Quick Start:
 """
 
 from uipath.llm_client.__version__ import __version__
+from uipath.llm_client.clients.normalized import UiPathNormalizedClient
 from uipath.llm_client.httpx_client import (
     UiPathHttpxAsyncClient,
     UiPathHttpxClient,
@@ -54,6 +55,8 @@ from uipath.llm_client.utils.retry import RetryConfig
 
 __all__ = [
     "__version__",
+    # Normalized client
+    "UiPathNormalizedClient",
     # Settings
     "get_default_client_settings",
     "PlatformSettings",

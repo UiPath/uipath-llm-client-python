@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_llm_client` (core package) will be documented in this file.
 
+## [1.6.0] - 2026-03-31
+
+### Added
+- `UiPathNormalizedClient`: a provider-agnostic HTTP client that speaks directly to UiPath's normalized API endpoint without requiring any vendor SDK. Supports sync/async chat completions, streaming, structured output (JSON schema), and tool calling across all supported providers (OpenAI, Google Gemini, Anthropic on Bedrock/Vertex, etc.).
+
 ## [1.5.10] - 2026-03-26
 
 ### Changed

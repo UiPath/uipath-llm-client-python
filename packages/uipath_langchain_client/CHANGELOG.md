@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_langchain_client` will be documented in this file.
 
+## [1.6.0] - 2026-03-31
+
+### Changed
+- Bumped `uipath-llm-client` dependency to `>=1.6.0` to pick up `UiPathNormalizedClient`
+
 ## [1.5.10] - 2026-03-26
 
 ### Changed

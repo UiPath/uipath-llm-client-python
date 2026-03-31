@@ -15,6 +15,7 @@ Example:
 """
 
 import logging
+from collections.abc import Mapping, Sequence
 from typing import Any
 
 from uipath.llm_client.httpx_client import UiPathHttpxAsyncClient, UiPathHttpxClient
@@ -64,6 +65,10 @@ class UiPathAnthropic(Anthropic):
         model_name: The Anthropic model name (e.g., "claude-3-5-sonnet-20241022").
         byo_connection_id: Bring Your Own connection ID for custom deployments.
         client_settings: UiPath client settings. Defaults to environment-based settings.
+        default_headers: Additional headers included in every request.
+        captured_headers: Case-insensitive response header name prefixes to capture.
+        timeout: Client-side request timeout in seconds.
+        max_retries: Maximum number of retries for failed requests. Defaults to 0.
         retry_config: Custom retry configuration.
         logger: Logger instance for request/response logging.
         **kwargs: Additional arguments passed to Anthropic client.
@@ -75,6 +80,10 @@ class UiPathAnthropic(Anthropic):
         model_name: str,
         byo_connection_id: str | None = None,
         client_settings: UiPathBaseSettings | None = None,
+        default_headers: Mapping[str, str] | None = None,
+        captured_headers: Sequence[str] = ("x-uipath-",),
+        timeout: float | None = None,
+        max_retries: int = 0,
         retry_config: RetryConfig | None = None,
         logger: logging.Logger | None = None,
         **kwargs: Any,
@@ -85,12 +94,13 @@ class UiPathAnthropic(Anthropic):
             model_name=model_name,
             byo_connection_id=byo_connection_id,
             api_config=api_config,
-            timeout=kwargs.pop("timeout", None),
-            max_retries=kwargs.pop("max_retries", None),
+            timeout=timeout,
+            max_retries=max_retries,
+            captured_headers=captured_headers,
             retry_config=retry_config,
             base_url=client_settings.build_base_url(model_name=model_name, api_config=api_config),
             headers={
-                **kwargs.pop("default_headers", {}),
+                **(default_headers or {}),
                 **client_settings.build_auth_headers(model_name=model_name, api_config=api_config),
             },
             logger=logger,
@@ -114,6 +124,10 @@ class UiPathAsyncAnthropic(AsyncAnthropic):
         model_name: The Anthropic model name (e.g., "claude-3-5-sonnet-20241022").
         byo_connection_id: Bring Your Own connection ID for custom deployments.
         client_settings: UiPath client settings. Defaults to environment-based settings.
+        default_headers: Additional headers included in every request.
+        captured_headers: Case-insensitive response header name prefixes to capture.
+        timeout: Client-side request timeout in seconds.
+        max_retries: Maximum number of retries for failed requests. Defaults to 0.
         retry_config: Custom retry configuration.
         logger: Logger instance for request/response logging.
         **kwargs: Additional arguments passed to AsyncAnthropic client.
@@ -125,6 +139,10 @@ class UiPathAsyncAnthropic(AsyncAnthropic):
         model_name: str,
         byo_connection_id: str | None = None,
         client_settings: UiPathBaseSettings | None = None,
+        default_headers: Mapping[str, str] | None = None,
+        captured_headers: Sequence[str] = ("x-uipath-",),
+        timeout: float | None = None,
+        max_retries: int = 0,
         retry_config: RetryConfig | None = None,
         logger: logging.Logger | None = None,
         **kwargs: Any,
@@ -135,12 +153,13 @@ class UiPathAsyncAnthropic(AsyncAnthropic):
             model_name=model_name,
             byo_connection_id=byo_connection_id,
             api_config=api_config,
-            timeout=kwargs.pop("timeout", None),
-            max_retries=kwargs.pop("max_retries", None),
+            timeout=timeout,
+            max_retries=max_retries,
+            captured_headers=captured_headers,
             retry_config=retry_config,
             base_url=client_settings.build_base_url(model_name=model_name, api_config=api_config),
             headers={
-                **kwargs.pop("default_headers", {}),
+                **(default_headers or {}),
                 **client_settings.build_auth_headers(model_name=model_name, api_config=api_config),
             },
             logger=logger,
@@ -164,6 +183,10 @@ class UiPathAnthropicBedrock(AnthropicBedrock):
         model_name: The Anthropic model name.
         byo_connection_id: Bring Your Own connection ID for custom deployments.
         client_settings: UiPath client settings. Defaults to environment-based settings.
+        default_headers: Additional headers included in every request.
+        captured_headers: Case-insensitive response header name prefixes to capture.
+        timeout: Client-side request timeout in seconds.
+        max_retries: Maximum number of retries for failed requests. Defaults to 0.
         retry_config: Custom retry configuration.
         logger: Logger instance for request/response logging.
         **kwargs: Additional arguments passed to AnthropicBedrock client.
@@ -175,6 +198,10 @@ class UiPathAnthropicBedrock(AnthropicBedrock):
         model_name: str,
         byo_connection_id: str | None = None,
         client_settings: UiPathBaseSettings | None = None,
+        default_headers: Mapping[str, str] | None = None,
+        captured_headers: Sequence[str] = ("x-uipath-",),
+        timeout: float | None = None,
+        max_retries: int = 0,
         retry_config: RetryConfig | None = None,
         logger: logging.Logger | None = None,
         **kwargs: Any,
@@ -185,12 +212,13 @@ class UiPathAnthropicBedrock(AnthropicBedrock):
             model_name=model_name,
             byo_connection_id=byo_connection_id,
             api_config=api_config,
-            timeout=kwargs.pop("timeout", None),
-            max_retries=kwargs.pop("max_retries", None),
+            timeout=timeout,
+            max_retries=max_retries,
+            captured_headers=captured_headers,
             retry_config=retry_config,
             base_url=client_settings.build_base_url(model_name=model_name, api_config=api_config),
             headers={
-                **kwargs.pop("default_headers", {}),
+                **(default_headers or {}),
                 **client_settings.build_auth_headers(model_name=model_name, api_config=api_config),
             },
             logger=logger,
@@ -216,6 +244,10 @@ class UiPathAsyncAnthropicBedrock(AsyncAnthropicBedrock):
         model_name: The Anthropic model name.
         byo_connection_id: Bring Your Own connection ID for custom deployments.
         client_settings: UiPath client settings. Defaults to environment-based settings.
+        default_headers: Additional headers included in every request.
+        captured_headers: Case-insensitive response header name prefixes to capture.
+        timeout: Client-side request timeout in seconds.
+        max_retries: Maximum number of retries for failed requests. Defaults to 0.
         retry_config: Custom retry configuration.
         logger: Logger instance for request/response logging.
         **kwargs: Additional arguments passed to AsyncAnthropicBedrock client.
@@ -227,6 +259,10 @@ class UiPathAsyncAnthropicBedrock(AsyncAnthropicBedrock):
         model_name: str,
         byo_connection_id: str | None = None,
         client_settings: UiPathBaseSettings | None = None,
+        default_headers: Mapping[str, str] | None = None,
+        captured_headers: Sequence[str] = ("x-uipath-",),
+        timeout: float | None = None,
+        max_retries: int = 0,
         retry_config: RetryConfig | None = None,
         logger: logging.Logger | None = None,
         **kwargs: Any,
@@ -237,12 +273,13 @@ class UiPathAsyncAnthropicBedrock(AsyncAnthropicBedrock):
             model_name=model_name,
             byo_connection_id=byo_connection_id,
             api_config=api_config,
-            timeout=kwargs.pop("timeout", None),
-            max_retries=kwargs.pop("max_retries", None),
+            timeout=timeout,
+            max_retries=max_retries,
+            captured_headers=captured_headers,
             retry_config=retry_config,
             base_url=client_settings.build_base_url(model_name=model_name, api_config=api_config),
             headers={
-                **kwargs.pop("default_headers", {}),
+                **(default_headers or {}),
                 **client_settings.build_auth_headers(model_name=model_name, api_config=api_config),
             },
             logger=logger,
@@ -268,6 +305,10 @@ class UiPathAnthropicVertex(AnthropicVertex):
         model_name: The Anthropic model name.
         byo_connection_id: Bring Your Own connection ID for custom deployments.
         client_settings: UiPath client settings. Defaults to environment-based settings.
+        default_headers: Additional headers included in every request.
+        captured_headers: Case-insensitive response header name prefixes to capture.
+        timeout: Client-side request timeout in seconds.
+        max_retries: Maximum number of retries for failed requests. Defaults to 0.
         retry_config: Custom retry configuration.
         logger: Logger instance for request/response logging.
         **kwargs: Additional arguments passed to AnthropicVertex client.
@@ -279,6 +320,10 @@ class UiPathAnthropicVertex(AnthropicVertex):
         model_name: str,
         byo_connection_id: str | None = None,
         client_settings: UiPathBaseSettings | None = None,
+        default_headers: Mapping[str, str] | None = None,
+        captured_headers: Sequence[str] = ("x-uipath-",),
+        timeout: float | None = None,
+        max_retries: int = 0,
         retry_config: RetryConfig | None = None,
         logger: logging.Logger | None = None,
         **kwargs: Any,
@@ -289,12 +334,13 @@ class UiPathAnthropicVertex(AnthropicVertex):
             model_name=model_name,
             byo_connection_id=byo_connection_id,
             api_config=api_config,
-            timeout=kwargs.pop("timeout", None),
-            max_retries=kwargs.pop("max_retries", None),
+            timeout=timeout,
+            max_retries=max_retries,
+            captured_headers=captured_headers,
             retry_config=retry_config,
             base_url=client_settings.build_base_url(model_name=model_name, api_config=api_config),
             headers={
-                **kwargs.pop("default_headers", {}),
+                **(default_headers or {}),
                 **client_settings.build_auth_headers(model_name=model_name, api_config=api_config),
             },
             logger=logger,
@@ -320,6 +366,10 @@ class UiPathAsyncAnthropicVertex(AsyncAnthropicVertex):
         model_name: The Anthropic model name.
         byo_connection_id: Bring Your Own connection ID for custom deployments.
         client_settings: UiPath client settings. Defaults to environment-based settings.
+        default_headers: Additional headers included in every request.
+        captured_headers: Case-insensitive response header name prefixes to capture.
+        timeout: Client-side request timeout in seconds.
+        max_retries: Maximum number of retries for failed requests. Defaults to 0.
         retry_config: Custom retry configuration.
         logger: Logger instance for request/response logging.
         **kwargs: Additional arguments passed to AsyncAnthropicVertex client.
@@ -331,6 +381,10 @@ class UiPathAsyncAnthropicVertex(AsyncAnthropicVertex):
         model_name: str,
         byo_connection_id: str | None = None,
         client_settings: UiPathBaseSettings | None = None,
+        default_headers: Mapping[str, str] | None = None,
+        captured_headers: Sequence[str] = ("x-uipath-",),
+        timeout: float | None = None,
+        max_retries: int = 0,
         retry_config: RetryConfig | None = None,
         logger: logging.Logger | None = None,
         **kwargs: Any,
@@ -341,12 +395,13 @@ class UiPathAsyncAnthropicVertex(AsyncAnthropicVertex):
             model_name=model_name,
             byo_connection_id=byo_connection_id,
             api_config=api_config,
-            timeout=kwargs.pop("timeout", None),
-            max_retries=kwargs.pop("max_retries", None),
+            timeout=timeout,
+            max_retries=max_retries,
+            captured_headers=captured_headers,
             retry_config=retry_config,
             base_url=client_settings.build_base_url(model_name=model_name, api_config=api_config),
             headers={
-                **kwargs.pop("default_headers", {}),
+                **(default_headers or {}),
                 **client_settings.build_auth_headers(model_name=model_name, api_config=api_config),
             },
             logger=logger,
@@ -372,6 +427,10 @@ class UiPathAnthropicFoundry(AnthropicFoundry):
         model_name: The Anthropic model name.
         byo_connection_id: Bring Your Own connection ID for custom deployments.
         client_settings: UiPath client settings. Defaults to environment-based settings.
+        default_headers: Additional headers included in every request.
+        captured_headers: Case-insensitive response header name prefixes to capture.
+        timeout: Client-side request timeout in seconds.
+        max_retries: Maximum number of retries for failed requests. Defaults to 0.
         retry_config: Custom retry configuration.
         logger: Logger instance for request/response logging.
         **kwargs: Additional arguments passed to AnthropicFoundry client.
@@ -383,6 +442,10 @@ class UiPathAnthropicFoundry(AnthropicFoundry):
         model_name: str,
         byo_connection_id: str | None = None,
         client_settings: UiPathBaseSettings | None = None,
+        default_headers: Mapping[str, str] | None = None,
+        captured_headers: Sequence[str] = ("x-uipath-",),
+        timeout: float | None = None,
+        max_retries: int = 0,
         retry_config: RetryConfig | None = None,
         logger: logging.Logger | None = None,
         **kwargs: Any,
@@ -393,12 +456,13 @@ class UiPathAnthropicFoundry(AnthropicFoundry):
             model_name=model_name,
             byo_connection_id=byo_connection_id,
             api_config=api_config,
-            timeout=kwargs.pop("timeout", None),
-            max_retries=kwargs.pop("max_retries", None),
+            timeout=timeout,
+            max_retries=max_retries,
+            captured_headers=captured_headers,
             retry_config=retry_config,
             base_url=client_settings.build_base_url(model_name=model_name, api_config=api_config),
             headers={
-                **kwargs.pop("default_headers", {}),
+                **(default_headers or {}),
                 **client_settings.build_auth_headers(model_name=model_name, api_config=api_config),
             },
             logger=logger,
@@ -422,6 +486,10 @@ class UiPathAsyncAnthropicFoundry(AsyncAnthropicFoundry):
         model_name: The Anthropic model name.
         byo_connection_id: Bring Your Own connection ID for custom deployments.
         client_settings: UiPath client settings. Defaults to environment-based settings.
+        default_headers: Additional headers included in every request.
+        captured_headers: Case-insensitive response header name prefixes to capture.
+        timeout: Client-side request timeout in seconds.
+        max_retries: Maximum number of retries for failed requests. Defaults to 0.
         retry_config: Custom retry configuration.
         logger: Logger instance for request/response logging.
         **kwargs: Additional arguments passed to AsyncAnthropicFoundry client.
@@ -433,6 +501,10 @@ class UiPathAsyncAnthropicFoundry(AsyncAnthropicFoundry):
         model_name: str,
         byo_connection_id: str | None = None,
         client_settings: UiPathBaseSettings | None = None,
+        default_headers: Mapping[str, str] | None = None,
+        captured_headers: Sequence[str] = ("x-uipath-",),
+        timeout: float | None = None,
+        max_retries: int = 0,
         retry_config: RetryConfig | None = None,
         logger: logging.Logger | None = None,
         **kwargs: Any,
@@ -443,12 +515,13 @@ class UiPathAsyncAnthropicFoundry(AsyncAnthropicFoundry):
             model_name=model_name,
             byo_connection_id=byo_connection_id,
             api_config=api_config,
-            timeout=kwargs.pop("timeout", None),
-            max_retries=kwargs.pop("max_retries", None),
+            timeout=timeout,
+            max_retries=max_retries,
+            captured_headers=captured_headers,
             retry_config=retry_config,
             base_url=client_settings.build_base_url(model_name=model_name, api_config=api_config),
             headers={
-                **kwargs.pop("default_headers", {}),
+                **(default_headers or {}),
                 **client_settings.build_auth_headers(model_name=model_name, api_config=api_config),
             },
             logger=logger,

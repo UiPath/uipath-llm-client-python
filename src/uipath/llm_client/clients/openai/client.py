@@ -1,5 +1,5 @@
 import logging
-from typing import Any
+from collections.abc import Mapping, Sequence
 
 from uipath.llm_client.clients.openai.utils import OpenAIRequestHandler
 from uipath.llm_client.httpx_client import UiPathHttpxAsyncClient, UiPathHttpxClient
@@ -23,20 +23,21 @@ class UiPathOpenAI(OpenAI):
         model_name: str,
         byo_connection_id: str | None = None,
         client_settings: UiPathBaseSettings | None = None,
+        default_headers: Mapping[str, str] | None = None,
+        captured_headers: Sequence[str] = ("x-uipath-",),
+        timeout: float | None = None,
+        max_retries: int = 0,
         retry_config: RetryConfig | None = None,
         logger: logging.Logger | None = None,
-        **kwargs: Any,
     ):
         client_settings = client_settings or get_default_client_settings()
-        timeout = kwargs.pop("timeout", None)
-        max_retries = kwargs.pop("max_retries", None)
-        default_headers = kwargs.pop("default_headers", None)
         httpx_client = UiPathHttpxClient(
             model_name=model_name,
             byo_connection_id=byo_connection_id,
             timeout=timeout,
             max_retries=max_retries,
             headers=default_headers,
+            captured_headers=captured_headers,
             retry_config=retry_config,
             logger=logger,
             auth=client_settings.build_auth_pipeline(),
@@ -63,20 +64,21 @@ class UiPathAsyncOpenAI(AsyncOpenAI):
         model_name: str,
         byo_connection_id: str | None = None,
         client_settings: UiPathBaseSettings | None = None,
+        default_headers: Mapping[str, str] | None = None,
+        captured_headers: Sequence[str] = ("x-uipath-",),
+        timeout: float | None = None,
+        max_retries: int = 0,
         retry_config: RetryConfig | None = None,
         logger: logging.Logger | None = None,
-        **kwargs: Any,
     ):
         client_settings = client_settings or get_default_client_settings()
-        timeout = kwargs.pop("timeout", None)
-        max_retries = kwargs.pop("max_retries", None)
-        default_headers = kwargs.pop("default_headers", None)
         httpx_client = UiPathHttpxAsyncClient(
             model_name=model_name,
             byo_connection_id=byo_connection_id,
             timeout=timeout,
             max_retries=max_retries,
             headers=default_headers,
+            captured_headers=captured_headers,
             retry_config=retry_config,
             logger=logger,
             auth=client_settings.build_auth_pipeline(),
@@ -103,20 +105,21 @@ class UiPathAzureOpenAI(AzureOpenAI):
         model_name: str,
         byo_connection_id: str | None = None,
         client_settings: UiPathBaseSettings | None = None,
+        default_headers: Mapping[str, str] | None = None,
+        captured_headers: Sequence[str] = ("x-uipath-",),
+        timeout: float | None = None,
+        max_retries: int = 0,
         retry_config: RetryConfig | None = None,
         logger: logging.Logger | None = None,
-        **kwargs: Any,
     ):
         client_settings = client_settings or get_default_client_settings()
-        timeout = kwargs.pop("timeout", None)
-        max_retries = kwargs.pop("max_retries", None)
-        default_headers = kwargs.pop("default_headers", None)
         httpx_client = UiPathHttpxClient(
             model_name=model_name,
             byo_connection_id=byo_connection_id,
             timeout=timeout,
             max_retries=max_retries,
             headers=default_headers,
+            captured_headers=captured_headers,
             retry_config=retry_config,
             logger=logger,
             auth=client_settings.build_auth_pipeline(),
@@ -144,20 +147,21 @@ class UiPathAsyncAzureOpenAI(AsyncAzureOpenAI):
         model_name: str,
         byo_connection_id: str | None = None,
         client_settings: UiPathBaseSettings | None = None,
+        default_headers: Mapping[str, str] | None = None,
+        captured_headers: Sequence[str] = ("x-uipath-",),
+        timeout: float | None = None,
+        max_retries: int = 0,
         retry_config: RetryConfig | None = None,
         logger: logging.Logger | None = None,
-        **kwargs: Any,
     ):
         client_settings = client_settings or get_default_client_settings()
-        timeout = kwargs.pop("timeout", None)
-        max_retries = kwargs.pop("max_retries", None)
-        default_headers = kwargs.pop("default_headers", None)
         httpx_client = UiPathHttpxAsyncClient(
             model_name=model_name,
             byo_connection_id=byo_connection_id,
             timeout=timeout,
             max_retries=max_retries,
             headers=default_headers,
+            captured_headers=captured_headers,
             retry_config=retry_config,
             logger=logger,
             auth=client_settings.build_auth_pipeline(),

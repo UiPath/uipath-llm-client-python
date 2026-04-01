@@ -18,14 +18,20 @@ class UiPathEmbeddings(UiPathBaseEmbeddings, Embeddings):
     )
 
     def embed_documents(self, texts: list[str]) -> list[list[float]]:
-        response = self.uipath_request(request_body={"input": texts})
+        response = self.uipath_request(
+            request_body={"input": texts, "model": self.model_name},
+            raise_status_error=True,
+        )
         return [r["embedding"] for r in response.json()["data"]]
 
     def embed_query(self, text: str) -> list[float]:
         return self.embed_documents([text])[0]
 
     async def aembed_documents(self, texts: list[str]) -> list[list[float]]:
-        response = await self.uipath_arequest(request_body={"input": texts})
+        response = await self.uipath_arequest(
+            request_body={"input": texts, "model": self.model_name},
+            raise_status_error=True,
+        )
         return [r["embedding"] for r in response.json()["data"]]
 
     async def aembed_query(self, text: str) -> list[float]:

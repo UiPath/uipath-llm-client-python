@@ -1,6 +1,6 @@
 from typing import Self
 
-from pydantic import model_validator
+from pydantic import Field, model_validator
 
 from uipath_langchain_client.base_client import UiPathBaseEmbeddings
 from uipath_langchain_client.settings import (
@@ -31,6 +31,14 @@ class UiPathFireworksEmbeddings(UiPathBaseEmbeddings, FireworksEmbeddings):
         freeze_base_url=True,
     )
 
+    # Override FireworksEmbeddings.model so that Pydantic merges it with
+    # UiPathBaseLLMClient.model_name (alias="model") into a single field.
+    # Without this, two separate fields coexist: FireworksEmbeddings.model
+    # (default "nomic-ai/nomic-embed-text-v1.5") and model_name, causing
+    # self.model to always return the stale FireworksEmbeddings default
+    # instead of the model name supplied by the caller.
+    model: str = Field(default="", alias="model_name")
+
     @model_validator(mode="after")
     def setup_uipath_client(self) -> Self:
         self.client = OpenAI(
@@ -48,7 +56,8 @@ class UiPathFireworksEmbeddings(UiPathBaseEmbeddings, FireworksEmbeddings):
     def embed_documents(self, texts: list[str]) -> list[list[float]]:
         """Embed search docs."""
         return [
-            i.embedding for i in self.client.embeddings.create(input=texts, model=self.model).data
+            i.embedding
+            for i in self.client.embeddings.create(input=texts, model=self.model_name).data
         ]
 
     def embed_query(self, text: str) -> list[float]:
@@ -59,7 +68,9 @@ class UiPathFireworksEmbeddings(UiPathBaseEmbeddings, FireworksEmbeddings):
         """Embed search docs asynchronously."""
         return [
             i.embedding
-            for i in (await self.async_client.embeddings.create(input=texts, model=self.model)).data
+            for i in (
+                await self.async_client.embeddings.create(input=texts, model=self.model_name)
+            ).data
         ]
 
     async def aembed_query(self, text: str) -> list[float]:

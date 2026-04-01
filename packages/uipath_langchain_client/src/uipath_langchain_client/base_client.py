@@ -25,7 +25,7 @@ Example:
 
 import logging
 from abc import ABC
-from collections.abc import AsyncIterator, Iterator, Mapping, Sequence
+from collections.abc import AsyncGenerator, AsyncIterator, Iterator, Mapping, Sequence
 from functools import cached_property
 from typing import Any, Literal
 
@@ -282,7 +282,7 @@ class UiPathBaseLLMClient(BaseModel, ABC):
         stream_type: Literal["text", "bytes", "lines", "raw"] = "lines",
         raise_status_error: bool = False,
         **kwargs: Any,
-    ) -> AsyncIterator[str | bytes]:
+    ) -> AsyncGenerator[str | bytes, None]:
         """Make an asynchronous streaming HTTP request to the UiPath API.
 
         Args:
@@ -423,7 +423,7 @@ class UiPathBaseChatModel(UiPathBaseLLMClient, BaseChatModel):
         stop: list[str] | None = None,
         run_manager: AsyncCallbackManagerForLLMRun | None = None,
         **kwargs: Any,
-    ) -> AsyncIterator[ChatGenerationChunk]:
+    ) -> AsyncGenerator[ChatGenerationChunk, None]:
         set_captured_response_headers({})
         try:
             first = True
@@ -443,7 +443,7 @@ class UiPathBaseChatModel(UiPathBaseLLMClient, BaseChatModel):
         stop: list[str] | None = None,
         run_manager: AsyncCallbackManagerForLLMRun | None = None,
         **kwargs: Any,
-    ) -> AsyncIterator[ChatGenerationChunk]:
+    ) -> AsyncGenerator[ChatGenerationChunk, None]:
         """Override in subclasses to provide the core (non-wrapped) async stream logic."""
         async for chunk in super()._astream(messages, stop=stop, run_manager=run_manager, **kwargs):
             yield chunk

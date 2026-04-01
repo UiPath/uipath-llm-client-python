@@ -298,7 +298,13 @@ def get_embedding_model(
             **model_kwargs,
         )
 
-    discovered_vendor_type = model_info["vendor"].lower()
+    discovered_vendor_type = model_info.get("vendor")
+    if discovered_vendor_type is None:
+        raise ValueError(
+            f"No vendor type found in model info for embedding model '{model_name}'. "
+            f"Model info returned: {model_info}"
+        )
+    discovered_vendor_type = discovered_vendor_type.lower()
     match discovered_vendor_type:
         case VendorType.OPENAI:
             if is_uipath_owned:

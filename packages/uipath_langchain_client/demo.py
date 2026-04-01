@@ -136,8 +136,20 @@ def demo_tool_calling():
         Args:
             expression: A mathematical expression to evaluate (e.g., "2 + 2").
         """
+        import ast
         try:
-            result = eval(expression)
+            # Restrict to a safe subset: only literals and basic arithmetic operators.
+            # This prevents arbitrary code execution via eval().
+            tree = ast.parse(expression, mode="eval")
+            allowed_node_types = (
+                ast.Expression, ast.BinOp, ast.UnaryOp, ast.Constant,
+                ast.Add, ast.Sub, ast.Mult, ast.Div, ast.FloorDiv,
+                ast.Mod, ast.Pow, ast.USub, ast.UAdd,
+            )
+            for node in ast.walk(tree):
+                if not isinstance(node, allowed_node_types):
+                    return f"Error: unsupported operation in expression"
+            result = eval(compile(tree, "<string>", "eval"), {"__builtins__": {}})
             return str(result)
         except Exception as e:
             return f"Error: {e}"

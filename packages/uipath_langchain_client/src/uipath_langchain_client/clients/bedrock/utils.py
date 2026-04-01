@@ -71,15 +71,19 @@ class WrappedBotoClient:
         return {
             "body": self.httpx_client.post(
                 "/",
-                json=json.loads(kwargs.get("body", {})),
+                json=json.loads(kwargs.get("body", "{}")),
             )
         }
 
     def invoke_model_with_response_stream(self, **kwargs: Any) -> Any:
-        return {"body": self._stream_generator(json.loads(kwargs.get("body", {})))}
+        return {"body": self._stream_generator(json.loads(kwargs.get("body", "{}")))}
 
     def converse(
-        self, *, messages: list[dict[str, Any]], system: str | None = None, **params: Any
+        self,
+        *,
+        messages: list[dict[str, Any]],
+        system: list[dict[str, Any]] | None = None,
+        **params: Any,
     ) -> Any:
         if self.httpx_client is None:
             raise ValueError("httpx_client is not set")
@@ -95,7 +99,11 @@ class WrappedBotoClient:
         ).json()
 
     def converse_stream(
-        self, *, messages: list[dict[str, Any]], system: str | None = None, **params: Any
+        self,
+        *,
+        messages: list[dict[str, Any]],
+        system: list[dict[str, Any]] | None = None,
+        **params: Any,
     ) -> Any:
         return {
             "stream": self._stream_generator(

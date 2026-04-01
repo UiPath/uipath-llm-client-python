@@ -15,9 +15,13 @@ from uipath_langchain_client.settings import (
 
 try:
     from anthropic import (
+        Anthropic,
         AnthropicBedrock,
+        AnthropicFoundry,
         AnthropicVertex,
+        AsyncAnthropic,
         AsyncAnthropicBedrock,
+        AsyncAnthropicFoundry,
         AsyncAnthropicVertex,
     )
     from langchain_anthropic.chat_models import ChatAnthropic
@@ -29,18 +33,13 @@ except ImportError as e:
 
 
 class UiPathChatAnthropic(UiPathBaseChatModel, ChatAnthropic):
-    # api_config.vendor_type is a placeholder here; the model_validator below
-    # always overwrites it (and api_flavor / api_version) from self.vendor_type.
-    # VendorType.VERTEXAI is used as the seed so UiPathAPIConfig's own validator
-    # (which requires vendor_type when routing_mode=PASSTHROUGH) is satisfied.
     api_config: UiPathAPIConfig = UiPathAPIConfig(
         api_type=ApiType.COMPLETIONS,
         routing_mode=RoutingMode.PASSTHROUGH,
-        vendor_type=VendorType.VERTEXAI,
+        vendor_type=VendorType.ANTHROPIC,
         freeze_base_url=True,
     )
-    # Required — caller must supply VendorType.VERTEXAI or VendorType.AWSBEDROCK.
-    vendor_type: VendorType
+    vendor_type: VendorType = VendorType.ANTHROPIC
 
     @model_validator(mode="after")
     def setup_api_flavor_and_version(self) -> Self:
@@ -53,8 +52,7 @@ class UiPathChatAnthropic(UiPathBaseChatModel, ChatAnthropic):
                 self.api_config.api_flavor = ApiFlavor.INVOKE
             case _:
                 raise ValueError(
-                    f"vendor_type '{self.vendor_type}' is not supported by UiPathChatAnthropic. "
-                    "Use VendorType.VERTEXAI or VendorType.AWSBEDROCK."
+                    "anthropic and azure vendors are currently not supported by UiPath"
                 )
         return self
 
@@ -66,8 +64,24 @@ class UiPathChatAnthropic(UiPathBaseChatModel, ChatAnthropic):
     @cached_property
     def _anthropic_client(
         self,
-    ) -> AnthropicVertex | AnthropicBedrock:
+    ) -> Anthropic | AnthropicVertex | AnthropicBedrock | AnthropicFoundry:
         match self.vendor_type:
+            case VendorType.ANTHROPIC:
+                return Anthropic(
+                    api_key="PLACEHOLDER",
+                    base_url=str(self.uipath_sync_client.base_url),
+                    default_headers=dict(self.uipath_sync_client.headers),
+                    max_retries=0,  # handled by the UiPathBaseChatModel
+                    http_client=self.uipath_sync_client,
+                )
+            case VendorType.AZURE:
+                return AnthropicFoundry(
+                    api_key="PLACEHOLDER",
+                    base_url=str(self.uipath_sync_client.base_url),
+                    default_headers=dict(self.uipath_sync_client.headers),
+                    max_retries=0,  # handled by the UiPathBaseChatModel
+                    http_client=self.uipath_sync_client,
+                )
             case VendorType.VERTEXAI:
                 return AnthropicVertex(
                     region="PLACEHOLDER",
@@ -89,15 +103,29 @@ class UiPathChatAnthropic(UiPathBaseChatModel, ChatAnthropic):
                     http_client=self.uipath_sync_client,
                 )
             case _:
-                raise ValueError(
-                    f"vendor_type '{self.vendor_type}' is not supported by UiPathChatAnthropic."
-                )
+                raise ValueError("Anthropic models are currently not hosted on any other provider")
 
     @cached_property
     def _async_anthropic_client(
         self,
-    ) -> AsyncAnthropicVertex | AsyncAnthropicBedrock:
+    ) -> AsyncAnthropic | AsyncAnthropicVertex | AsyncAnthropicBedrock | AsyncAnthropicFoundry:
         match self.vendor_type:
+            case VendorType.ANTHROPIC:
+                return AsyncAnthropic(
+                    api_key="PLACEHOLDER",
+                    base_url=str(self.uipath_async_client.base_url),
+                    default_headers=dict(self.uipath_async_client.headers),
+                    max_retries=0,  # handled by the UiPathBaseChatModel
+                    http_client=self.uipath_async_client,
+                )
+            case VendorType.AZURE:
+                return AsyncAnthropicFoundry(
+                    api_key="PLACEHOLDER",
+                    base_url=str(self.uipath_async_client.base_url),
+                    default_headers=dict(self.uipath_async_client.headers),
+                    max_retries=0,  # handled by the UiPathBaseChatModel
+                    http_client=self.uipath_async_client,
+                )
             case VendorType.VERTEXAI:
                 return AsyncAnthropicVertex(
                     region="PLACEHOLDER",
@@ -119,9 +147,7 @@ class UiPathChatAnthropic(UiPathBaseChatModel, ChatAnthropic):
                     http_client=self.uipath_async_client,
                 )
             case _:
-                raise ValueError(
-                    f"vendor_type '{self.vendor_type}' is not supported by UiPathChatAnthropic."
-                )
+                raise ValueError("Anthropic models are currently not hosted on any other provider")
 
     @override
     def _create(self, payload: dict) -> Any:

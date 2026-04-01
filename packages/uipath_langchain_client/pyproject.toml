@@ -5,35 +5,38 @@ dynamic = ["version"]
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-    "langchain>=1.2.13",
+    "langchain>=1.2.14",
     "uipath-llm-client>=1.7.0",
 ]
 
 [project.optional-dependencies]
 openai = [
-    "langchain-openai>=1.1.11",
+    "langchain-openai>=1.1.12",
 ]
 google = [
     "langchain-google-genai>=4.2.1",
 ]
 anthropic = [
     "langchain-anthropic>=1.4.0",
-    "anthropic[bedrock,vertex]>=0.86.0",
+    "anthropic[bedrock,vertex]>=0.87.0",
 ]
 aws = [
-    "langchain-aws[anthropic]>=1.4.1",
+    "langchain-aws[anthropic]>=1.4.2",
 ]
 vertexai = [
     "langchain-google-vertexai>=3.2.2",
 ]
 azure = [
-    "langchain-azure-ai>=1.1.1",
+    "langchain-azure-ai>=1.2.1",
 ]
 fireworks = [
     "langchain-fireworks>=1.1.0",
 ]
 all = [
-    "uipath-langchain-client[openai,aws,google,anthropic,azure,vertexai,fireworks]"
+    "uipath-langchain-client[openai,aws,google,anthropic,azure,vertexai,fireworks,litellm]"
+]
+litellm = [
+    "langchain-litellm>=0.6.3",
 ]
 
 [build-system]

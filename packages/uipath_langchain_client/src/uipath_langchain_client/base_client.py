@@ -25,7 +25,7 @@ Example:
 
 import logging
 from abc import ABC
-from collections.abc import AsyncGenerator, AsyncIterator, Iterator, Mapping, Sequence
+from collections.abc import AsyncGenerator, AsyncIterator, Generator, Iterator, Mapping, Sequence
 from functools import cached_property
 from typing import Any, Literal
 
@@ -239,7 +239,7 @@ class UiPathBaseLLMClient(BaseModel, ABC):
         stream_type: Literal["text", "bytes", "lines", "raw"] = "lines",
         raise_status_error: bool = False,
         **kwargs: Any,
-    ) -> Iterator[str | bytes]:
+    ) -> Generator[str | bytes, None, None]:
         """Make a synchronous streaming HTTP request to the UiPath API.
 
         Args:
@@ -393,7 +393,7 @@ class UiPathBaseChatModel(UiPathBaseLLMClient, BaseChatModel):
         stop: list[str] | None = None,
         run_manager: CallbackManagerForLLMRun | None = None,
         **kwargs: Any,
-    ) -> Iterator[ChatGenerationChunk]:
+    ) -> Generator[ChatGenerationChunk, None, None]:
         set_captured_response_headers({})
         try:
             first = True
@@ -413,7 +413,7 @@ class UiPathBaseChatModel(UiPathBaseLLMClient, BaseChatModel):
         stop: list[str] | None = None,
         run_manager: CallbackManagerForLLMRun | None = None,
         **kwargs: Any,
-    ) -> Iterator[ChatGenerationChunk]:
+    ) -> Generator[ChatGenerationChunk, None, None]:
         """Override in subclasses to provide the core (non-wrapped) stream logic."""
         yield from super()._stream(messages, stop=stop, run_manager=run_manager, **kwargs)
 

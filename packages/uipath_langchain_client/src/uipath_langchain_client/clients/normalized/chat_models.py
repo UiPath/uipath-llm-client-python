@@ -24,7 +24,7 @@ Example:
 """
 
 import json
-from collections.abc import AsyncGenerator, AsyncIterator, Callable, Iterator, Sequence
+from collections.abc import AsyncGenerator, Callable, Generator, Iterator, Sequence
 from typing import Any
 
 from langchain_core.callbacks import (
@@ -392,7 +392,7 @@ class UiPathChat(UiPathBaseChatModel):
         stop: list[str] | None = None,
         run_manager: CallbackManagerForLLMRun | None = None,
         **kwargs: Any,
-    ) -> Iterator[ChatGenerationChunk]:
+    ) -> Generator[ChatGenerationChunk, None, None]:
         request_body = self._preprocess_request(messages, stop=stop, **kwargs)
         request_body["stream"] = True
         for chunk in self.uipath_stream(
@@ -400,7 +400,7 @@ class UiPathChat(UiPathBaseChatModel):
         ):
             chunk = str(chunk)
             if chunk.startswith("data:"):
-                chunk = chunk[len("data:"):].strip()
+                chunk = chunk[len("data:") :].strip()
             try:
                 json_data = json.loads(chunk)
             except json.JSONDecodeError:
@@ -423,7 +423,7 @@ class UiPathChat(UiPathBaseChatModel):
         ):
             chunk = str(chunk)
             if chunk.startswith("data:"):
-                chunk = chunk[len("data:"):].strip()
+                chunk = chunk[len("data:") :].strip()
             try:
                 json_data = json.loads(chunk)
             except json.JSONDecodeError:

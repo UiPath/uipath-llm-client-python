@@ -46,9 +46,9 @@ class UiPathChatAnthropic(UiPathBaseChatModel, ChatAnthropic):
         self.api_config.vendor_type = self.vendor_type
         match self.vendor_type:
             case VendorType.ANTHROPIC:
-                self.api_config.api_flavor = ApiFlavor.CHAT_COMPLETIONS
+                self.api_config.api_flavor = None
             case VendorType.AZURE:
-                self.api_config.api_flavor = ApiFlavor.CHAT_COMPLETIONS
+                self.api_config.api_flavor = None
             case VendorType.VERTEXAI:
                 self.api_config.api_flavor = ApiFlavor.ANTHROPIC_CLAUDE
                 self.api_config.api_version = "v1beta1"

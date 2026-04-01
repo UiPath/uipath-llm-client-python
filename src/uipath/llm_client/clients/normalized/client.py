@@ -19,6 +19,16 @@ Example:
     ... )
     >>> print(response["choices"][0]["message"]["content"])
     >>>
+    >>> # Structured output with Pydantic
+    >>> from pydantic import BaseModel
+    >>> class Capital(BaseModel):
+    ...     capital: str
+    ...     country: str
+    >>> response = client.completions.create(
+    ...     messages=[{"role": "user", "content": "Capital of France?"}],
+    ...     output_format=Capital,
+    ... )
+    >>>
     >>> # Embeddings
     >>> embed_client = UiPathNormalizedClient(model_name="text-embedding-3-large")
     >>> result = embed_client.embeddings.create(input=["Hello world"])
@@ -27,8 +37,10 @@ Example:
 
 import json
 import logging
-from collections.abc import AsyncIterator, Iterator, Mapping, Sequence
+from collections.abc import AsyncIterator, Callable, Iterator, Mapping, Sequence
 from typing import Any
+
+from pydantic import BaseModel
 
 from uipath.llm_client.httpx_client import UiPathHttpxAsyncClient, UiPathHttpxClient
 from uipath.llm_client.settings import (
@@ -38,6 +50,108 @@ from uipath.llm_client.settings import (
 )
 from uipath.llm_client.settings.constants import ApiType, RoutingMode
 from uipath.llm_client.utils.retry import RetryConfig
+
+# Type alias for tool definitions accepted by the normalized API.
+# Each tool can be:
+#   - A dict in the flat OpenAI function format: {"name": ..., "description": ..., "parameters": ...}
+#   - A Pydantic BaseModel subclass (auto-converted to the flat format)
+#   - A callable with type annotations (auto-converted via docstring + signature)
+ToolType = dict[str, Any] | type[BaseModel] | Callable[..., Any]
+
+# Type alias for structured output format.
+# Can be:
+#   - A Pydantic BaseModel subclass (auto-converted to json_schema response_format)
+#   - A dict (passed through as-is to the API's response_format field)
+OutputFormatType = type[BaseModel] | dict[str, Any]
+
+
+def _pydantic_to_tool(model: type[BaseModel]) -> dict[str, Any]:
+    """Convert a Pydantic model class to the flat normalized API tool format."""
+    schema = model.model_json_schema()
+    # Remove pydantic-internal keys that aren't part of JSON Schema
+    schema.pop("title", None)
+    return {
+        "name": model.__name__,
+        "description": model.__doc__ or model.__name__,
+        "parameters": schema,
+    }
+
+
+def _callable_to_tool(func: Callable[..., Any]) -> dict[str, Any]:
+    """Convert a callable to the flat normalized API tool format using its signature."""
+    import inspect
+
+    sig = inspect.signature(func)
+    properties: dict[str, Any] = {}
+    required: list[str] = []
+    for name, param in sig.parameters.items():
+        prop: dict[str, Any] = {}
+        if param.annotation is not inspect.Parameter.empty:
+            type_map = {str: "string", int: "integer", float: "number", bool: "boolean"}
+            prop["type"] = type_map.get(param.annotation, "string")
+        else:
+            prop["type"] = "string"
+        properties[name] = prop
+        if param.default is inspect.Parameter.empty:
+            required.append(name)
+
+    return {
+        "name": func.__name__,
+        "description": func.__doc__ or func.__name__,
+        "parameters": {
+            "type": "object",
+            "properties": properties,
+            "required": required,
+        },
+    }
+
+
+def _resolve_tool(tool: ToolType) -> dict[str, Any]:
+    """Convert a tool definition to the flat normalized API format."""
+    if isinstance(tool, dict):
+        return tool
+    if isinstance(tool, type) and issubclass(tool, BaseModel):
+        return _pydantic_to_tool(tool)
+    if callable(tool):
+        return _callable_to_tool(tool)
+    raise TypeError(f"Unsupported tool type: {type(tool)}")
+
+
+def _make_strict_schema(schema: dict[str, Any]) -> dict[str, Any]:
+    """Recursively add ``additionalProperties: false`` to all object schemas.
+
+    Required by the ``strict: true`` mode of the normalized API's ``json_schema``
+    response format.
+    """
+    if schema.get("type") == "object":
+        schema.setdefault("additionalProperties", False)
+    for value in schema.values():
+        if isinstance(value, dict):
+            _make_strict_schema(value)
+        elif isinstance(value, list):
+            for item in value:
+                if isinstance(item, dict):
+                    _make_strict_schema(item)
+    return schema
+
+
+def _resolve_output_format(output_format: OutputFormatType) -> dict[str, Any]:
+    """Convert an output format spec to the API's response_format field."""
+    if isinstance(output_format, dict):
+        return output_format
+    if isinstance(output_format, type) and issubclass(output_format, BaseModel):
+        schema = output_format.model_json_schema()
+        schema.pop("title", None)
+        _make_strict_schema(schema)
+        return {
+            "type": "json_schema",
+            "json_schema": {
+                "name": output_format.__name__,
+                "strict": True,
+                "schema": schema,
+            },
+        }
+    raise TypeError(f"Unsupported output_format type: {type(output_format)}")
 
 
 class NormalizedCompletions:
@@ -59,14 +173,62 @@ class NormalizedCompletions:
         self._sync_client = sync_client
         self._async_client = async_client
 
-    def _build_body(self, messages: list[dict[str, Any]], **kwargs: Any) -> dict[str, Any]:
+    def _build_body(
+        self,
+        messages: list[dict[str, Any]],
+        *,
+        tools: list[ToolType] | None = None,
+        output_format: OutputFormatType | None = None,
+        tool_choice: str | dict[str, Any] | None = None,
+        temperature: float | None = None,
+        max_tokens: int | None = None,
+        top_p: float | None = None,
+        stop: list[str] | str | None = None,
+        n: int | None = None,
+        presence_penalty: float | None = None,
+        frequency_penalty: float | None = None,
+        **kwargs: Any,
+    ) -> dict[str, Any]:
         body: dict[str, Any] = {"model": self._model_name, "messages": messages}
+
+        if tools is not None:
+            body["tools"] = [_resolve_tool(t) for t in tools]
+        if output_format is not None:
+            body["response_format"] = _resolve_output_format(output_format)
+        if tool_choice is not None:
+            body["tool_choice"] = tool_choice
+        if temperature is not None:
+            body["temperature"] = temperature
+        if max_tokens is not None:
+            body["max_tokens"] = max_tokens
+        if top_p is not None:
+            body["top_p"] = top_p
+        if stop is not None:
+            body["stop"] = stop
+        if n is not None:
+            body["n"] = n
+        if presence_penalty is not None:
+            body["presence_penalty"] = presence_penalty
+        if frequency_penalty is not None:
+            body["frequency_penalty"] = frequency_penalty
+
         body.update(kwargs)
         return body
 
     def create(
         self,
         messages: list[dict[str, Any]],
+        *,
+        tools: list[ToolType] | None = None,
+        output_format: OutputFormatType | None = None,
+        tool_choice: str | dict[str, Any] | None = None,
+        temperature: float | None = None,
+        max_tokens: int | None = None,
+        top_p: float | None = None,
+        stop: list[str] | str | None = None,
+        n: int | None = None,
+        presence_penalty: float | None = None,
+        frequency_penalty: float | None = None,
         **kwargs: Any,
     ) -> dict[str, Any]:
         """Send a synchronous chat completion request.
@@ -74,19 +236,41 @@ class NormalizedCompletions:
         Args:
             messages: List of message dicts in OpenAI format, e.g.
                 ``[{"role": "user", "content": "Hello!"}]``.
-            **kwargs: Additional parameters forwarded to the API:
-                - temperature (float): Sampling temperature (0.0–2.0).
-                - max_tokens (int): Maximum tokens in the response.
-                - tools (list[dict]): Tool definitions for function calling.
-                - tool_choice (str | dict): Tool selection strategy.
-                - response_format (dict): Structured output format (JSON schema).
-                - stop (list[str]): Stop sequences.
+            tools: Tool definitions for function calling. Each element can be:
+                - A dict in flat format: ``{"name": ..., "description": ..., "parameters": ...}``
+                - A Pydantic ``BaseModel`` subclass (auto-converted)
+                - A callable with type annotations (auto-converted)
+            output_format: Structured output format. Can be:
+                - A Pydantic ``BaseModel`` subclass (auto-converted to ``json_schema``)
+                - A dict passed as-is to ``response_format``
+            tool_choice: Tool selection strategy (e.g., ``"auto"``, ``"required"``,
+                or ``{"type": "tool", "name": "..."}``).
+            temperature: Sampling temperature (0.0–2.0).
+            max_tokens: Maximum tokens in the response.
+            top_p: Nucleus sampling probability mass.
+            stop: Stop sequence(s) to end generation.
+            n: Number of completions to generate.
+            presence_penalty: Penalty for repeated tokens (-2.0 to 2.0).
+            frequency_penalty: Penalty based on token frequency (-2.0 to 2.0).
+            **kwargs: Additional parameters forwarded to the API.
 
         Returns:
             The API response as a dict with OpenAI-compatible structure.
-            Key fields: ``choices[0].message.content``, ``usage``.
         """
-        body = self._build_body(messages, **kwargs)
+        body = self._build_body(
+            messages,
+            tools=tools,
+            output_format=output_format,
+            tool_choice=tool_choice,
+            temperature=temperature,
+            max_tokens=max_tokens,
+            top_p=top_p,
+            stop=stop,
+            n=n,
+            presence_penalty=presence_penalty,
+            frequency_penalty=frequency_penalty,
+            **kwargs,
+        )
         response = self._sync_client.post("", json=body)
         response.raise_for_status()
         return response.json()  # type: ignore[no-any-return]
@@ -94,18 +278,52 @@ class NormalizedCompletions:
     async def acreate(
         self,
         messages: list[dict[str, Any]],
+        *,
+        tools: list[ToolType] | None = None,
+        output_format: OutputFormatType | None = None,
+        tool_choice: str | dict[str, Any] | None = None,
+        temperature: float | None = None,
+        max_tokens: int | None = None,
+        top_p: float | None = None,
+        stop: list[str] | str | None = None,
+        n: int | None = None,
+        presence_penalty: float | None = None,
+        frequency_penalty: float | None = None,
         **kwargs: Any,
     ) -> dict[str, Any]:
         """Send an asynchronous chat completion request.
 
         Args:
             messages: List of message dicts in OpenAI format.
-            **kwargs: Additional parameters forwarded to the API (see ``create()``).
+            tools: Tool definitions (see ``create()``).
+            output_format: Structured output format (see ``create()``).
+            tool_choice: Tool selection strategy.
+            temperature: Sampling temperature (0.0–2.0).
+            max_tokens: Maximum tokens in the response.
+            top_p: Nucleus sampling probability mass.
+            stop: Stop sequence(s).
+            n: Number of completions.
+            presence_penalty: Penalty for repeated tokens.
+            frequency_penalty: Penalty based on token frequency.
+            **kwargs: Additional parameters forwarded to the API.
 
         Returns:
             The API response as a dict with OpenAI-compatible structure.
         """
-        body = self._build_body(messages, **kwargs)
+        body = self._build_body(
+            messages,
+            tools=tools,
+            output_format=output_format,
+            tool_choice=tool_choice,
+            temperature=temperature,
+            max_tokens=max_tokens,
+            top_p=top_p,
+            stop=stop,
+            n=n,
+            presence_penalty=presence_penalty,
+            frequency_penalty=frequency_penalty,
+            **kwargs,
+        )
         response = await self._async_client.post("", json=body)
         response.raise_for_status()
         return response.json()  # type: ignore[no-any-return]
@@ -113,21 +331,52 @@ class NormalizedCompletions:
     def stream(
         self,
         messages: list[dict[str, Any]],
+        *,
+        tools: list[ToolType] | None = None,
+        output_format: OutputFormatType | None = None,
+        tool_choice: str | dict[str, Any] | None = None,
+        temperature: float | None = None,
+        max_tokens: int | None = None,
+        top_p: float | None = None,
+        stop: list[str] | str | None = None,
+        n: int | None = None,
+        presence_penalty: float | None = None,
+        frequency_penalty: float | None = None,
         **kwargs: Any,
     ) -> Iterator[dict[str, Any]]:
         """Stream a synchronous chat completion, yielding parsed SSE chunks.
 
-        The ``X-UiPath-Streaming-Enabled: true`` header is set automatically by
-        the underlying httpx client when streaming is requested.
-
         Args:
             messages: List of message dicts in OpenAI format.
-            **kwargs: Additional parameters forwarded to the API (see ``create()``).
+            tools: Tool definitions (see ``create()``).
+            output_format: Structured output format (see ``create()``).
+            tool_choice: Tool selection strategy.
+            temperature: Sampling temperature (0.0–2.0).
+            max_tokens: Maximum tokens in the response.
+            top_p: Nucleus sampling probability mass.
+            stop: Stop sequence(s).
+            n: Number of completions.
+            presence_penalty: Penalty for repeated tokens.
+            frequency_penalty: Penalty based on token frequency.
+            **kwargs: Additional parameters forwarded to the API.
 
         Yields:
             Parsed JSON dicts for each SSE chunk from the response stream.
         """
-        body = self._build_body(messages, **kwargs)
+        body = self._build_body(
+            messages,
+            tools=tools,
+            output_format=output_format,
+            tool_choice=tool_choice,
+            temperature=temperature,
+            max_tokens=max_tokens,
+            top_p=top_p,
+            stop=stop,
+            n=n,
+            presence_penalty=presence_penalty,
+            frequency_penalty=frequency_penalty,
+            **kwargs,
+        )
         with self._sync_client.stream("POST", "", json=body) as response:
             response.raise_for_status()
             for line in response.iter_lines():
@@ -143,21 +392,52 @@ class NormalizedCompletions:
     async def astream(
         self,
         messages: list[dict[str, Any]],
+        *,
+        tools: list[ToolType] | None = None,
+        output_format: OutputFormatType | None = None,
+        tool_choice: str | dict[str, Any] | None = None,
+        temperature: float | None = None,
+        max_tokens: int | None = None,
+        top_p: float | None = None,
+        stop: list[str] | str | None = None,
+        n: int | None = None,
+        presence_penalty: float | None = None,
+        frequency_penalty: float | None = None,
         **kwargs: Any,
     ) -> AsyncIterator[dict[str, Any]]:
         """Stream an asynchronous chat completion, yielding parsed SSE chunks.
 
-        The ``X-UiPath-Streaming-Enabled: true`` header is set automatically by
-        the underlying httpx async client when streaming is requested.
-
         Args:
             messages: List of message dicts in OpenAI format.
-            **kwargs: Additional parameters forwarded to the API (see ``create()``).
+            tools: Tool definitions (see ``create()``).
+            output_format: Structured output format (see ``create()``).
+            tool_choice: Tool selection strategy.
+            temperature: Sampling temperature (0.0–2.0).
+            max_tokens: Maximum tokens in the response.
+            top_p: Nucleus sampling probability mass.
+            stop: Stop sequence(s).
+            n: Number of completions.
+            presence_penalty: Penalty for repeated tokens.
+            frequency_penalty: Penalty based on token frequency.
+            **kwargs: Additional parameters forwarded to the API.
 
         Yields:
             Parsed JSON dicts for each SSE chunk from the response stream.
         """
-        body = self._build_body(messages, **kwargs)
+        body = self._build_body(
+            messages,
+            tools=tools,
+            output_format=output_format,
+            tool_choice=tool_choice,
+            temperature=temperature,
+            max_tokens=max_tokens,
+            top_p=top_p,
+            stop=stop,
+            n=n,
+            presence_penalty=presence_penalty,
+            frequency_penalty=frequency_penalty,
+            **kwargs,
+        )
         async with self._async_client.stream("POST", "", json=body) as response:
             response.raise_for_status()
             async for line in response.aiter_lines():
@@ -197,31 +477,50 @@ class NormalizedEmbeddings:
         self._sync_client = sync_client
         self._async_client = async_client
 
-    def _build_body(self, input: str | list[str], **kwargs: Any) -> dict[str, Any]:
+    def _build_body(
+        self,
+        input: str | list[str],
+        *,
+        encoding_format: str | None = None,
+        dimensions: int | None = None,
+        **kwargs: Any,
+    ) -> dict[str, Any]:
         # The normalized embeddings endpoint resolves the model from routing headers;
         # the body only needs "input" (matching UiPathEmbeddings in the langchain client).
         # The API requires input to always be a list.
         body: dict[str, Any] = {"input": [input] if isinstance(input, str) else input}
+        if encoding_format is not None:
+            body["encoding_format"] = encoding_format
+        if dimensions is not None:
+            body["dimensions"] = dimensions
         body.update(kwargs)
         return body
 
     def create(
         self,
         input: str | list[str],
+        *,
+        encoding_format: str | None = None,
+        dimensions: int | None = None,
         **kwargs: Any,
     ) -> dict[str, Any]:
         """Generate embeddings synchronously.
 
         Args:
             input: A single string or list of strings to embed.
-            **kwargs: Additional parameters forwarded to the API
-                (e.g., ``encoding_format``).
+            encoding_format: The format of the returned embeddings
+                (e.g., ``"float"``, ``"base64"``).
+            dimensions: The number of dimensions for the output embeddings
+                (only supported by some models).
+            **kwargs: Additional parameters forwarded to the API.
 
         Returns:
             The API response dict. Extract vectors via
             ``response["data"][i]["embedding"]``.
         """
-        body = self._build_body(input, **kwargs)
+        body = self._build_body(
+            input, encoding_format=encoding_format, dimensions=dimensions, **kwargs
+        )
         response = self._sync_client.post("", json=body)
         response.raise_for_status()
         return response.json()  # type: ignore[no-any-return]
@@ -229,19 +528,26 @@ class NormalizedEmbeddings:
     async def acreate(
         self,
         input: str | list[str],
+        *,
+        encoding_format: str | None = None,
+        dimensions: int | None = None,
         **kwargs: Any,
     ) -> dict[str, Any]:
         """Generate embeddings asynchronously.
 
         Args:
             input: A single string or list of strings to embed.
-            **kwargs: Additional parameters forwarded to the API (see ``create()``).
+            encoding_format: The format of the returned embeddings.
+            dimensions: The number of dimensions for the output embeddings.
+            **kwargs: Additional parameters forwarded to the API.
 
         Returns:
             The API response dict. Extract vectors via
             ``response["data"][i]["embedding"]``.
         """
-        body = self._build_body(input, **kwargs)
+        body = self._build_body(
+            input, encoding_format=encoding_format, dimensions=dimensions, **kwargs
+        )
         response = await self._async_client.post("", json=body)
         response.raise_for_status()
         return response.json()  # type: ignore[no-any-return]
@@ -285,10 +591,22 @@ class UiPathNormalizedClient:
         ... )
         >>> print(response["choices"][0]["message"]["content"])
         >>>
+        >>> # Structured output with Pydantic
+        >>> from pydantic import BaseModel
+        >>> class Answer(BaseModel):
+        ...     result: int
+        >>> response = client.completions.create(
+        ...     messages=[{"role": "user", "content": "What is 2+2?"}],
+        ...     output_format=Answer,
+        ... )
+        >>>
         >>> embed_client = UiPathNormalizedClient(model_name="text-embedding-3-large")
         >>> result = embed_client.embeddings.create(input="Hello world")
         >>> print(result["data"][0]["embedding"])
     """
+
+    completions: NormalizedCompletions
+    embeddings: NormalizedEmbeddings
 
     def __init__(
         self,

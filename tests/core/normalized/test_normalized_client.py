@@ -18,6 +18,7 @@ import json
 from typing import Any
 
 import pytest
+from pydantic import BaseModel
 
 from uipath.llm_client.clients.normalized import UiPathNormalizedClient
 from uipath.llm_client.settings import UiPathBaseSettings
@@ -33,10 +34,10 @@ EMBEDDING_MODELS = [
     "gemini-embedding-001",
 ]
 
-# The normalized API expects the flat OpenAI function format (name/description/parameters
-# at the top level), not the OpenAI tool format ({type: "function", function: {...}}).
-# This matches what langchain's convert_to_openai_function() returns.
-WEATHER_TOOL: dict[str, Any] = {
+
+# --- Tool definitions: dict, Pydantic, and callable forms ---
+
+WEATHER_TOOL_DICT: dict[str, Any] = {
     "name": "get_weather",
     "description": "Get the current weather for a given location.",
     "parameters": {
@@ -51,10 +52,24 @@ WEATHER_TOOL: dict[str, Any] = {
     },
 }
 
-CAPITAL_SCHEMA: dict[str, Any] = {
+
+class GetWeather(BaseModel):
+    """Get the current weather for a given location."""
+
+    location: str
+
+
+def get_weather(location: str) -> str:
+    """Get the current weather for a given location."""
+    return f"Sunny in {location}"
+
+
+# --- Structured output: dict and Pydantic forms ---
+
+CAPITAL_SCHEMA_DICT: dict[str, Any] = {
     "type": "json_schema",
     "json_schema": {
-        "name": "capital_answer",
+        "name": "CapitalAnswer",
         "strict": True,
         "schema": {
             "type": "object",
@@ -69,6 +84,11 @@ CAPITAL_SCHEMA: dict[str, Any] = {
 }
 
 
+class CapitalAnswer(BaseModel):
+    capital: str
+    country: str
+
+
 @pytest.fixture(params=COMPLETION_MODELS)
 def model_name(request: pytest.FixtureRequest) -> str:
     return request.param  # type: ignore[no-any-return]
@@ -79,11 +99,15 @@ def embedding_model_name(request: pytest.FixtureRequest) -> str:
     return request.param  # type: ignore[no-any-return]
 
 
+_DEBUG_HEADERS = {"X-UiPath-LLMGateway-AllowFull4xxResponse": "true"}
+
+
 @pytest.fixture
 def client(model_name: str, client_settings: UiPathBaseSettings) -> UiPathNormalizedClient:
     return UiPathNormalizedClient(
         model_name=model_name,
         client_settings=client_settings,
+        default_headers=_DEBUG_HEADERS,
     )
 
 
@@ -94,6 +118,7 @@ def embed_client(
     return UiPathNormalizedClient(
         model_name=embedding_model_name,
         client_settings=client_settings,
+        default_headers=_DEBUG_HEADERS,
     )
 
 
@@ -125,10 +150,10 @@ class TestNormalizedClientCompletions:
         assert message["role"] == "assistant"
         assert message.get("content") or message.get("tool_calls")
 
-    def test_structured_output(self, client: UiPathNormalizedClient) -> None:
+    def test_structured_output_pydantic(self, client: UiPathNormalizedClient) -> None:
         response = client.completions.create(
             messages=[{"role": "user", "content": "What is the capital of France?"}],
-            response_format=CAPITAL_SCHEMA,
+            output_format=CapitalAnswer,
             max_tokens=100,
         )
 
@@ -140,10 +165,10 @@ class TestNormalizedClientCompletions:
         assert "Paris" in data["capital"]
 
     @pytest.mark.asyncio
-    async def test_astructured_output(self, client: UiPathNormalizedClient) -> None:
+    async def test_astructured_output_dict(self, client: UiPathNormalizedClient) -> None:
         response = await client.completions.acreate(
             messages=[{"role": "user", "content": "What is the capital of France?"}],
-            response_format=CAPITAL_SCHEMA,
+            output_format=CAPITAL_SCHEMA_DICT,
             max_tokens=100,
         )
 
@@ -154,10 +179,10 @@ class TestNormalizedClientCompletions:
         assert "capital" in data
         assert "Paris" in data["capital"]
 
-    def test_tool_calling(self, client: UiPathNormalizedClient) -> None:
+    def test_tool_calling_dict(self, client: UiPathNormalizedClient) -> None:
         response = client.completions.create(
             messages=[{"role": "user", "content": "What's the weather in Paris?"}],
-            tools=[WEATHER_TOOL],
+            tools=[WEATHER_TOOL_DICT],
             tool_choice={"type": "auto"},
             max_tokens=200,
         )
@@ -166,14 +191,27 @@ class TestNormalizedClientCompletions:
         choice = response["choices"][0]
         tool_calls = choice["message"].get("tool_calls", [])
         assert tool_calls, f"Expected tool_calls in response, got: {choice!r}"
-        # Normalized API returns tool calls with name at top level (flat format)
         assert tool_calls[0].get("name") == "get_weather"
 
     @pytest.mark.asyncio
-    async def test_atool_calling(self, client: UiPathNormalizedClient) -> None:
+    async def test_atool_calling_pydantic(self, client: UiPathNormalizedClient) -> None:
         response = await client.completions.acreate(
             messages=[{"role": "user", "content": "What's the weather in Paris?"}],
-            tools=[WEATHER_TOOL],
+            tools=[GetWeather],
+            tool_choice={"type": "auto"},
+            max_tokens=200,
+        )
+
+        assert "choices" in response
+        choice = response["choices"][0]
+        tool_calls = choice["message"].get("tool_calls", [])
+        assert tool_calls, f"Expected tool_calls in response, got: {choice!r}"
+        assert tool_calls[0].get("name") == "GetWeather"
+
+    def test_tool_calling_callable(self, client: UiPathNormalizedClient) -> None:
+        response = client.completions.create(
+            messages=[{"role": "user", "content": "What's the weather in Paris?"}],
+            tools=[get_weather],
             tool_choice={"type": "auto"},
             max_tokens=200,
         )
@@ -188,7 +226,7 @@ class TestNormalizedClientCompletions:
         chunks = list(
             client.completions.stream(
                 messages=[{"role": "user", "content": "Say 'hello' and nothing else."}],
-                max_tokens=50,
+                max_tokens=500,
             )
         )
 

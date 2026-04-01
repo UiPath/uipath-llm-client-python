@@ -17,9 +17,7 @@ import asyncio
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_core.tools import tool
 from uipath_langchain_client import get_chat_model, get_embedding_model
-from uipath_langchain_client.settings import get_default_client_settings
-
-from uipath.llm_client.settings.constants import RoutingMode
+from uipath_langchain_client.settings import RoutingMode, get_default_client_settings
 
 
 def demo_basic_chat():

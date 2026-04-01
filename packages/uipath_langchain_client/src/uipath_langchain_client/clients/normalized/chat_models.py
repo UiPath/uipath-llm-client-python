@@ -328,9 +328,7 @@ class UiPathChat(UiPathBaseChatModel):
         response = await self.uipath_arequest(request_body=request_body, raise_status_error=True)
         return self._postprocess_response(response.json())
 
-    def _generate_chunk(
-        self, original_message: str, json_data: dict[str, Any]
-    ) -> ChatGenerationChunk:
+    def _generate_chunk(self, json_data: dict[str, Any]) -> ChatGenerationChunk:
         generation_info = {
             "id": json_data.get("id"),
             "created": json_data.get("created", ""),
@@ -406,7 +404,7 @@ class UiPathChat(UiPathBaseChatModel):
                 continue
             if "id" in json_data and not json_data["id"]:
                 continue
-            yield self._generate_chunk(chunk, json_data)
+            yield self._generate_chunk(json_data)
 
     async def _uipath_astream(
         self,
@@ -429,4 +427,4 @@ class UiPathChat(UiPathBaseChatModel):
                 continue
             if "id" in json_data and not json_data["id"]:
                 continue
-            yield self._generate_chunk(chunk, json_data)
+            yield self._generate_chunk(json_data)

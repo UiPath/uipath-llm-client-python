@@ -45,15 +45,17 @@ class UiPathChatAnthropic(UiPathBaseChatModel, ChatAnthropic):
     def setup_api_flavor_and_version(self) -> Self:
         self.api_config.vendor_type = self.vendor_type
         match self.vendor_type:
+            case VendorType.ANTHROPIC:
+                self.api_config.api_flavor = ApiFlavor.CHAT_COMPLETIONS
+            case VendorType.AZURE:
+                self.api_config.api_flavor = ApiFlavor.CHAT_COMPLETIONS
             case VendorType.VERTEXAI:
                 self.api_config.api_flavor = ApiFlavor.ANTHROPIC_CLAUDE
                 self.api_config.api_version = "v1beta1"
             case VendorType.AWSBEDROCK:
                 self.api_config.api_flavor = ApiFlavor.INVOKE
             case _:
-                raise ValueError(
-                    "anthropic and azure vendors are currently not supported by UiPath"
-                )
+                raise ValueError(f"Unsupported vendor_type: {self.vendor_type}")
         return self
 
     # Override fields to avoid typing issues and fix stuff

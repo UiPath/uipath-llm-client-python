@@ -25,7 +25,7 @@ Example:
 
 import logging
 from abc import ABC
-from collections.abc import AsyncGenerator, AsyncIterator, Generator, Iterator, Mapping, Sequence
+from collections.abc import AsyncGenerator, Generator, Mapping, Sequence
 from functools import cached_property
 from typing import Any, Literal
 

@@ -48,7 +48,7 @@ except ImportError as e:
     ) from e
 
 
-class UiPathChatBedrockConverse(UiPathBaseChatModel, ChatBedrockConverse):
+class UiPathChatBedrockConverse(UiPathBaseChatModel, ChatBedrockConverse):  # type: ignore[override]
     api_config: UiPathAPIConfig = UiPathAPIConfig(
         api_type=ApiType.COMPLETIONS,
         routing_mode=RoutingMode.PASSTHROUGH,
@@ -77,7 +77,7 @@ class UiPathChatBedrockConverse(UiPathBaseChatModel, ChatBedrockConverse):
         return self
 
 
-class UiPathChatBedrock(UiPathBaseChatModel, ChatBedrock):
+class UiPathChatBedrock(UiPathBaseChatModel, ChatBedrock):  # type: ignore[override]
     api_config: UiPathAPIConfig = UiPathAPIConfig(
         api_type=ApiType.COMPLETIONS,
         routing_mode=RoutingMode.PASSTHROUGH,

@@ -1,7 +1,7 @@
 import base64
 import json
+from collections.abc import Generator
 from typing import Any
-from collections.abc import Generator, Iterator
 
 from httpx import Client
 
@@ -51,7 +51,9 @@ class WrappedBotoClient:
         self.httpx_client = httpx_client
         self.meta = _MockClientMeta(region_name=region_name)
 
-    def _stream_generator(self, request_body: dict[str, Any]) -> Generator[dict[str, Any], None, None]:
+    def _stream_generator(
+        self, request_body: dict[str, Any]
+    ) -> Generator[dict[str, Any], None, None]:
         if self.httpx_client is None:
             raise ValueError("httpx_client is not set")
         with self.httpx_client.stream("POST", "/", json=_serialize_bytes(request_body)) as response:

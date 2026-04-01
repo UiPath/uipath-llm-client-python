@@ -24,7 +24,7 @@ Example:
 """
 
 import json
-from collections.abc import AsyncGenerator, Callable, Generator, Iterator, Sequence
+from collections.abc import AsyncGenerator, Callable, Generator, Sequence
 from typing import Any
 
 from langchain_core.callbacks import (

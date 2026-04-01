@@ -19,7 +19,7 @@ class UiPathEmbeddings(UiPathBaseEmbeddings, Embeddings):
 
     def embed_documents(self, texts: list[str]) -> list[list[float]]:
         response = self.uipath_request(
-            request_body={"input": texts, "model": self.model_name},
+            request_body={"input": texts},
             raise_status_error=True,
         )
         return [r["embedding"] for r in response.json()["data"]]
@@ -29,7 +29,7 @@ class UiPathEmbeddings(UiPathBaseEmbeddings, Embeddings):
 
     async def aembed_documents(self, texts: list[str]) -> list[list[float]]:
         response = await self.uipath_arequest(
-            request_body={"input": texts, "model": self.model_name},
+            request_body={"input": texts},
             raise_status_error=True,
         )
         return [r["embedding"] for r in response.json()["data"]]

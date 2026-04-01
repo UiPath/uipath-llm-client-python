@@ -155,7 +155,6 @@ class UiPathChat(UiPathBaseChatModel):
         }
 
         return {
-            "model": self.model_name,
             **{k: v for k, v in exclude_if_none.items() if v is not None},
             **self.model_kwargs,
         }

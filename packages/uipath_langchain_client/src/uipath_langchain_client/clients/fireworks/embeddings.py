@@ -31,12 +31,6 @@ class UiPathFireworksEmbeddings(UiPathBaseEmbeddings, FireworksEmbeddings):
         freeze_base_url=True,
     )
 
-    # Override FireworksEmbeddings.model so that Pydantic merges it with
-    # UiPathBaseLLMClient.model_name (alias="model") into a single field.
-    # Without this, two separate fields coexist: FireworksEmbeddings.model
-    # (default "nomic-ai/nomic-embed-text-v1.5") and model_name, causing
-    # self.model to always return the stale FireworksEmbeddings default
-    # instead of the model name supplied by the caller.
     model: str = Field(default="", alias="model_name")
 
     @model_validator(mode="after")

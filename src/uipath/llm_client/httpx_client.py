@@ -21,7 +21,7 @@ Example:
 """
 
 import logging
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Callable, Sequence
 from typing import Any
 
 from httpx import (
@@ -72,7 +72,7 @@ class UiPathHttpxClient(Client):
     """
 
     _streaming_header: str = "X-UiPath-Streaming-Enabled"
-    _default_headers: Mapping[str, str] = {
+    _default_headers: dict[str, str] = {
         "X-UiPath-LLMGateway-TimeoutSeconds": "295",  # server side timeout, default is 10, maximum is 300
         # "X-UiPath-LLMGateway-AllowFull4xxResponse": "true",  # allow full 4xx responses (default is false) — removed from default to avoid PII leakage in logs
     }
@@ -100,7 +100,8 @@ class UiPathHttpxClient(Client):
             captured_headers: Case-insensitive header name prefixes to capture from
                 responses. Captured headers are stored in a ContextVar and can be
                 retrieved with get_captured_response_headers(). Defaults to ("x-uipath-",).
-            max_retries: Maximum retry attempts for failed requests. Defaults to 1.
+            max_retries: Maximum retry attempts for failed requests. Defaults to 0
+                (retries disabled). Set to a positive integer to enable retries.
             retry_config: Custom retry configuration (backoff, retryable status codes).
             logger: Logger instance for request/response logging.
             **kwargs: Additional arguments passed to httpx.Client (e.g., base_url,
@@ -114,7 +115,7 @@ class UiPathHttpxClient(Client):
         # Extract httpx.Client params that we need to modify
         headers: HeaderTypes | None = kwargs.pop("headers", None)
         transport: BaseTransport | None = kwargs.pop("transport", None)
-        event_hooks: Mapping[str, list[Callable[..., Any]]] | None = kwargs.pop("event_hooks", None)
+        event_hooks: dict[str, list[Callable[..., Any]]] | None = kwargs.pop("event_hooks", None)
 
         # Merge headers: default -> api_config -> user provided
         merged_headers = Headers(self._default_headers)
@@ -131,7 +132,7 @@ class UiPathHttpxClient(Client):
         # Setup retry transport if not provided
         if transport is None:
             transport = RetryableHTTPTransport(
-                max_retries=max_retries or 0,
+                max_retries=max_retries if max_retries is not None else 0,
                 retry_config=retry_config,
                 logger=logger,
             )
@@ -147,8 +148,8 @@ class UiPathHttpxClient(Client):
                 "request": [],
                 "response": [],
             }
-        event_hooks["request"].append(logging_config.log_request_duration)
-        event_hooks["response"].append(logging_config.log_response_duration)
+        event_hooks.setdefault("request", []).append(logging_config.log_request_duration)
+        event_hooks.setdefault("response", []).append(logging_config.log_response_duration)
         event_hooks["response"].append(logging_config.log_error)
 
         # setup ssl context
@@ -205,7 +206,7 @@ class UiPathHttpxAsyncClient(AsyncClient):
     """
 
     _streaming_header: str = "X-UiPath-Streaming-Enabled"
-    _default_headers: Mapping[str, str] = {
+    _default_headers: dict[str, str] = {
         "X-UiPath-LLMGateway-TimeoutSeconds": "295",  # server side timeout, default is 10, maximum is 300
         # "X-UiPath-LLMGateway-AllowFull4xxResponse": "true",  # allow full 4xx responses (default is false) — removed from default to avoid PII leakage in logs
     }
@@ -233,7 +234,8 @@ class UiPathHttpxAsyncClient(AsyncClient):
             captured_headers: Case-insensitive header name prefixes to capture from
                 responses. Captured headers are stored in a ContextVar and can be
                 retrieved with get_captured_response_headers(). Defaults to ("x-uipath-",).
-            max_retries: Maximum retry attempts for failed requests. Defaults to 1.
+            max_retries: Maximum retry attempts for failed requests. Defaults to 0
+                (retries disabled). Set to a positive integer to enable retries.
             retry_config: Custom retry configuration (backoff, retryable status codes).
             logger: Logger instance for request/response logging.
             **kwargs: Additional arguments passed to httpx.AsyncClient (e.g., base_url,
@@ -247,7 +249,7 @@ class UiPathHttpxAsyncClient(AsyncClient):
         # Extract httpx.AsyncClient params that we need to modify
         headers: HeaderTypes | None = kwargs.pop("headers", None)
         transport: AsyncBaseTransport | None = kwargs.pop("transport", None)
-        event_hooks: Mapping[str, list[Callable[..., Any]]] | None = kwargs.pop("event_hooks", None)
+        event_hooks: dict[str, list[Callable[..., Any]]] | None = kwargs.pop("event_hooks", None)
 
         # Merge headers: default -> api_config -> user provided
         merged_headers = Headers(self._default_headers)
@@ -264,7 +266,7 @@ class UiPathHttpxAsyncClient(AsyncClient):
         # Setup retry transport if not provided
         if transport is None:
             transport = RetryableAsyncHTTPTransport(
-                max_retries=max_retries or 0,
+                max_retries=max_retries if max_retries is not None else 0,
                 retry_config=retry_config,
                 logger=logger,
             )
@@ -280,8 +282,8 @@ class UiPathHttpxAsyncClient(AsyncClient):
                 "request": [],
                 "response": [],
             }
-        event_hooks["request"].append(logging_config.alog_request_duration)
-        event_hooks["response"].append(logging_config.alog_response_duration)
+        event_hooks.setdefault("request", []).append(logging_config.alog_request_duration)
+        event_hooks.setdefault("response", []).append(logging_config.alog_response_duration)
         event_hooks["response"].append(logging_config.alog_error)
 
         # setup ssl context

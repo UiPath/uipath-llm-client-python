@@ -4,13 +4,14 @@ from collections.abc import Mapping, Sequence
 from httpx import Headers
 
 from uipath.llm_client.settings.base import UiPathAPIConfig
+from uipath.llm_client.settings.constants import ApiType, RoutingMode
 
-_CAPTURED_RESPONSE_HEADERS: contextvars.ContextVar[dict[str, str]] = contextvars.ContextVar(
-    "_captured_response_headers", default={}
+_CAPTURED_RESPONSE_HEADERS: contextvars.ContextVar[dict[str, str] | None] = contextvars.ContextVar(
+    "_captured_response_headers", default=None
 )
 
-_DYNAMIC_REQUEST_HEADERS: contextvars.ContextVar[dict[str, str]] = contextvars.ContextVar(
-    "_dynamic_request_headers", default={}
+_DYNAMIC_REQUEST_HEADERS: contextvars.ContextVar[dict[str, str] | None] = contextvars.ContextVar(
+    "_dynamic_request_headers", default=None
 )
 
 
@@ -20,10 +21,10 @@ def get_captured_response_headers() -> dict[str, str]:
     Returns an empty dict if no headers have been captured or if called
     outside a capture scope.
     """
-    return dict(_CAPTURED_RESPONSE_HEADERS.get())
+    return dict(_CAPTURED_RESPONSE_HEADERS.get() or {})
 
 
-def set_captured_response_headers(headers: dict[str, str]) -> contextvars.Token[dict[str, str]]:
+def set_captured_response_headers(headers: dict[str, str]) -> contextvars.Token[dict[str, str] | None]:
     """Set captured response headers for the current context."""
     return _CAPTURED_RESPONSE_HEADERS.set(headers)
 
@@ -33,10 +34,10 @@ def get_dynamic_request_headers() -> dict[str, str]:
 
     Returns an empty dict if no dynamic headers have been set in this context.
     """
-    return dict(_DYNAMIC_REQUEST_HEADERS.get())
+    return dict(_DYNAMIC_REQUEST_HEADERS.get() or {})
 
 
-def set_dynamic_request_headers(headers: dict[str, str]) -> contextvars.Token[dict[str, str]]:
+def set_dynamic_request_headers(headers: dict[str, str]) -> contextvars.Token[dict[str, str] | None]:
     """Set headers to be injected into the next outgoing request."""
     return _DYNAMIC_REQUEST_HEADERS.set(headers)
 
@@ -74,9 +75,9 @@ def build_routing_headers(
     """
     headers: dict[str, str] = {}
     if api_config is not None:
-        if api_config.routing_mode == "normalized" and model_name is not None:
+        if api_config.routing_mode == RoutingMode.NORMALIZED and model_name is not None:
             headers["X-UiPath-LlmGateway-NormalizedApi-ModelName"] = model_name
-        elif api_config.routing_mode == "passthrough" and api_config.api_type == "completions":
+        elif api_config.routing_mode == RoutingMode.PASSTHROUGH and api_config.api_type == ApiType.COMPLETIONS:
             if api_config.api_flavor is not None:
                 headers["X-UiPath-LlmGateway-ApiFlavor"] = api_config.api_flavor
             if api_config.api_version is not None:

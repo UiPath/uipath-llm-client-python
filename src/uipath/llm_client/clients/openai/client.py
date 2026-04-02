@@ -1,8 +1,8 @@
 import logging
-from typing import Any
+from collections.abc import Mapping, Sequence
 
 from uipath.llm_client.clients.openai.utils import OpenAIRequestHandler
-from uipath.llm_client.httpx_client import UiPathHttpxAsyncClient, UiPathHttpxClient
+from uipath.llm_client.clients.utils import build_httpx_async_client, build_httpx_client
 from uipath.llm_client.settings import get_default_client_settings
 from uipath.llm_client.settings.base import UiPathBaseSettings
 from uipath.llm_client.utils.retry import RetryConfig
@@ -17,29 +17,47 @@ except ImportError as e:
 
 
 class UiPathOpenAI(OpenAI):
+    """OpenAI client routed through UiPath LLM Gateway.
+
+    Wraps the standard OpenAI client to route requests through UiPath's
+    LLM Gateway while preserving the full OpenAI SDK interface.
+
+    Args:
+        model_name: The OpenAI model name (e.g., "gpt-4o-2024-11-20").
+        byo_connection_id: Bring Your Own connection ID for custom deployments.
+        client_settings: UiPath client settings. Defaults to environment-based settings.
+        timeout: Client-side request timeout in seconds.
+        max_retries: Maximum retry attempts for failed requests.
+        default_headers: Additional headers to include in requests.
+        captured_headers: Response header prefixes to capture (case-insensitive).
+        retry_config: Custom retry configuration.
+        logger: Logger instance for request/response logging.
+    """
+
     def __init__(
         self,
         *,
         model_name: str,
         byo_connection_id: str | None = None,
         client_settings: UiPathBaseSettings | None = None,
+        timeout: float | None = None,
+        max_retries: int | None = None,
+        default_headers: Mapping[str, str] | None = None,
+        captured_headers: Sequence[str] = ("x-uipath-",),
         retry_config: RetryConfig | None = None,
         logger: logging.Logger | None = None,
-        **kwargs: Any,
     ):
         client_settings = client_settings or get_default_client_settings()
-        timeout = kwargs.pop("timeout", None)
-        max_retries = kwargs.pop("max_retries", None)
-        default_headers = kwargs.pop("default_headers", None)
-        httpx_client = UiPathHttpxClient(
+        httpx_client = build_httpx_client(
             model_name=model_name,
             byo_connection_id=byo_connection_id,
+            client_settings=client_settings,
             timeout=timeout,
             max_retries=max_retries,
-            headers=default_headers,
+            default_headers=default_headers,
+            captured_headers=captured_headers,
             retry_config=retry_config,
             logger=logger,
-            auth=client_settings.build_auth_pipeline(),
             event_hooks={
                 "request": [
                     OpenAIRequestHandler(
@@ -57,29 +75,47 @@ class UiPathOpenAI(OpenAI):
 
 
 class UiPathAsyncOpenAI(AsyncOpenAI):
+    """Async OpenAI client routed through UiPath LLM Gateway.
+
+    Wraps the standard AsyncOpenAI client to route requests through UiPath's
+    LLM Gateway while preserving the full OpenAI SDK interface.
+
+    Args:
+        model_name: The OpenAI model name (e.g., "gpt-4o-2024-11-20").
+        byo_connection_id: Bring Your Own connection ID for custom deployments.
+        client_settings: UiPath client settings. Defaults to environment-based settings.
+        timeout: Client-side request timeout in seconds.
+        max_retries: Maximum retry attempts for failed requests.
+        default_headers: Additional headers to include in requests.
+        captured_headers: Response header prefixes to capture (case-insensitive).
+        retry_config: Custom retry configuration.
+        logger: Logger instance for request/response logging.
+    """
+
     def __init__(
         self,
         *,
         model_name: str,
         byo_connection_id: str | None = None,
         client_settings: UiPathBaseSettings | None = None,
+        timeout: float | None = None,
+        max_retries: int | None = None,
+        default_headers: Mapping[str, str] | None = None,
+        captured_headers: Sequence[str] = ("x-uipath-",),
         retry_config: RetryConfig | None = None,
         logger: logging.Logger | None = None,
-        **kwargs: Any,
     ):
         client_settings = client_settings or get_default_client_settings()
-        timeout = kwargs.pop("timeout", None)
-        max_retries = kwargs.pop("max_retries", None)
-        default_headers = kwargs.pop("default_headers", None)
-        httpx_client = UiPathHttpxAsyncClient(
+        httpx_client = build_httpx_async_client(
             model_name=model_name,
             byo_connection_id=byo_connection_id,
+            client_settings=client_settings,
             timeout=timeout,
             max_retries=max_retries,
-            headers=default_headers,
+            default_headers=default_headers,
+            captured_headers=captured_headers,
             retry_config=retry_config,
             logger=logger,
-            auth=client_settings.build_auth_pipeline(),
             event_hooks={
                 "request": [
                     OpenAIRequestHandler(
@@ -97,29 +133,47 @@ class UiPathAsyncOpenAI(AsyncOpenAI):
 
 
 class UiPathAzureOpenAI(AzureOpenAI):
+    """Azure OpenAI client routed through UiPath LLM Gateway.
+
+    Wraps the AzureOpenAI client to route requests through UiPath's
+    LLM Gateway while preserving the full Azure OpenAI SDK interface.
+
+    Args:
+        model_name: The model name (e.g., "gpt-4o-2024-11-20").
+        byo_connection_id: Bring Your Own connection ID for custom deployments.
+        client_settings: UiPath client settings. Defaults to environment-based settings.
+        timeout: Client-side request timeout in seconds.
+        max_retries: Maximum retry attempts for failed requests.
+        default_headers: Additional headers to include in requests.
+        captured_headers: Response header prefixes to capture (case-insensitive).
+        retry_config: Custom retry configuration.
+        logger: Logger instance for request/response logging.
+    """
+
     def __init__(
         self,
         *,
         model_name: str,
         byo_connection_id: str | None = None,
         client_settings: UiPathBaseSettings | None = None,
+        timeout: float | None = None,
+        max_retries: int | None = None,
+        default_headers: Mapping[str, str] | None = None,
+        captured_headers: Sequence[str] = ("x-uipath-",),
         retry_config: RetryConfig | None = None,
         logger: logging.Logger | None = None,
-        **kwargs: Any,
     ):
         client_settings = client_settings or get_default_client_settings()
-        timeout = kwargs.pop("timeout", None)
-        max_retries = kwargs.pop("max_retries", None)
-        default_headers = kwargs.pop("default_headers", None)
-        httpx_client = UiPathHttpxClient(
+        httpx_client = build_httpx_client(
             model_name=model_name,
             byo_connection_id=byo_connection_id,
+            client_settings=client_settings,
             timeout=timeout,
             max_retries=max_retries,
-            headers=default_headers,
+            default_headers=default_headers,
+            captured_headers=captured_headers,
             retry_config=retry_config,
             logger=logger,
-            auth=client_settings.build_auth_pipeline(),
             event_hooks={
                 "request": [
                     OpenAIRequestHandler(
@@ -138,29 +192,47 @@ class UiPathAzureOpenAI(AzureOpenAI):
 
 
 class UiPathAsyncAzureOpenAI(AsyncAzureOpenAI):
+    """Async Azure OpenAI client routed through UiPath LLM Gateway.
+
+    Wraps the AsyncAzureOpenAI client to route requests through UiPath's
+    LLM Gateway while preserving the full Azure OpenAI SDK interface.
+
+    Args:
+        model_name: The model name (e.g., "gpt-4o-2024-11-20").
+        byo_connection_id: Bring Your Own connection ID for custom deployments.
+        client_settings: UiPath client settings. Defaults to environment-based settings.
+        timeout: Client-side request timeout in seconds.
+        max_retries: Maximum retry attempts for failed requests.
+        default_headers: Additional headers to include in requests.
+        captured_headers: Response header prefixes to capture (case-insensitive).
+        retry_config: Custom retry configuration.
+        logger: Logger instance for request/response logging.
+    """
+
     def __init__(
         self,
         *,
         model_name: str,
         byo_connection_id: str | None = None,
         client_settings: UiPathBaseSettings | None = None,
+        timeout: float | None = None,
+        max_retries: int | None = None,
+        default_headers: Mapping[str, str] | None = None,
+        captured_headers: Sequence[str] = ("x-uipath-",),
         retry_config: RetryConfig | None = None,
         logger: logging.Logger | None = None,
-        **kwargs: Any,
     ):
         client_settings = client_settings or get_default_client_settings()
-        timeout = kwargs.pop("timeout", None)
-        max_retries = kwargs.pop("max_retries", None)
-        default_headers = kwargs.pop("default_headers", None)
-        httpx_client = UiPathHttpxAsyncClient(
+        httpx_client = build_httpx_async_client(
             model_name=model_name,
             byo_connection_id=byo_connection_id,
+            client_settings=client_settings,
             timeout=timeout,
             max_retries=max_retries,
-            headers=default_headers,
+            default_headers=default_headers,
+            captured_headers=captured_headers,
             retry_config=retry_config,
             logger=logger,
-            auth=client_settings.build_auth_pipeline(),
             event_hooks={
                 "request": [
                     OpenAIRequestHandler(

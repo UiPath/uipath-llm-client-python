@@ -9,20 +9,22 @@ For framework-specific integrations, see:
     - uipath_llamaindex_client: LlamaIndex-compatible models
 
 Quick Start:
-    >>> from uipath.llm_client import UiPathBaseLLMClient, UiPathAPIConfig
-    >>> from uipath.llm_client.settings import get_default_client_settings
+    >>> from uipath.llm_client import UiPathHttpxClient
+    >>> from uipath.llm_client.settings import get_default_client_settings, UiPathAPIConfig
+    >>> from uipath.llm_client.settings.constants import ApiType, RoutingMode
     >>>
     >>> settings = get_default_client_settings()
-    >>> client = UiPathBaseLLMClient(
-    ...     model="gpt-4o-2024-11-20",
-    ...     api_config=UiPathAPIConfig(
-    ...         api_type=ApiType.COMPLETIONS,
-    ...         routing_mode=RoutingMode.PASSTHROUGH,
-    ...         vendor_type="openai",
-    ...     ),
-    ...     settings=settings,
+    >>> api_config = UiPathAPIConfig(
+    ...     api_type=ApiType.COMPLETIONS,
+    ...     routing_mode=RoutingMode.PASSTHROUGH,
+    ...     vendor_type="openai",
     ... )
-    >>> response = client.uipath_request(request_body={...})
+    >>> client = UiPathHttpxClient(
+    ...     model_name="gpt-4o-2024-11-20",
+    ...     api_config=api_config,
+    ...     base_url=settings.build_base_url(model_name="gpt-4o-2024-11-20", api_config=api_config),
+    ...     auth=settings.build_auth_pipeline(),
+    ... )
 """
 
 from uipath.llm_client.__version__ import __version__

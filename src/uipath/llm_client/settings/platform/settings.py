@@ -8,6 +8,7 @@ from typing_extensions import override
 from uipath.platform.common import EndpointManager
 
 from uipath.llm_client.settings.base import UiPathAPIConfig, UiPathBaseSettings
+from uipath.llm_client.settings.constants import ApiType, RoutingMode
 from uipath.llm_client.settings.platform.utils import is_token_expired, parse_access_token
 
 
@@ -72,7 +73,7 @@ class PlatformBaseSettings(UiPathBaseSettings):
             )
 
         parsed_token_data = parse_access_token(access_token)
-        self.client_id = parsed_token_data.get("client_id", None)
+        self.client_id = parsed_token_data.get("client_id")
         return self
 
     @staticmethod
@@ -97,19 +98,21 @@ class PlatformBaseSettings(UiPathBaseSettings):
         api_config: UiPathAPIConfig | None = None,
     ) -> str:
         """Build the base URL for API requests."""
-        assert model_name is not None
-        assert api_config is not None
-        if api_config.routing_mode == "normalized" and api_config.api_type == "completions":
+        if model_name is None:
+            raise ValueError("model_name is required for PlatformBaseSettings.build_base_url")
+        if api_config is None:
+            raise ValueError("api_config is required for PlatformBaseSettings.build_base_url")
+        if api_config.routing_mode == RoutingMode.NORMALIZED and api_config.api_type == ApiType.COMPLETIONS:
             url = f"{self.base_url}/{EndpointManager.get_normalized_endpoint()}"
-        elif api_config.routing_mode == "normalized" and api_config.api_type == "embeddings":
+        elif api_config.routing_mode == RoutingMode.NORMALIZED and api_config.api_type == ApiType.EMBEDDINGS:
             raise ValueError(
                 "Normalized embeddings are not supported on UiPath Platform (AgentHub/Orchestrator). "
                 "Use passthrough routing mode for embeddings instead."
             )
-        elif api_config.routing_mode == "passthrough" and api_config.api_type == "completions":
+        elif api_config.routing_mode == RoutingMode.PASSTHROUGH and api_config.api_type == ApiType.COMPLETIONS:
             endpoint = EndpointManager.get_vendor_endpoint()
             url = f"{self.base_url}/{self._format_endpoint(endpoint, model=model_name, vendor=api_config.vendor_type, api_version=api_config.api_version)}"
-        elif api_config.routing_mode == "passthrough" and api_config.api_type == "embeddings":
+        elif api_config.routing_mode == RoutingMode.PASSTHROUGH and api_config.api_type == ApiType.EMBEDDINGS:
             if api_config.vendor_type is not None and api_config.vendor_type != "openai":
                 raise ValueError(
                     f"Platform embeddings endpoint only supports OpenAI-compatible models, "

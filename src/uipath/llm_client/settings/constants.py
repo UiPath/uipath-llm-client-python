@@ -28,7 +28,7 @@ class ApiFlavor(StrEnum):
     ANTHROPIC_CLAUDE = "anthropic-claude"
 
 
-_API_FLAVOR_TO_VENDOR_TYPE: dict[ApiFlavor, VendorType] = {
+API_FLAVOR_TO_VENDOR_TYPE: dict[ApiFlavor, VendorType] = {
     ApiFlavor.CHAT_COMPLETIONS: VendorType.OPENAI,
     ApiFlavor.RESPONSES: VendorType.OPENAI,
     ApiFlavor.GENERATE_CONTENT: VendorType.VERTEXAI,

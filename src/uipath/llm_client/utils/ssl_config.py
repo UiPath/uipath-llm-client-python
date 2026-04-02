@@ -3,7 +3,7 @@ import ssl
 from typing import Any
 
 
-def expand_path(path):
+def expand_path(path: str | None) -> str | None:
     """Expand environment variables and user home directory in path."""
     if not path:
         return path
@@ -14,24 +14,40 @@ def expand_path(path):
     return path
 
 
-def create_ssl_context():
+def create_ssl_context() -> ssl.SSLContext:
+    """Create an SSL context using system certificates.
+
+    Tries ``truststore`` first for native system certificate support.
+    Falls back to ``certifi`` for bundled Mozilla CA certificates.
+
+    Raises:
+        ImportError: If neither ``truststore`` nor ``certifi`` is installed.
+    """
     # Try truststore first (system certificates)
     try:
         import truststore
 
         return truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
     except ImportError:
-        # Fallback to manual certificate configuration
+        pass
+
+    # Fallback to manual certificate configuration
+    try:
         import certifi
-
-        ssl_cert_file = expand_path(os.environ.get("SSL_CERT_FILE"))
-        requests_ca_bundle = expand_path(os.environ.get("REQUESTS_CA_BUNDLE"))
-        ssl_cert_dir = expand_path(os.environ.get("SSL_CERT_DIR"))
-
-        return ssl.create_default_context(
-            cafile=ssl_cert_file or requests_ca_bundle or certifi.where(),
-            capath=ssl_cert_dir,
+    except ImportError:
+        raise ImportError(
+            "SSL certificate support requires either 'truststore' or 'certifi'. "
+            "Install one with: pip install truststore  or  pip install certifi"
         )
+
+    ssl_cert_file = expand_path(os.environ.get("SSL_CERT_FILE"))
+    requests_ca_bundle = expand_path(os.environ.get("REQUESTS_CA_BUNDLE"))
+    ssl_cert_dir = expand_path(os.environ.get("SSL_CERT_DIR"))
+
+    return ssl.create_default_context(
+        cafile=ssl_cert_file or requests_ca_bundle or certifi.where(),
+        capath=ssl_cert_dir,
+    )
 
 
 def get_httpx_ssl_client_kwargs() -> dict[str, Any]:

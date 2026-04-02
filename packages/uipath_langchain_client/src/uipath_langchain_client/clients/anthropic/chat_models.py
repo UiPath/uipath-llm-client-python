@@ -152,13 +152,13 @@ class UiPathChatAnthropic(UiPathBaseChatModel, ChatAnthropic):
                 raise ValueError("Anthropic models are currently not hosted on any other provider")
 
     @override
-    def _create(self, payload: dict) -> Any:
+    def _create(self, payload: dict[str, Any]) -> Any:
         if "betas" in payload:
             return self._anthropic_client.beta.messages.create(**payload)
         return self._anthropic_client.messages.create(**payload)
 
     @override
-    async def _acreate(self, payload: dict) -> Any:
+    async def _acreate(self, payload: dict[str, Any]) -> Any:
         if "betas" in payload:
             return await self._async_anthropic_client.beta.messages.create(**payload)
         return await self._async_anthropic_client.messages.create(**payload)

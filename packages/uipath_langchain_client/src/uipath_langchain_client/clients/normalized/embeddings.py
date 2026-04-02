@@ -1,10 +1,8 @@
-from langchain_core.embeddings import Embeddings
-
 from uipath_langchain_client.base_client import UiPathBaseEmbeddings
 from uipath_langchain_client.settings import ApiType, RoutingMode, UiPathAPIConfig
 
 
-class UiPathEmbeddings(UiPathBaseEmbeddings, Embeddings):
+class UiPathEmbeddings(UiPathBaseEmbeddings):
     """LangChain embeddings using the UiPath's normalized embeddings API.
 
     Provides a consistent interface for generating text embeddings across all

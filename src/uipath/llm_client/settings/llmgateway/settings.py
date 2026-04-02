@@ -7,8 +7,10 @@ from pydantic import Field, SecretStr, model_validator
 from typing_extensions import override
 
 from uipath.llm_client.settings.base import UiPathAPIConfig, UiPathBaseSettings
+from uipath.llm_client.settings.constants import ApiType, RoutingMode
 from uipath.llm_client.settings.llmgateway.utils import LLMGatewayEndpoints
 from uipath.llm_client.utils.exceptions import UiPathAPIError
+from uipath.llm_client.utils.ssl_config import get_httpx_ssl_client_kwargs
 
 
 class LLMGatewayBaseSettings(UiPathBaseSettings):
@@ -73,13 +75,17 @@ class LLMGatewayBaseSettings(UiPathBaseSettings):
         model_name: str | None = None,
         api_config: UiPathAPIConfig | None = None,
     ) -> str:
+        if api_config is None:
+            raise ValueError("api_config is required for LLMGatewaySettings.build_base_url")
+        if api_config.routing_mode is None:
+            raise ValueError("api_config.routing_mode is required for LLMGatewaySettings.build_base_url")
         base_url = f"{self.base_url}/{self.org_id}/{self.tenant_id}"
-        if api_config is not None and api_config.routing_mode == "normalized":
-            url = f"{base_url}/{LLMGatewayEndpoints.NORMALIZED_ENDPOINT.value.format(api_type='chat/completions' if api_config.api_type == 'completions' else 'embeddings')}"
-        else:
-            if api_config is None:
-                raise ValueError("api_config is required for passthrough routing_mode")
+        if api_config.routing_mode == RoutingMode.NORMALIZED:
+            url = f"{base_url}/{LLMGatewayEndpoints.NORMALIZED_ENDPOINT.value.format(api_type='chat/completions' if api_config.api_type == ApiType.COMPLETIONS else 'embeddings')}"
+        elif api_config.routing_mode == RoutingMode.PASSTHROUGH:
             url = f"{base_url}/{LLMGatewayEndpoints.PASSTHROUGH_ENDPOINT.value.format(vendor=api_config.vendor_type, model=model_name, api_type=api_config.api_type)}"
+        else:
+            raise ValueError(f"Unsupported routing_mode: {api_config.routing_mode}")
         return url
 
     @override
@@ -108,7 +114,7 @@ class LLMGatewayBaseSettings(UiPathBaseSettings):
     @override
     def get_available_models(self) -> list[dict[str, Any]]:
         discovery_url = f"{self.base_url}/{self.org_id}/{self.tenant_id}/{LLMGatewayEndpoints.DISCOVERY_ENDPOINT.value}"
-        with Client(auth=self.build_auth_pipeline(), headers=self.build_auth_headers()) as client:
+        with Client(auth=self.build_auth_pipeline(), headers=self.build_auth_headers(), **get_httpx_ssl_client_kwargs()) as client:
             response = client.get(discovery_url)
             if response.is_error:
                 raise UiPathAPIError.from_response(response)
@@ -116,17 +122,23 @@ class LLMGatewayBaseSettings(UiPathBaseSettings):
 
     @override
     def validate_byo_model(self, model_info: dict[str, Any]) -> None:
+        """Validate that the model is a BYOM model.
+
+        Note: This method may mutate ``self.operation_code`` as a side effect
+        when no operation code was explicitly configured but the model provides
+        available codes.
+        """
         byom_details = model_info.get("byomDetails", {})
         operation_codes = byom_details.get("availableOperationCodes", [])
         if self.operation_code and self.operation_code not in operation_codes:
             raise ValueError(
-                f"The operation code {self.operation_code} is not allowed for the model {model_info['modelName']}"
+                f"The operation code {self.operation_code} is not allowed for the model {model_info.get('modelName', 'unknown')}"
             )
         if not self.operation_code and len(operation_codes) > 0:
             if len(operation_codes) > 1:
                 logging.warning(
                     "Multiple operation codes are allowed for the model %s, but no operation code was provided, picking the first one available: %s",
-                    model_info["modelName"],
+                    model_info.get("modelName", "unknown"),
                     operation_codes[0],
                 )
             self.operation_code = operation_codes[0]

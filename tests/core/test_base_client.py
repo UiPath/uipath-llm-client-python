@@ -458,8 +458,8 @@ class TestLLMGatewayAuthRefresh:
                 except StopIteration:
                     pass
 
-    def test_auth_singleton_reuses_instance(self, llmgw_env_vars):
-        """Test that LLMGatewayS2SAuth is a singleton."""
+    def test_auth_singleton_reuses_instance_for_same_settings(self, llmgw_env_vars):
+        """Test that LLMGatewayS2SAuth reuses the same instance for identical settings."""
         from uipath.llm_client.settings.llmgateway.auth import LLMGatewayS2SAuth
 
         with patch.dict(os.environ, llmgw_env_vars, clear=True):
@@ -467,6 +467,20 @@ class TestLLMGatewayAuthRefresh:
             auth1 = LLMGatewayS2SAuth(settings=settings)
             auth2 = LLMGatewayS2SAuth(settings=settings)
             assert auth1 is auth2
+
+    def test_auth_creates_separate_instances_for_different_settings(self, llmgw_env_vars):
+        """Test that LLMGatewayS2SAuth creates separate instances for different credentials."""
+        from uipath.llm_client.settings.llmgateway.auth import LLMGatewayS2SAuth
+
+        env1 = {**llmgw_env_vars, "LLMGW_ACCESS_TOKEN": "token-a"}
+        env2 = {**llmgw_env_vars, "LLMGW_ACCESS_TOKEN": "token-b"}
+        with patch.dict(os.environ, env1, clear=True):
+            settings1 = LLMGatewaySettings()
+        with patch.dict(os.environ, env2, clear=True):
+            settings2 = LLMGatewaySettings()
+        auth1 = LLMGatewayS2SAuth(settings=settings1)
+        auth2 = LLMGatewayS2SAuth(settings=settings2)
+        assert auth1 is not auth2
 
 
 # ============================================================================
@@ -637,17 +651,17 @@ class TestPlatformSettings:
     def test_build_base_url_requires_model_name(
         self, platform_env_vars, mock_platform_auth, normalized_api_config
     ):
-        """Test build_base_url asserts model_name is not None."""
+        """Test build_base_url raises ValueError when model_name is None."""
         with patch.dict(os.environ, platform_env_vars, clear=True):
             settings = PlatformSettings()
-            with pytest.raises(AssertionError):
+            with pytest.raises(ValueError, match="model_name is required"):
                 settings.build_base_url(model_name=None, api_config=normalized_api_config)
 
     def test_build_base_url_requires_api_config(self, platform_env_vars, mock_platform_auth):
-        """Test build_base_url asserts api_config is not None."""
+        """Test build_base_url raises ValueError when api_config is None."""
         with patch.dict(os.environ, platform_env_vars, clear=True):
             settings = PlatformSettings()
-            with pytest.raises(AssertionError):
+            with pytest.raises(ValueError, match="api_config is required"):
                 settings.build_base_url(model_name="gpt-4o", api_config=None)
 
     def test_build_auth_headers_empty_when_no_optional(self, platform_env_vars, mock_platform_auth):
@@ -715,12 +729,11 @@ class TestPlatformAuthRefresh:
     @pytest.fixture(autouse=True)
     def clear_auth_singleton(self):
         """Clear PlatformAuth singleton before each test."""
-        from uipath.llm_client.settings.platform.auth import PlatformAuth
         from uipath.llm_client.settings.utils import SingletonMeta
 
-        SingletonMeta._instances.pop(PlatformAuth, None)
+        SingletonMeta._instances.clear()
         yield
-        SingletonMeta._instances.pop(PlatformAuth, None)
+        SingletonMeta._instances.clear()
 
     def test_auth_flow_adds_bearer_token(self, platform_env_vars, mock_platform_auth):
         """Test auth_flow adds Authorization header."""
@@ -765,8 +778,8 @@ class TestPlatformAuthRefresh:
                 except StopIteration:
                     pass
 
-    def test_auth_singleton_reuses_instance(self, platform_env_vars, mock_platform_auth):
-        """Test that PlatformAuth is a singleton."""
+    def test_auth_singleton_reuses_instance_for_same_settings(self, platform_env_vars, mock_platform_auth):
+        """Test that PlatformAuth reuses the same instance for identical settings."""
         from uipath.llm_client.settings.platform.auth import PlatformAuth
 
         with patch.dict(os.environ, platform_env_vars, clear=True):
@@ -774,6 +787,20 @@ class TestPlatformAuthRefresh:
             auth1 = PlatformAuth(settings=settings)
             auth2 = PlatformAuth(settings=settings)
             assert auth1 is auth2
+
+    def test_auth_creates_separate_instances_for_different_settings(self, platform_env_vars, mock_platform_auth):
+        """Test that PlatformAuth creates separate instances for different credentials."""
+        from uipath.llm_client.settings.platform.auth import PlatformAuth
+
+        env1 = {**platform_env_vars, "UIPATH_ACCESS_TOKEN": "token-x"}
+        env2 = {**platform_env_vars, "UIPATH_ACCESS_TOKEN": "token-y"}
+        with patch.dict(os.environ, env1, clear=True):
+            settings1 = PlatformSettings()
+        with patch.dict(os.environ, env2, clear=True):
+            settings2 = PlatformSettings()
+        auth1 = PlatformAuth(settings=settings1)
+        auth2 = PlatformAuth(settings=settings2)
+        assert auth1 is not auth2
 
 
 # ============================================================================
@@ -1131,7 +1158,7 @@ class TestSingletonMeta:
     """Tests for SingletonMeta metaclass."""
 
     def test_singleton_creates_single_instance(self):
-        """Test singleton creates only one instance."""
+        """Test singleton creates only one instance when no cache key is defined."""
 
         class TestSingleton(metaclass=SingletonMeta):
             def __init__(self, value: int):
@@ -1156,6 +1183,41 @@ class TestSingletonMeta:
         b = SingletonB()
 
         assert a is not b
+
+    def test_keyed_singleton_same_key_reuses_instance(self):
+        """Test that same cache key returns the same instance."""
+
+        class KeyedSingleton(metaclass=SingletonMeta):
+            def __init__(self, key: str, value: int):
+                self.key = key
+                self.value = value
+
+            @classmethod
+            def _singleton_cache_key(cls, key: str, value: int) -> tuple:
+                return (key,)
+
+        a = KeyedSingleton("k1", 10)
+        b = KeyedSingleton("k1", 20)
+        assert a is b
+        assert a.value == 10  # First value retained
+
+    def test_keyed_singleton_different_key_creates_new_instance(self):
+        """Test that different cache keys create separate instances."""
+
+        class KeyedSingleton2(metaclass=SingletonMeta):
+            def __init__(self, key: str, value: int):
+                self.key = key
+                self.value = value
+
+            @classmethod
+            def _singleton_cache_key(cls, key: str, value: int) -> tuple:
+                return (key,)
+
+        a = KeyedSingleton2("k1", 10)
+        b = KeyedSingleton2("k2", 20)
+        assert a is not b
+        assert a.value == 10
+        assert b.value == 20
 
 
 # ============================================================================

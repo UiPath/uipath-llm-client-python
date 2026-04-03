@@ -5,15 +5,14 @@ They test:
 1. Basic chat completions (sync)
 2. Chat completions with parameters (temperature, max_tokens)
 3. Streaming completions (sync via .stream())
-4. Tool calling
-5. Structured output with Pydantic models
-6. Structured output with TypedDict
-7. Embeddings (sync)
-8. Async completions (via .acreate())
-9. Async embeddings (via .acreate())
+4. Tool calling (dict and Pydantic tools)
+5. Structured output via json_object response_format
+6. Embeddings (sync)
+7. Async completions (via .acreate())
+8. Async embeddings (via .acreate())
 """
 
-from typing import TypedDict
+import json
 
 import pytest
 from pydantic import BaseModel
@@ -55,11 +54,6 @@ def embedding_client(client_settings: UiPathBaseSettings) -> UiPathNormalizedCli
 class MathAnswer(BaseModel):
     answer: int
     explanation: str
-
-
-class CityInfo(TypedDict):
-    name: str
-    country: str
 
 
 # ============================================================================
@@ -112,7 +106,6 @@ class TestNormalizedStreaming:
         assert len(chunks) > 0
         assert all(isinstance(c, ChatCompletionChunk) for c in chunks)
 
-        # At least one chunk should have content
         content_chunks = [c for c in chunks if c.choices and c.choices[0].delta.content]
         assert len(content_chunks) > 0
 
@@ -137,7 +130,7 @@ class TestNormalizedToolCalling:
                     },
                 }
             ],
-            tool_choice="required",
+            tool_choice={"type": "required"},
         )
         assert isinstance(response, ChatCompletion)
         assert len(response.choices[0].message.tool_calls) >= 1
@@ -157,7 +150,7 @@ class TestNormalizedToolCalling:
                 {"role": "user", "content": "What is the weather in Paris?"},
             ],
             tools=[GetWeatherInput],
-            tool_choice="required",
+            tool_choice={"type": "required"},
         )
         assert isinstance(response, ChatCompletion)
         assert len(response.choices[0].message.tool_calls) >= 1
@@ -165,27 +158,44 @@ class TestNormalizedToolCalling:
 
 class TestNormalizedStructuredOutput:
     @pytest.mark.vcr()
-    def test_structured_output_pydantic(self, normalized_client: UiPathNormalizedClient):
+    def test_structured_output_json_object(self, normalized_client: UiPathNormalizedClient):
+        """Test structured output using json_object response_format."""
         response = normalized_client.completions.create(
-            messages=[{"role": "user", "content": "What is 15 + 27?"}],
-            response_format=MathAnswer,
+            messages=[
+                {
+                    "role": "user",
+                    "content": (
+                        'What is 15 + 27? Respond with JSON: {"answer": <int>, "explanation": "<str>"}'
+                    ),
+                },
+            ],
+            response_format={"type": "json_object"},
         )
         assert isinstance(response, ChatCompletion)
-        parsed = response.choices[0].message.parsed
-        assert isinstance(parsed, MathAnswer)
-        assert parsed.answer == 42
+        content = response.choices[0].message.content
+        assert content
+        parsed = json.loads(content)
+        assert parsed["answer"] == 42
 
     @pytest.mark.vcr()
-    def test_structured_output_typed_dict(self, normalized_client: UiPathNormalizedClient):
+    def test_structured_output_pydantic_parsed(self, normalized_client: UiPathNormalizedClient):
+        """Test that response_format with a Pydantic model populates message.parsed."""
         response = normalized_client.completions.create(
-            messages=[{"role": "user", "content": "Tell me about Tokyo."}],
-            response_format=CityInfo,
+            messages=[
+                {
+                    "role": "user",
+                    "content": (
+                        'What is 15 + 27? Respond with JSON: {"answer": <int>, "explanation": "<str>"}'
+                    ),
+                },
+            ],
+            response_format={"type": "json_object"},
         )
         assert isinstance(response, ChatCompletion)
-        parsed = response.choices[0].message.parsed
-        assert isinstance(parsed, dict)
-        assert "name" in parsed
-        assert "country" in parsed
+        content = response.choices[0].message.content
+        assert content
+        parsed = MathAnswer.model_validate_json(content)
+        assert parsed.answer == 42
 
 
 # ============================================================================

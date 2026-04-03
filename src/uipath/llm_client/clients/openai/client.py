@@ -3,8 +3,7 @@ from collections.abc import Mapping, Sequence
 
 from uipath.llm_client.clients.openai.utils import OpenAIRequestHandler
 from uipath.llm_client.clients.utils import build_httpx_async_client, build_httpx_client
-from uipath.llm_client.settings import get_default_client_settings
-from uipath.llm_client.settings.base import UiPathBaseSettings
+from uipath.llm_client.settings import UiPathBaseSettings, get_default_client_settings
 from uipath.llm_client.utils.retry import RetryConfig
 
 try:

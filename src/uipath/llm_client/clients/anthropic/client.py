@@ -89,8 +89,8 @@ class UiPathAnthropic(Anthropic):
             http_client=build_httpx_client(
                 model_name=model_name,
                 byo_connection_id=byo_connection_id,
-                api_config=_build_api_config(),
                 client_settings=client_settings,
+                api_config=_build_api_config(),
                 timeout=timeout,
                 max_retries=max_retries,
                 default_headers=default_headers,
@@ -136,8 +136,8 @@ class UiPathAsyncAnthropic(AsyncAnthropic):
             http_client=build_httpx_async_client(
                 model_name=model_name,
                 byo_connection_id=byo_connection_id,
-                api_config=_build_api_config(),
                 client_settings=client_settings,
+                api_config=_build_api_config(),
                 timeout=timeout,
                 max_retries=max_retries,
                 default_headers=default_headers,
@@ -185,8 +185,8 @@ class UiPathAnthropicBedrock(AnthropicBedrock):
             http_client=build_httpx_client(
                 model_name=model_name,
                 byo_connection_id=byo_connection_id,
-                api_config=_build_api_config(vendor_type=VendorType.AWSBEDROCK),
                 client_settings=client_settings,
+                api_config=_build_api_config(vendor_type=VendorType.AWSBEDROCK),
                 timeout=timeout,
                 max_retries=max_retries,
                 default_headers=default_headers,
@@ -234,8 +234,8 @@ class UiPathAsyncAnthropicBedrock(AsyncAnthropicBedrock):
             http_client=build_httpx_async_client(
                 model_name=model_name,
                 byo_connection_id=byo_connection_id,
-                api_config=_build_api_config(vendor_type=VendorType.AWSBEDROCK),
                 client_settings=client_settings,
+                api_config=_build_api_config(vendor_type=VendorType.AWSBEDROCK),
                 timeout=timeout,
                 max_retries=max_retries,
                 default_headers=default_headers,
@@ -283,8 +283,8 @@ class UiPathAnthropicVertex(AnthropicVertex):
             http_client=build_httpx_client(
                 model_name=model_name,
                 byo_connection_id=byo_connection_id,
-                api_config=_build_api_config(vendor_type=VendorType.VERTEXAI),
                 client_settings=client_settings,
+                api_config=_build_api_config(vendor_type=VendorType.VERTEXAI),
                 timeout=timeout,
                 max_retries=max_retries,
                 default_headers=default_headers,
@@ -332,8 +332,8 @@ class UiPathAsyncAnthropicVertex(AsyncAnthropicVertex):
             http_client=build_httpx_async_client(
                 model_name=model_name,
                 byo_connection_id=byo_connection_id,
-                api_config=_build_api_config(vendor_type=VendorType.VERTEXAI),
                 client_settings=client_settings,
+                api_config=_build_api_config(vendor_type=VendorType.VERTEXAI),
                 timeout=timeout,
                 max_retries=max_retries,
                 default_headers=default_headers,
@@ -379,8 +379,8 @@ class UiPathAnthropicFoundry(AnthropicFoundry):
             http_client=build_httpx_client(
                 model_name=model_name,
                 byo_connection_id=byo_connection_id,
-                api_config=_build_api_config(vendor_type=VendorType.AZURE),
                 client_settings=client_settings,
+                api_config=_build_api_config(vendor_type=VendorType.AZURE),
                 timeout=timeout,
                 max_retries=max_retries,
                 default_headers=default_headers,
@@ -426,8 +426,8 @@ class UiPathAsyncAnthropicFoundry(AsyncAnthropicFoundry):
             http_client=build_httpx_async_client(
                 model_name=model_name,
                 byo_connection_id=byo_connection_id,
-                api_config=_build_api_config(vendor_type=VendorType.AZURE),
                 client_settings=client_settings,
+                api_config=_build_api_config(vendor_type=VendorType.AZURE),
                 timeout=timeout,
                 max_retries=max_retries,
                 default_headers=default_headers,

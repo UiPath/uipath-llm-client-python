@@ -60,8 +60,8 @@ class UiPathGoogle(Client):
         httpx_client = build_httpx_client(
             model_name=model_name,
             byo_connection_id=byo_connection_id,
-            api_config=api_config,
             client_settings=client_settings,
+            api_config=api_config,
             timeout=timeout,
             max_retries=max_retries,
             default_headers=default_headers,
@@ -72,8 +72,8 @@ class UiPathGoogle(Client):
         httpx_async_client = build_httpx_async_client(
             model_name=model_name,
             byo_connection_id=byo_connection_id,
-            api_config=api_config,
             client_settings=client_settings,
+            api_config=api_config,
             timeout=timeout,
             max_retries=max_retries,
             default_headers=default_headers,

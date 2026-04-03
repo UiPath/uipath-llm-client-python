@@ -2,9 +2,9 @@ import logging
 
 from httpx import URL, Request
 
-from uipath.llm_client.httpx_client import build_routing_headers
 from uipath.llm_client.settings.base import UiPathAPIConfig, UiPathBaseSettings
 from uipath.llm_client.settings.constants import ApiFlavor, ApiType, RoutingMode, VendorType
+from uipath.llm_client.utils.headers import build_routing_headers
 
 _logger = logging.getLogger(__name__)
 

@@ -25,7 +25,8 @@ Example:
 
 import json
 from collections.abc import AsyncGenerator, Callable, Generator, Sequence
-from typing import Any
+from functools import partial
+from typing import Any, Literal, Union, cast
 
 from langchain_core.callbacks import (
     AsyncCallbackManagerForLLMRun,
@@ -44,20 +45,75 @@ from langchain_core.messages import (
     UsageMetadata,
 )
 from langchain_core.messages.utils import convert_to_openai_messages
+from langchain_core.output_parsers import JsonOutputParser
+from langchain_core.output_parsers.openai_tools import (
+    JsonOutputKeyToolsParser,
+    PydanticToolsParser,
+)
 from langchain_core.outputs import (
     ChatGeneration,
     ChatGenerationChunk,
     ChatResult,
 )
-from langchain_core.runnables import Runnable
+from langchain_core.runnables import Runnable, RunnableLambda, RunnablePassthrough
 from langchain_core.tools import BaseTool
 from langchain_core.utils.function_calling import (
     convert_to_openai_function,
+    convert_to_openai_tool,
 )
-from pydantic import Field
+from langchain_core.utils.pydantic import is_basemodel_subclass
+from pydantic import AliasChoices, BaseModel, Field
 
 from uipath_langchain_client.base_client import UiPathBaseChatModel
 from uipath_langchain_client.settings import ApiType, RoutingMode, UiPathAPIConfig
+
+_DictOrPydanticClass = Union[dict[str, Any], type[BaseModel], type]
+_DictOrPydantic = Union[dict[str, Any], BaseModel]
+
+
+def _oai_structured_outputs_parser(ai_msg: AIMessage, schema: type[BaseModel]) -> BaseModel:
+    if not ai_msg.content:
+        raise ValueError("Expected non-empty content from model.")
+    content = ai_msg.content
+    if isinstance(content, list):
+        # Extract the first text block from content parts
+        content = next((c for c in content if isinstance(c, str)), str(content[0]))
+    parsed = json.loads(content)
+    return schema.model_validate(parsed)
+
+
+def _build_normalized_response_format(
+    schema: _DictOrPydanticClass, strict: bool | None = None
+) -> dict[str, Any]:
+    """Build response_format for the normalized API from a schema."""
+    if isinstance(schema, dict):
+        return {"type": "json_schema", "json_schema": schema}
+
+    if isinstance(schema, type) and issubclass(schema, BaseModel):
+        json_schema = schema.model_json_schema()
+        rf: dict[str, Any] = {
+            "type": "json_schema",
+            "json_schema": {
+                "name": schema.__name__,
+                "schema": json_schema,
+            },
+        }
+        if strict is not None:
+            rf["json_schema"]["strict"] = strict
+        return rf
+
+    # TypedDict or other type — convert via openai tool schema
+    tool_schema = convert_to_openai_tool(schema)
+    rf = {
+        "type": "json_schema",
+        "json_schema": {
+            "name": tool_schema["function"]["name"],
+            "schema": tool_schema["function"]["parameters"],
+        },
+    }
+    if strict is not None:
+        rf["json_schema"]["strict"] = strict
+    return rf
 
 
 class UiPathChat(UiPathBaseChatModel):
@@ -101,33 +157,48 @@ class UiPathChat(UiPathBaseChatModel):
         freeze_base_url=True,
     )
 
-    # Standard LLM parameters
-    max_tokens: int | None = None
+    # Common
+    max_tokens: int | None = Field(
+        default=None,
+        validation_alias=AliasChoices("max_tokens", "max_output_tokens", "max_completion_tokens"),
+    )
     temperature: float | None = None
-    stop: list[str] | str | None = Field(default=None, alias="stop_sequences")
+    top_p: float | None = None
+    top_k: int | None = None
+    stop: list[str] | str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("stop", "stop_sequences"),
+    )
+    n: int | None = Field(
+        default=None,
+        validation_alias=AliasChoices("n", "candidate_count"),
+    )
+    frequency_penalty: float | None = None
+    presence_penalty: float | None = None
+    seed: int | None = None
 
-    n: int | None = None  # Number of completions to generate
-    top_p: float | None = None  # Nucleus sampling probability mass
-    presence_penalty: float | None = None  # Penalty for repeated tokens
-    frequency_penalty: float | None = None  # Frequency-based repetition penalty
-    verbosity: str | None = None  # Response verbosity: "low", "medium", or "high"
+    model_kwargs: dict[str, Any] = Field(default_factory=dict)
+    disabled_params: dict[str, Any] | None = None
 
-    model_kwargs: dict[str, Any] = Field(
-        default_factory=dict
-    )  # Additional model-specific parameters
-    disabled_params: dict[str, Any] | None = None  # Parameters to exclude from requests
+    # OpenAI
+    logit_bias: dict[str, int] | None = None
+    logprobs: bool | None = None
+    top_logprobs: int | None = None
+    parallel_tool_calls: bool | None = None
+    reasoning_effort: str | None = None
+    reasoning: dict[str, Any] | None = None
 
-    # OpenAI o1/o3 reasoning parameters
-    reasoning: dict[str, Any] | None = None  # {"effort": "low"|"medium"|"high", "summary": ...}
-    reasoning_effort: str | None = None  # "minimal", "low", "medium", or "high"
+    # Anthropic
+    thinking: dict[str, Any] | None = None
 
-    # Anthropic Claude extended thinking parameters
-    thinking: dict[str, Any] | None = None  # {"type": "enabled"|"disabled", "budget_tokens": N}
+    # Google
+    thinking_level: str | None = None
+    thinking_budget: int | None = None
+    include_thoughts: bool | None = None
+    safety_settings: list[dict[str, Any]] | None = None
 
-    # Google Gemini thinking parameters
-    thinking_level: str | None = None  # Thinking depth level
-    thinking_budget: int | None = None  # Token budget for thinking
-    include_thoughts: bool | None = None  # Include thinking in response
+    # Shared
+    verbosity: str | None = None
 
     @property
     def _llm_type(self) -> str:
@@ -138,20 +209,31 @@ class UiPathChat(UiPathBaseChatModel):
     def _default_params(self) -> dict[str, Any]:
         """Get the default parameters for the normalized API request."""
         exclude_if_none = {
-            "frequency_penalty": self.frequency_penalty,
-            "presence_penalty": self.presence_penalty,
-            "top_p": self.top_p,
-            "stop": self.stop or None,  # Also exclude empty list for this
-            "n": self.n,
             "max_tokens": self.max_tokens,
             "temperature": self.temperature,
-            "verbosity": self.verbosity,
-            "reasoning": self.reasoning,
+            "top_p": self.top_p,
+            "top_k": self.top_k,
+            "stop": self.stop or None,
+            "n": self.n,
+            "frequency_penalty": self.frequency_penalty,
+            "presence_penalty": self.presence_penalty,
+            "seed": self.seed,
+            # OpenAI
+            "logit_bias": self.logit_bias,
+            "logprobs": self.logprobs,
+            "top_logprobs": self.top_logprobs,
+            "parallel_tool_calls": self.parallel_tool_calls,
             "reasoning_effort": self.reasoning_effort,
+            "reasoning": self.reasoning,
+            # Anthropic
             "thinking": self.thinking,
+            # Google
             "thinking_level": self.thinking_level,
             "thinking_budget": self.thinking_budget,
             "include_thoughts": self.include_thoughts,
+            "safety_settings": self.safety_settings,
+            # Shared
+            "verbosity": self.verbosity,
         }
 
         return {
@@ -181,6 +263,7 @@ class UiPathChat(UiPathBaseChatModel):
         *,
         tool_choice: str | None = None,
         strict: bool | None = None,
+        parallel_tool_calls: bool | None = None,
         **kwargs: Any,
     ) -> Runnable[LanguageModelInput, AIMessage]:
         """Bind tools to the model with automatic tool choice detection."""
@@ -197,7 +280,7 @@ class UiPathChat(UiPathBaseChatModel):
             tool_choice = "auto"
 
         if tool_choice in ["required", "auto"]:
-            tool_choice_object = {
+            tool_choice_object: dict[str, Any] = {
                 "type": tool_choice,
             }
         else:
@@ -206,11 +289,113 @@ class UiPathChat(UiPathBaseChatModel):
                 "name": tool_choice,
             }
 
-        return super().bind(
-            tools=formatted_tools,
-            tool_choice=tool_choice_object,
+        bind_kwargs: dict[str, Any] = {
+            "tools": formatted_tools,
+            "tool_choice": tool_choice_object,
             **kwargs,
-        )
+        }
+        if parallel_tool_calls is not None:
+            bind_kwargs["parallel_tool_calls"] = parallel_tool_calls
+
+        return super().bind(**bind_kwargs)
+
+    def with_structured_output(
+        self,
+        schema: _DictOrPydanticClass | None = None,
+        *,
+        method: Literal["function_calling", "json_mode", "json_schema"] = "function_calling",
+        include_raw: bool = False,
+        strict: bool | None = None,
+        **kwargs: Any,
+    ) -> Runnable[LanguageModelInput, _DictOrPydantic]:
+        """Model wrapper that returns outputs formatted to match the given schema.
+
+        Args:
+            schema: The output schema as a Pydantic class, TypedDict, JSON Schema dict,
+                or OpenAI function schema.
+            method: Either "json_schema" (uses response_format) or "function_calling"
+                (uses tool calling to force the schema).
+            include_raw: If True, returns dict with 'raw', 'parsed', and 'parsing_error'.
+            strict: If True, model output is guaranteed to match the schema exactly.
+            **kwargs: Additional arguments passed to bind().
+
+        Returns:
+            A Runnable that parses the model output into the given schema.
+        """
+        if schema is None:
+            raise ValueError("schema must be specified.")
+
+        is_pydantic = isinstance(schema, type) and is_basemodel_subclass(schema)
+
+        if method == "function_calling":
+            tool_name = convert_to_openai_tool(schema)["function"]["name"]
+            llm = self.bind_tools(
+                [schema],
+                tool_choice="any",
+                strict=strict,
+                ls_structured_output_format={
+                    "kwargs": {"method": "function_calling", "strict": strict},
+                    "schema": schema,
+                },
+                **kwargs,
+            )
+            if is_pydantic:
+                output_parser: Runnable = PydanticToolsParser(
+                    tools=[schema],  # type: ignore[list-item]
+                    first_tool_only=True,
+                )
+            else:
+                output_parser = JsonOutputKeyToolsParser(key_name=tool_name, first_tool_only=True)
+        elif method == "json_mode":
+            llm = self.bind(
+                response_format={"type": "json_object"},
+                ls_structured_output_format={
+                    "kwargs": {"method": method},
+                    "schema": schema,
+                },
+                **kwargs,
+            )
+            if is_pydantic:
+                from langchain_core.output_parsers import PydanticOutputParser
+
+                output_parser = PydanticOutputParser(pydantic_object=schema)  # type: ignore[arg-type]
+            else:
+                output_parser = JsonOutputParser()
+        elif method == "json_schema":
+            response_format = _build_normalized_response_format(schema, strict=strict)
+            llm = self.bind(
+                response_format=response_format,
+                ls_structured_output_format={
+                    "kwargs": {"method": method, "strict": strict},
+                    "schema": convert_to_openai_tool(schema),
+                },
+                **kwargs,
+            )
+            if is_pydantic:
+                output_parser = RunnableLambda(
+                    partial(_oai_structured_outputs_parser, schema=cast(type, schema))
+                ).with_types(output_type=cast(type, schema))
+            else:
+                output_parser = JsonOutputParser()
+        else:
+            raise ValueError(
+                f"Unrecognized method: '{method}'. "
+                "Expected 'function_calling', 'json_mode', or 'json_schema'."
+            )
+
+        if include_raw:
+            parser_assign = RunnablePassthrough.assign(
+                parsed=lambda x: output_parser.invoke(x["raw"]),
+                parsing_error=lambda _: None,
+            )
+            parser_none = RunnablePassthrough.assign(
+                parsed=lambda _: None,
+            )
+            parser_with_fallback = parser_assign.with_fallbacks(
+                [parser_none], exception_key="parsing_error"
+            )
+            return RunnablePassthrough.assign(raw=llm) | parser_with_fallback  # type: ignore[return-value]
+        return llm | output_parser  # type: ignore[return-value]
 
     def _preprocess_request(
         self, messages: list[BaseMessage], stop: list[str] | None = None, **kwargs: Any

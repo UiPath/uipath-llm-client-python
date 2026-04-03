@@ -20,6 +20,7 @@ def test_main_package_imports():
         RetryConfig,
         UiPathHttpxAsyncClient,
         UiPathHttpxClient,
+        UiPathNormalizedClient,
         __version__,
         get_default_client_settings,
     )
@@ -46,6 +47,10 @@ def test_main_package_imports():
     # Verify RetryConfig is a type (TypedDict)
     assert RetryConfig is not None, "RetryConfig should be importable"
     print("  RetryConfig is importable")
+
+    # Verify normalized client is a type
+    assert isinstance(UiPathNormalizedClient, type), "UiPathNormalizedClient should be a class"
+    print("  UiPathNormalizedClient is importable")
 
     print("  Main package imports OK")
 
@@ -414,6 +419,47 @@ def test_google_client_inheritance():
     print("  Google client inheritance OK")
 
 
+def test_normalized_client_imports():
+    """Test that normalized client and its types can be imported."""
+    print("Testing normalized client imports...")
+
+    from uipath.llm_client.clients.normalized import (
+        ChatCompletion,
+        ChatCompletionChunk,
+        Choice,
+        Delta,
+        EmbeddingData,
+        EmbeddingResponse,
+        Message,
+        StreamChoice,
+        ToolCall,
+        ToolCallChunk,
+        UiPathNormalizedClient,
+        Usage,
+    )
+
+    # Verify all are types
+    types = [
+        UiPathNormalizedClient,
+        ChatCompletion,
+        ChatCompletionChunk,
+        Choice,
+        Delta,
+        EmbeddingData,
+        EmbeddingResponse,
+        Message,
+        StreamChoice,
+        ToolCall,
+        ToolCallChunk,
+        Usage,
+    ]
+    for t in types:
+        assert isinstance(t, type), f"{t.__name__} should be a class"
+
+    print(f"  All {len(types)} normalized client types are importable")
+    print("  Normalized client imports OK")
+
+
 def test_uipath_api_config():
     """Test UiPathAPIConfig can be instantiated with valid configurations."""
     print("Testing UiPathAPIConfig instantiation...")
@@ -463,6 +509,7 @@ def main():
         test_httpx_client_module_imports,
         test_exceptions_module_imports,
         test_retry_module_imports,
+        test_normalized_client_imports,
         test_openai_client_imports,
         test_anthropic_client_imports,
         test_google_client_imports,

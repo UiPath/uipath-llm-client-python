@@ -87,6 +87,7 @@ def get_chat_model(
     routing_mode: RoutingMode | str = RoutingMode.PASSTHROUGH,
     vendor_type: VendorType | str | None = None,
     api_flavor: ApiFlavor | str | None = None,
+    custom_class: type[UiPathBaseChatModel] | None = None,
     **model_kwargs: Any,
 ) -> UiPathBaseChatModel:
     """Factory function to create the appropriate LangChain chat model for a given model name.
@@ -106,6 +107,9 @@ def get_chat_model(
             - Bedrock Claude: Default uses UiPathChatAnthropicBedrock.
               ApiFlavor.CONVERSE uses UiPathChatBedrockConverse,
               ApiFlavor.INVOKE uses UiPathChatBedrock.
+        custom_class: A custom class to use for instantiating the chat model instead of the
+            auto-detected one. Must be a subclass of UiPathBaseChatModel. When provided,
+            the factory skips vendor detection and uses this class directly.
         **model_kwargs: Additional keyword arguments to pass to the model constructor.
 
     Returns:
@@ -127,6 +131,14 @@ def get_chat_model(
     is_uipath_owned = model_info.get("modelSubscriptionType") == "UiPathOwned"
     if not is_uipath_owned:
         client_settings.validate_byo_model(model_info)
+
+    if custom_class is not None:
+        return custom_class(
+            model=model_name,
+            settings=client_settings,
+            byo_connection_id=byo_connection_id,
+            **model_kwargs,
+        )
 
     if routing_mode == RoutingMode.NORMALIZED:
         from uipath_langchain_client.clients.normalized.chat_models import (
@@ -248,6 +260,7 @@ def get_embedding_model(
     client_settings: UiPathBaseSettings | None = None,
     routing_mode: RoutingMode | str = RoutingMode.PASSTHROUGH,
     vendor_type: VendorType | str | None = None,
+    custom_class: type[UiPathBaseEmbeddings] | None = None,
     **model_kwargs: Any,
 ) -> UiPathBaseEmbeddings:
     """Factory function to create the appropriate LangChain embeddings model.
@@ -262,6 +275,9 @@ def get_embedding_model(
             RoutingMode.PASSTHROUGH for vendor-specific APIs.
         vendor_type: Filter models by vendor type (e.g., VendorType.OPENAI).
             If not provided, auto-detected from the model discovery endpoint.
+        custom_class: A custom class to use for instantiating the embedding model instead of
+            the auto-detected one. Must be a subclass of UiPathBaseEmbeddings. When provided,
+            the factory skips vendor detection and uses this class directly.
         **model_kwargs: Additional arguments passed to the embeddings constructor.
 
     Returns:
@@ -285,6 +301,14 @@ def get_embedding_model(
     is_uipath_owned = model_info.get("modelSubscriptionType") == "UiPathOwned"
     if not is_uipath_owned:
         client_settings.validate_byo_model(model_info)
+
+    if custom_class is not None:
+        return custom_class(
+            model=model_name,
+            settings=client_settings,
+            byo_connection_id=byo_connection_id,
+            **model_kwargs,
+        )
 
     if routing_mode == RoutingMode.NORMALIZED:
         from uipath_langchain_client.clients.normalized.embeddings import (

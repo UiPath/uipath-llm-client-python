@@ -1,12 +1,8 @@
-import logging
-
 from httpx import URL, Request
 
 from uipath.llm_client.settings.base import UiPathAPIConfig, UiPathBaseSettings
 from uipath.llm_client.settings.constants import ApiFlavor, ApiType, RoutingMode, VendorType
 from uipath.llm_client.utils.headers import build_routing_headers
-
-_logger = logging.getLogger(__name__)
 
 
 class OpenAIRequestHandler:
@@ -54,10 +50,7 @@ class OpenAIRequestHandler:
             api_config = self.base_api_config.model_copy(update={"api_type": ApiType.EMBEDDINGS})
             self._apply_routing(request, api_config)
         else:
-            _logger.debug(
-                "Unrecognized API endpoint '%s' — passing through without UiPath routing.",
-                request.url.path,
-            )
+            raise ValueError(f"Unrecognized API endpoint '{request.url.path}'")
 
     async def fix_url_and_headers_async(self, request: Request):
         self.fix_url_and_headers(request)

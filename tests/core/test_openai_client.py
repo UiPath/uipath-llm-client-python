@@ -192,27 +192,17 @@ class TestFixUrlEmbeddings:
 
 
 class TestFixUrlUnrecognized:
-    def test_does_not_rewrite_url(self, handler):
+    def test_raises_value_error(self, handler):
         request = _make_request("/v1/models")
-        original_url = str(request.url)
-        handler.fix_url_and_headers(request)
-
-        assert str(request.url) == original_url
+        with pytest.raises(ValueError, match="Unrecognized API endpoint"):
+            handler.fix_url_and_headers(request)
 
     def test_does_not_call_build_base_url(self, handler):
         request = _make_request("/v1/models")
-        handler.fix_url_and_headers(request)
-
-        handler.client_settings.build_base_url.assert_not_called()
-
-    def test_logs_debug_message(self, handler, caplog):
-        import logging
-
-        with caplog.at_level(logging.DEBUG, logger="uipath.llm_client.clients.openai.utils"):
-            request = _make_request("/v1/models")
+        with pytest.raises(ValueError):
             handler.fix_url_and_headers(request)
 
-        assert any("Unrecognized API endpoint" in msg for msg in caplog.messages)
+        handler.client_settings.build_base_url.assert_not_called()
 
 
 # ============================================================================

@@ -1,7 +1,7 @@
 import logging
-from typing import Any
+from collections.abc import Mapping, Sequence
 
-from uipath.llm_client.httpx_client import UiPathHttpxAsyncClient, UiPathHttpxClient
+from uipath.llm_client.clients.utils import build_httpx_async_client, build_httpx_client
 from uipath.llm_client.settings import (
     UiPathAPIConfig,
     UiPathBaseSettings,
@@ -21,15 +21,32 @@ except ImportError as e:
 
 
 class UiPathGoogle(Client):
+    """Google GenAI client routed through UiPath LLM Gateway.
+
+    Args:
+        model_name: The Google model name (e.g., "gemini-2.5-flash").
+        byo_connection_id: Bring Your Own connection ID for custom deployments.
+        client_settings: UiPath client settings. Defaults to environment-based settings.
+        timeout: Client-side request timeout in seconds.
+        max_retries: Maximum retry attempts for failed requests.
+        default_headers: Additional headers to include in requests.
+        captured_headers: Response header prefixes to capture (case-insensitive).
+        retry_config: Custom retry configuration.
+        logger: Logger instance for request/response logging.
+    """
+
     def __init__(
         self,
         *,
         model_name: str,
         byo_connection_id: str | None = None,
         client_settings: UiPathBaseSettings | None = None,
+        timeout: float | None = None,
+        max_retries: int | None = None,
+        default_headers: Mapping[str, str] | None = None,
+        captured_headers: Sequence[str] = ("x-uipath-",),
         retry_config: RetryConfig | None = None,
         logger: logging.Logger | None = None,
-        **kwargs: Any,
     ):
         client_settings = client_settings or get_default_client_settings()
         api_config = UiPathAPIConfig(
@@ -40,35 +57,29 @@ class UiPathGoogle(Client):
             api_version="v1beta1",
             freeze_base_url=True,
         )
-        httpx_client = UiPathHttpxClient(
+        httpx_client = build_httpx_client(
             model_name=model_name,
             byo_connection_id=byo_connection_id,
+            client_settings=client_settings,
             api_config=api_config,
-            timeout=kwargs.pop("timeout", None),
-            max_retries=kwargs.pop("max_retries", None),
+            timeout=timeout,
+            max_retries=max_retries,
+            default_headers=default_headers,
+            captured_headers=captured_headers,
             retry_config=retry_config,
-            base_url=client_settings.build_base_url(model_name=model_name, api_config=api_config),
-            headers={
-                **kwargs.pop("default_headers", {}),
-                **client_settings.build_auth_headers(model_name=model_name, api_config=api_config),
-            },
             logger=logger,
-            auth=client_settings.build_auth_pipeline(),
         )
-        httpx_async_client = UiPathHttpxAsyncClient(
+        httpx_async_client = build_httpx_async_client(
             model_name=model_name,
             byo_connection_id=byo_connection_id,
+            client_settings=client_settings,
             api_config=api_config,
-            timeout=kwargs.pop("timeout", None),
-            max_retries=kwargs.pop("max_retries", None),
+            timeout=timeout,
+            max_retries=max_retries,
+            default_headers=default_headers,
+            captured_headers=captured_headers,
             retry_config=retry_config,
-            base_url=client_settings.build_base_url(model_name=model_name, api_config=api_config),
-            headers={
-                **kwargs.pop("default_headers", {}),
-                **client_settings.build_auth_headers(model_name=model_name, api_config=api_config),
-            },
             logger=logger,
-            auth=client_settings.build_auth_pipeline(),
         )
         super().__init__(
             api_key="PLACEHOLDER",

@@ -25,7 +25,7 @@ Example:
 
 import logging
 from abc import ABC
-from collections.abc import AsyncIterator, Iterator, Mapping, Sequence
+from collections.abc import AsyncGenerator, Generator, Mapping, Sequence
 from functools import cached_property
 from typing import Any, Literal
 
@@ -189,7 +189,7 @@ class UiPathBaseLLMClient(BaseModel, ABC):
 
     def uipath_request(
         self,
-        method: str = "POST",
+        method: Literal["POST", "GET"] = "POST",
         url: URL | str = "/",
         *,
         request_body: dict[str, Any] | None = None,
@@ -199,16 +199,18 @@ class UiPathBaseLLMClient(BaseModel, ABC):
         """Make a synchronous HTTP request to the UiPath API.
 
         Args:
-            method: HTTP method (GET, POST, etc.). Defaults to "POST".
+            method: HTTP method (POST or GET). Defaults to "POST".
             url: Request URL path. Defaults to "/".
             request_body: JSON request body to send.
+            raise_status_error: If True, raises UiPathAPIError on non-2xx responses.
             **kwargs: Additional arguments passed to httpx.Client.request().
 
         Returns:
             httpx.Response: The HTTP response from the API.
 
         Raises:
-            UiPathAPIError: On HTTP 4xx/5xx responses (raised by transport layer).
+            UiPathAPIError: On HTTP 4xx/5xx responses when raise_status_error is True,
+                or raised by the transport layer.
         """
         response = self.uipath_sync_client.request(method, url, json=request_body, **kwargs)
         if raise_status_error:
@@ -224,7 +226,22 @@ class UiPathBaseLLMClient(BaseModel, ABC):
         raise_status_error: bool = False,
         **kwargs: Any,
     ) -> Response:
-        """Make an asynchronous HTTP request to the UiPath API."""
+        """Make an asynchronous HTTP request to the UiPath API.
+
+        Args:
+            method: HTTP method (POST or GET). Defaults to "POST".
+            url: Request URL path. Defaults to "/".
+            request_body: JSON request body to send.
+            raise_status_error: If True, raises UiPathAPIError on non-2xx responses.
+            **kwargs: Additional arguments passed to httpx.AsyncClient.request().
+
+        Returns:
+            httpx.Response: The HTTP response from the API.
+
+        Raises:
+            UiPathAPIError: On HTTP 4xx/5xx responses when raise_status_error is True,
+                or raised by the transport layer.
+        """
         response = await self.uipath_async_client.request(method, url, json=request_body, **kwargs)
         if raise_status_error:
             response.raise_for_status()
@@ -239,7 +256,7 @@ class UiPathBaseLLMClient(BaseModel, ABC):
         stream_type: Literal["text", "bytes", "lines", "raw"] = "lines",
         raise_status_error: bool = False,
         **kwargs: Any,
-    ) -> Iterator[str | bytes]:
+    ) -> Generator[str | bytes, None, None]:
         """Make a synchronous streaming HTTP request to the UiPath API.
 
         Args:
@@ -251,6 +268,7 @@ class UiPathBaseLLMClient(BaseModel, ABC):
                 - "bytes": Yield raw byte chunks
                 - "lines": Yield complete lines (default, best for SSE)
                 - "raw": Yield raw response data
+            raise_status_error: If True, raises UiPathAPIError on non-2xx responses.
             **kwargs: Additional arguments passed to httpx.Client.stream().
 
         Yields:
@@ -282,7 +300,7 @@ class UiPathBaseLLMClient(BaseModel, ABC):
         stream_type: Literal["text", "bytes", "lines", "raw"] = "lines",
         raise_status_error: bool = False,
         **kwargs: Any,
-    ) -> AsyncIterator[str | bytes]:
+    ) -> AsyncGenerator[str | bytes, None]:
         """Make an asynchronous streaming HTTP request to the UiPath API.
 
         Args:
@@ -294,6 +312,7 @@ class UiPathBaseLLMClient(BaseModel, ABC):
                 - "bytes": Yield raw byte chunks
                 - "lines": Yield complete lines (default, best for SSE)
                 - "raw": Yield raw response data
+            raise_status_error: If True, raises UiPathAPIError on non-2xx responses.
             **kwargs: Additional arguments passed to httpx.AsyncClient.stream().
 
         Yields:
@@ -393,7 +412,7 @@ class UiPathBaseChatModel(UiPathBaseLLMClient, BaseChatModel):
         stop: list[str] | None = None,
         run_manager: CallbackManagerForLLMRun | None = None,
         **kwargs: Any,
-    ) -> Iterator[ChatGenerationChunk]:
+    ) -> Generator[ChatGenerationChunk, None, None]:
         set_captured_response_headers({})
         try:
             first = True
@@ -413,7 +432,7 @@ class UiPathBaseChatModel(UiPathBaseLLMClient, BaseChatModel):
         stop: list[str] | None = None,
         run_manager: CallbackManagerForLLMRun | None = None,
         **kwargs: Any,
-    ) -> Iterator[ChatGenerationChunk]:
+    ) -> Generator[ChatGenerationChunk, None, None]:
         """Override in subclasses to provide the core (non-wrapped) stream logic."""
         yield from super()._stream(messages, stop=stop, run_manager=run_manager, **kwargs)
 
@@ -423,7 +442,7 @@ class UiPathBaseChatModel(UiPathBaseLLMClient, BaseChatModel):
         stop: list[str] | None = None,
         run_manager: AsyncCallbackManagerForLLMRun | None = None,
         **kwargs: Any,
-    ) -> AsyncIterator[ChatGenerationChunk]:
+    ) -> AsyncGenerator[ChatGenerationChunk, None]:
         set_captured_response_headers({})
         try:
             first = True
@@ -443,7 +462,7 @@ class UiPathBaseChatModel(UiPathBaseLLMClient, BaseChatModel):
         stop: list[str] | None = None,
         run_manager: AsyncCallbackManagerForLLMRun | None = None,
         **kwargs: Any,
-    ) -> AsyncIterator[ChatGenerationChunk]:
+    ) -> AsyncGenerator[ChatGenerationChunk, None]:
         """Override in subclasses to provide the core (non-wrapped) async stream logic."""
         async for chunk in super()._astream(messages, stop=stop, run_manager=run_manager, **kwargs):
             yield chunk

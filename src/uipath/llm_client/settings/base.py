@@ -2,7 +2,7 @@
 Base Settings Module for UiPath LLM Client
 
 This module defines the abstract base classes and data models for UiPath API settings.
-Concrete implementations are provided in the `agenthub` and `llmgateway` submodules.
+Concrete implementations are provided in the `platform` and `llmgateway` submodules.
 """
 
 from abc import ABC, abstractmethod

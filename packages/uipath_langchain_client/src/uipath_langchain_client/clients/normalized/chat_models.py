@@ -24,7 +24,7 @@ Example:
 """
 
 import json
-from collections.abc import AsyncIterator, Callable, Iterator, Sequence
+from collections.abc import AsyncGenerator, Callable, Generator, Sequence
 from typing import Any
 
 from langchain_core.callbacks import (
@@ -155,7 +155,6 @@ class UiPathChat(UiPathBaseChatModel):
         }
 
         return {
-            "model": self.model_name,
             **{k: v for k, v in exclude_if_none.items() if v is not None},
             **self.model_kwargs,
         }
@@ -329,9 +328,7 @@ class UiPathChat(UiPathBaseChatModel):
         response = await self.uipath_arequest(request_body=request_body, raise_status_error=True)
         return self._postprocess_response(response.json())
 
-    def _generate_chunk(
-        self, original_message: str, json_data: dict[str, Any]
-    ) -> ChatGenerationChunk:
+    def _generate_chunk(self, json_data: dict[str, Any]) -> ChatGenerationChunk:
         generation_info = {
             "id": json_data.get("id"),
             "created": json_data.get("created", ""),
@@ -377,10 +374,10 @@ class UiPathChat(UiPathBaseChatModel):
                 )
 
         return ChatGenerationChunk(
-            text=original_message,
+            text=content or "",
             generation_info=generation_info,
             message=AIMessageChunk(
-                content=content,
+                content=content or "",
                 usage_metadata=usage_metadata,
                 tool_call_chunks=tool_call_chunks,
             ),
@@ -392,21 +389,22 @@ class UiPathChat(UiPathBaseChatModel):
         stop: list[str] | None = None,
         run_manager: CallbackManagerForLLMRun | None = None,
         **kwargs: Any,
-    ) -> Iterator[ChatGenerationChunk]:
+    ) -> Generator[ChatGenerationChunk, None, None]:
         request_body = self._preprocess_request(messages, stop=stop, **kwargs)
+        request_body["stream"] = True
         for chunk in self.uipath_stream(
             request_body=request_body, stream_type="lines", raise_status_error=True
         ):
             chunk = str(chunk)
             if chunk.startswith("data:"):
-                chunk = chunk.split("data:")[1].strip()
+                chunk = chunk[len("data:") :].strip()
             try:
                 json_data = json.loads(chunk)
             except json.JSONDecodeError:
                 continue
             if "id" in json_data and not json_data["id"]:
                 continue
-            yield self._generate_chunk(chunk, json_data)
+            yield self._generate_chunk(json_data)
 
     async def _uipath_astream(
         self,
@@ -414,18 +412,19 @@ class UiPathChat(UiPathBaseChatModel):
         stop: list[str] | None = None,
         run_manager: AsyncCallbackManagerForLLMRun | None = None,
         **kwargs: Any,
-    ) -> AsyncIterator[ChatGenerationChunk]:
+    ) -> AsyncGenerator[ChatGenerationChunk, None]:
         request_body = self._preprocess_request(messages, stop=stop, **kwargs)
+        request_body["stream"] = True
         async for chunk in self.uipath_astream(
             request_body=request_body, stream_type="lines", raise_status_error=True
         ):
             chunk = str(chunk)
             if chunk.startswith("data:"):
-                chunk = chunk.split("data:")[1].strip()
+                chunk = chunk[len("data:") :].strip()
             try:
                 json_data = json.loads(chunk)
             except json.JSONDecodeError:
                 continue
             if "id" in json_data and not json_data["id"]:
                 continue
-            yield self._generate_chunk(chunk, json_data)
+            yield self._generate_chunk(json_data)

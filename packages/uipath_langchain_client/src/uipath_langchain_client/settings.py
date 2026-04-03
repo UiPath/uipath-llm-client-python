@@ -23,7 +23,7 @@ from uipath.llm_client.settings import (
     get_default_client_settings,
 )
 from uipath.llm_client.settings.constants import (
-    _API_FLAVOR_TO_VENDOR_TYPE,
+    API_FLAVOR_TO_VENDOR_TYPE,
     ApiFlavor,
     ApiType,
     RoutingMode,
@@ -40,5 +40,5 @@ __all__ = [
     "RoutingMode",
     "ApiFlavor",
     "VendorType",
-    "_API_FLAVOR_TO_VENDOR_TYPE",
+    "API_FLAVOR_TO_VENDOR_TYPE",
 ]

@@ -12,9 +12,21 @@ from uipath.llm_client.settings.utils import SingletonMeta
 class PlatformAuth(Auth, metaclass=SingletonMeta):
     """Bearer authentication handler with automatic token refresh.
 
-    Singleton class that stores access_token and refresh_token directly,
-    reusing them across all requests. Automatically refreshes on 401 responses.
+    Singleton keyed by (base_url, organization_id, tenant_id, access_token)
+    so that clients sharing the same credentials reuse one token while
+    different credentials get separate instances.  Automatically refreshes
+    on 401 responses.
     """
+
+    @classmethod
+    def _singleton_cache_key(cls, settings: PlatformBaseSettings) -> tuple:
+        """Derive a cache key from the credentials so different settings get different instances."""
+        return (
+            settings.base_url,
+            settings.organization_id,
+            settings.tenant_id,
+            settings.access_token.get_secret_value() if settings.access_token else None,
+        )
 
     def __init__(
         self,

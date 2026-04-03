@@ -5,17 +5,28 @@ from httpx import Auth, Client, Request, Response
 from uipath.llm_client.settings.llmgateway.settings import LLMGatewayBaseSettings
 from uipath.llm_client.settings.llmgateway.utils import LLMGatewayEndpoints
 from uipath.llm_client.settings.utils import SingletonMeta
+from uipath.llm_client.utils.ssl_config import get_httpx_ssl_client_kwargs
 
 
 class LLMGatewayS2SAuth(Auth, metaclass=SingletonMeta):
     """Bearer authentication handler with automatic token refresh.
 
-    Singleton class that reuses the same token across all requests to minimize
-    token generation overhead. Automatically refreshes the token on 401 responses.
+    Singleton keyed by (client_id, client_secret) so that clients sharing the
+    same credentials reuse one token while different credentials get separate
+    instances.  Automatically refreshes the token on 401 responses.
 
     Does not raise errors on token retrieval failures — the request is sent
     without a valid token and the downstream client handles the error response.
     """
+
+    @classmethod
+    def _singleton_cache_key(cls, settings: LLMGatewayBaseSettings) -> tuple:
+        """Derive a cache key from the credentials so different settings get different instances."""
+        return (
+            settings.base_url,
+            settings.client_id.get_secret_value() if settings.client_id else None,
+            settings.client_secret.get_secret_value() if settings.client_secret else None,
+        )
 
     def __init__(
         self,
@@ -51,7 +62,7 @@ class LLMGatewayS2SAuth(Auth, metaclass=SingletonMeta):
             grant_type="client_credentials",
         )
         try:
-            with Client() as http_client:
+            with Client(**get_httpx_ssl_client_kwargs()) as http_client:
                 response = http_client.post(url_get_token, data=token_credentials)
                 if response.is_error:
                     return None

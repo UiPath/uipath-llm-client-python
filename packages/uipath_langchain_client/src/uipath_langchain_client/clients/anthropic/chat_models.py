@@ -45,15 +45,17 @@ class UiPathChatAnthropic(UiPathBaseChatModel, ChatAnthropic):
     def setup_api_flavor_and_version(self) -> Self:
         self.api_config.vendor_type = self.vendor_type
         match self.vendor_type:
+            case VendorType.ANTHROPIC:
+                self.api_config.api_flavor = None
+            case VendorType.AZURE:
+                self.api_config.api_flavor = None
             case VendorType.VERTEXAI:
                 self.api_config.api_flavor = ApiFlavor.ANTHROPIC_CLAUDE
                 self.api_config.api_version = "v1beta1"
             case VendorType.AWSBEDROCK:
                 self.api_config.api_flavor = ApiFlavor.INVOKE
             case _:
-                raise ValueError(
-                    "anthropic and azure vendors are currently not supported by UiPath"
-                )
+                raise ValueError(f"Unsupported vendor_type: {self.vendor_type}")
         return self
 
     # Override fields to avoid typing issues and fix stuff
@@ -150,13 +152,13 @@ class UiPathChatAnthropic(UiPathBaseChatModel, ChatAnthropic):
                 raise ValueError("Anthropic models are currently not hosted on any other provider")
 
     @override
-    def _create(self, payload: dict) -> Any:
+    def _create(self, payload: dict[str, Any]) -> Any:
         if "betas" in payload:
             return self._anthropic_client.beta.messages.create(**payload)
         return self._anthropic_client.messages.create(**payload)
 
     @override
-    async def _acreate(self, payload: dict) -> Any:
+    async def _acreate(self, payload: dict[str, Any]) -> Any:
         if "betas" in payload:
             return await self._async_anthropic_client.beta.messages.create(**payload)
         return await self._async_anthropic_client.messages.create(**payload)

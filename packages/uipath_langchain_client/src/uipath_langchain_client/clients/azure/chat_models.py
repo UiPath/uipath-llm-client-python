@@ -1,11 +1,11 @@
 from typing import Self
 
-from httpx import URL, Request
+from httpx import Request
 from pydantic import Field, model_validator
 
 from uipath_langchain_client.base_client import UiPathBaseChatModel
+from uipath_langchain_client.clients.openai.utils import fix_url_and_api_flavor_header
 from uipath_langchain_client.settings import (
-    ApiFlavor,
     ApiType,
     RoutingMode,
     UiPathAPIConfig,
@@ -42,24 +42,14 @@ class UiPathAzureAIChatCompletionsModel(UiPathBaseChatModel, AzureAIOpenAIApiCha
     def setup_uipath_client(self) -> Self:
         base_url = str(self.uipath_sync_client.base_url).rstrip("/")
 
-        def fix_url_and_api_flavor_header(request: Request):
-            url_suffix = str(request.url).split(base_url)[-1]
-            if "responses" in url_suffix:
-                request.headers["X-UiPath-LlmGateway-ApiFlavor"] = ApiFlavor.RESPONSES.value
-            else:
-                request.headers["X-UiPath-LlmGateway-ApiFlavor"] = ApiFlavor.CHAT_COMPLETIONS.value
-            request.url = URL(base_url)
+        def on_request(request: Request) -> None:
+            fix_url_and_api_flavor_header(base_url, request)
 
-        async def fix_url_and_api_flavor_header_async(request: Request):
-            url_suffix = str(request.url).split(base_url)[-1]
-            if "responses" in url_suffix:
-                request.headers["X-UiPath-LlmGateway-ApiFlavor"] = ApiFlavor.RESPONSES.value
-            else:
-                request.headers["X-UiPath-LlmGateway-ApiFlavor"] = ApiFlavor.CHAT_COMPLETIONS.value
-            request.url = URL(base_url)
+        async def on_request_async(request: Request) -> None:
+            fix_url_and_api_flavor_header(base_url, request)
 
-        self.uipath_sync_client.event_hooks["request"].append(fix_url_and_api_flavor_header)
-        self.uipath_async_client.event_hooks["request"].append(fix_url_and_api_flavor_header_async)
+        self.uipath_sync_client.event_hooks["request"].append(on_request)
+        self.uipath_async_client.event_hooks["request"].append(on_request_async)
 
         self.root_client = OpenAI(
             api_key="PLACEHOLDER",

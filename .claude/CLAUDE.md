@@ -100,10 +100,10 @@ Follow the existing format — newest version first, grouped by date:
 Before every commit and before opening a PR, always run:
 
 ```bash
-ruff check && ruff format --check && pytest tests
+ruff check && ruff format . && pyright && pytest tests
 ```
 
-All three must pass. Fix any lint, format, or test failures before committing. This applies when working as an AI assistant too — run the checks, fix failures, then commit and push.
+All four must pass. Fix any lint, format, type, or test failures before committing. This applies when working as an AI assistant too — run the checks, fix failures, then commit and push.
 
 ---
 

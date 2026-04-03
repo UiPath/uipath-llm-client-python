@@ -26,6 +26,7 @@ Example:
 """
 
 from json import JSONDecodeError
+from typing import Literal
 
 from httpx import HTTPStatusError, Request, Response
 
@@ -96,43 +97,43 @@ class UiPathAPIError(HTTPStatusError):
 class UiPathBadRequestError(UiPathAPIError):
     """HTTP 400 Bad Request error."""
 
-    status_code: int = 400
+    status_code: Literal[400] = 400  # pyright: ignore[reportIncompatibleVariableOverride]
 
 
 class UiPathAuthenticationError(UiPathAPIError):
     """HTTP 401 Unauthorized error."""
 
-    status_code: int = 401
+    status_code: Literal[401] = 401  # pyright: ignore[reportIncompatibleVariableOverride]
 
 
 class UiPathPermissionDeniedError(UiPathAPIError):
     """HTTP 403 Forbidden error."""
 
-    status_code: int = 403
+    status_code: Literal[403] = 403  # pyright: ignore[reportIncompatibleVariableOverride]
 
 
 class UiPathNotFoundError(UiPathAPIError):
     """HTTP 404 Not Found error."""
 
-    status_code: int = 404
+    status_code: Literal[404] = 404  # pyright: ignore[reportIncompatibleVariableOverride]
 
 
 class UiPathConflictError(UiPathAPIError):
     """HTTP 409 Conflict error."""
 
-    status_code: int = 409
+    status_code: Literal[409] = 409  # pyright: ignore[reportIncompatibleVariableOverride]
 
 
 class UiPathRequestTooLargeError(UiPathAPIError):
     """HTTP 413 Payload Too Large error."""
 
-    status_code: int = 413
+    status_code: Literal[413] = 413  # pyright: ignore[reportIncompatibleVariableOverride]
 
 
 class UiPathUnprocessableEntityError(UiPathAPIError):
     """HTTP 422 Unprocessable Entity error."""
 
-    status_code: int = 422
+    status_code: Literal[422] = 422  # pyright: ignore[reportIncompatibleVariableOverride]
 
 
 class UiPathRateLimitError(UiPathAPIError):
@@ -142,7 +143,7 @@ class UiPathRateLimitError(UiPathAPIError):
         retry_after: Seconds to wait before retrying (from Retry-After header), or None.
     """
 
-    status_code: int = 429
+    status_code: Literal[429] = 429  # pyright: ignore[reportIncompatibleVariableOverride]
 
     def __init__(
         self,
@@ -178,9 +179,9 @@ class UiPathRateLimitError(UiPathAPIError):
         from datetime import datetime, timezone
 
         # Check both header variants (case-insensitive in httpx)
-        retry_after_value = response.headers.get("retry-after") or response.headers.get(
-            "x-retry-after"
-        )
+        retry_after_value = response.headers.get("retry-after")
+        if retry_after_value is None:
+            retry_after_value = response.headers.get("x-retry-after")
 
         if retry_after_value is None:
             return None
@@ -207,25 +208,25 @@ class UiPathRateLimitError(UiPathAPIError):
 class UiPathInternalServerError(UiPathAPIError):
     """HTTP 500 Internal Server Error."""
 
-    status_code: int = 500
+    status_code: Literal[500] = 500  # pyright: ignore[reportIncompatibleVariableOverride]
 
 
 class UiPathServiceUnavailableError(UiPathAPIError):
     """HTTP 503 Service Unavailable error."""
 
-    status_code: int = 503
+    status_code: Literal[503] = 503  # pyright: ignore[reportIncompatibleVariableOverride]
 
 
 class UiPathGatewayTimeoutError(UiPathAPIError):
     """HTTP 504 Gateway Timeout error."""
 
-    status_code: int = 504
+    status_code: Literal[504] = 504  # pyright: ignore[reportIncompatibleVariableOverride]
 
 
 class UiPathTooManyRequestsError(UiPathAPIError):
     """HTTP 529 Too Many Requests (Anthropic overload) error."""
 
-    status_code: int = 529
+    status_code: Literal[529] = 529  # pyright: ignore[reportIncompatibleVariableOverride]
 
 
 _STATUS_CODE_TO_EXCEPTION: dict[int, type[UiPathAPIError]] = {

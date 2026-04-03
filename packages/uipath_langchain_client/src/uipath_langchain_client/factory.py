@@ -27,7 +27,7 @@ from uipath_langchain_client.base_client import (
     UiPathBaseEmbeddings,
 )
 from uipath_langchain_client.settings import (
-    _API_FLAVOR_TO_VENDOR_TYPE,
+    API_FLAVOR_TO_VENDOR_TYPE,
     ApiFlavor,
     RoutingMode,
     UiPathBaseSettings,
@@ -73,7 +73,7 @@ def _get_model_info(
 
     if not matching_models:
         raise ValueError(
-            f"Model {model_name} not found in available models the available models are: {[m['modelName'] for m in available_models]}"
+            f"Model {model_name} not found. Available models are: {[m['modelName'] for m in available_models]}"
         )
 
     return matching_models[0]
@@ -143,7 +143,7 @@ def get_chat_model(
     discovered_vendor_type = model_info.get("vendor", None)
     discovered_api_flavor = model_info.get("apiFlavor", None)
     if discovered_vendor_type is None and discovered_api_flavor is not None:
-        discovered_vendor_type = _API_FLAVOR_TO_VENDOR_TYPE.get(discovered_api_flavor, None)
+        discovered_vendor_type = API_FLAVOR_TO_VENDOR_TYPE.get(discovered_api_flavor, None)
     if discovered_vendor_type is None:
         raise ValueError("No vendor type or api flavor found in model info")
     discovered_vendor_type = discovered_vendor_type.lower()
@@ -298,7 +298,17 @@ def get_embedding_model(
             **model_kwargs,
         )
 
-    discovered_vendor_type = model_info["vendor"].lower()
+    discovered_vendor_type = model_info.get("vendor")
+    if discovered_vendor_type is None:
+        discovered_api_flavor = model_info.get("apiFlavor")
+        if discovered_api_flavor is not None:
+            discovered_vendor_type = API_FLAVOR_TO_VENDOR_TYPE.get(discovered_api_flavor)
+    if discovered_vendor_type is None:
+        raise ValueError(
+            f"No vendor type found in model info for embedding model '{model_name}'. "
+            f"Model info returned: {model_info}"
+        )
+    discovered_vendor_type = discovered_vendor_type.lower()
     match discovered_vendor_type:
         case VendorType.OPENAI:
             if is_uipath_owned:

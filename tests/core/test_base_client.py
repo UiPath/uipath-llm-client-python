@@ -458,8 +458,8 @@ class TestLLMGatewayAuthRefresh:
                 except StopIteration:
                     pass
 
-    def test_auth_singleton_reuses_instance(self, llmgw_env_vars):
-        """Test that LLMGatewayS2SAuth is a singleton."""
+    def test_auth_singleton_reuses_instance_for_same_settings(self, llmgw_env_vars):
+        """Test that LLMGatewayS2SAuth reuses the same instance for identical settings."""
         from uipath.llm_client.settings.llmgateway.auth import LLMGatewayS2SAuth
 
         with patch.dict(os.environ, llmgw_env_vars, clear=True):
@@ -467,6 +467,20 @@ class TestLLMGatewayAuthRefresh:
             auth1 = LLMGatewayS2SAuth(settings=settings)
             auth2 = LLMGatewayS2SAuth(settings=settings)
             assert auth1 is auth2
+
+    def test_auth_creates_separate_instances_for_different_settings(self, llmgw_env_vars):
+        """Test that LLMGatewayS2SAuth creates separate instances for different credentials."""
+        from uipath.llm_client.settings.llmgateway.auth import LLMGatewayS2SAuth
+
+        env1 = {**llmgw_env_vars, "LLMGW_CLIENT_ID": "id-a", "LLMGW_CLIENT_SECRET": "secret-a"}
+        env2 = {**llmgw_env_vars, "LLMGW_CLIENT_ID": "id-b", "LLMGW_CLIENT_SECRET": "secret-b"}
+        with patch.dict(os.environ, env1, clear=True):
+            settings1 = LLMGatewaySettings()
+        with patch.dict(os.environ, env2, clear=True):
+            settings2 = LLMGatewaySettings()
+        auth1 = LLMGatewayS2SAuth(settings=settings1)
+        auth2 = LLMGatewayS2SAuth(settings=settings2)
+        assert auth1 is not auth2
 
 
 # ============================================================================
@@ -637,17 +651,17 @@ class TestPlatformSettings:
     def test_build_base_url_requires_model_name(
         self, platform_env_vars, mock_platform_auth, normalized_api_config
     ):
-        """Test build_base_url asserts model_name is not None."""
+        """Test build_base_url raises ValueError when model_name is None."""
         with patch.dict(os.environ, platform_env_vars, clear=True):
             settings = PlatformSettings()
-            with pytest.raises(AssertionError):
+            with pytest.raises(ValueError, match="model_name is required"):
                 settings.build_base_url(model_name=None, api_config=normalized_api_config)
 
     def test_build_base_url_requires_api_config(self, platform_env_vars, mock_platform_auth):
-        """Test build_base_url asserts api_config is not None."""
+        """Test build_base_url raises ValueError when api_config is None."""
         with patch.dict(os.environ, platform_env_vars, clear=True):
             settings = PlatformSettings()
-            with pytest.raises(AssertionError):
+            with pytest.raises(ValueError, match="api_config is required"):
                 settings.build_base_url(model_name="gpt-4o", api_config=None)
 
     def test_build_auth_headers_empty_when_no_optional(self, platform_env_vars, mock_platform_auth):
@@ -715,12 +729,11 @@ class TestPlatformAuthRefresh:
     @pytest.fixture(autouse=True)
     def clear_auth_singleton(self):
         """Clear PlatformAuth singleton before each test."""
-        from uipath.llm_client.settings.platform.auth import PlatformAuth
         from uipath.llm_client.settings.utils import SingletonMeta
 
-        SingletonMeta._instances.pop(PlatformAuth, None)
+        SingletonMeta._instances.clear()
         yield
-        SingletonMeta._instances.pop(PlatformAuth, None)
+        SingletonMeta._instances.clear()
 
     def test_auth_flow_adds_bearer_token(self, platform_env_vars, mock_platform_auth):
         """Test auth_flow adds Authorization header."""
@@ -765,8 +778,10 @@ class TestPlatformAuthRefresh:
                 except StopIteration:
                     pass
 
-    def test_auth_singleton_reuses_instance(self, platform_env_vars, mock_platform_auth):
-        """Test that PlatformAuth is a singleton."""
+    def test_auth_singleton_reuses_instance_for_same_settings(
+        self, platform_env_vars, mock_platform_auth
+    ):
+        """Test that PlatformAuth reuses the same instance for identical settings."""
         from uipath.llm_client.settings.platform.auth import PlatformAuth
 
         with patch.dict(os.environ, platform_env_vars, clear=True):
@@ -774,6 +789,22 @@ class TestPlatformAuthRefresh:
             auth1 = PlatformAuth(settings=settings)
             auth2 = PlatformAuth(settings=settings)
             assert auth1 is auth2
+
+    def test_auth_creates_separate_instances_for_different_settings(
+        self, platform_env_vars, mock_platform_auth
+    ):
+        """Test that PlatformAuth creates separate instances for different credentials."""
+        from uipath.llm_client.settings.platform.auth import PlatformAuth
+
+        env1 = {**platform_env_vars, "UIPATH_ACCESS_TOKEN": "token-x"}
+        env2 = {**platform_env_vars, "UIPATH_ACCESS_TOKEN": "token-y"}
+        with patch.dict(os.environ, env1, clear=True):
+            settings1 = PlatformSettings()
+        with patch.dict(os.environ, env2, clear=True):
+            settings2 = PlatformSettings()
+        auth1 = PlatformAuth(settings=settings1)
+        auth2 = PlatformAuth(settings=settings2)
+        assert auth1 is not auth2
 
 
 # ============================================================================
@@ -1131,7 +1162,7 @@ class TestSingletonMeta:
     """Tests for SingletonMeta metaclass."""
 
     def test_singleton_creates_single_instance(self):
-        """Test singleton creates only one instance."""
+        """Test singleton creates only one instance when no cache key is defined."""
 
         class TestSingleton(metaclass=SingletonMeta):
             def __init__(self, value: int):
@@ -1156,6 +1187,41 @@ class TestSingletonMeta:
         b = SingletonB()
 
         assert a is not b
+
+    def test_keyed_singleton_same_key_reuses_instance(self):
+        """Test that same cache key returns the same instance."""
+
+        class KeyedSingleton(metaclass=SingletonMeta):
+            def __init__(self, key: str, value: int):
+                self.key = key
+                self.value = value
+
+            @classmethod
+            def _singleton_cache_key(cls, key: str, value: int) -> tuple:
+                return (key,)
+
+        a = KeyedSingleton("k1", 10)
+        b = KeyedSingleton("k1", 20)
+        assert a is b
+        assert a.value == 10  # First value retained
+
+    def test_keyed_singleton_different_key_creates_new_instance(self):
+        """Test that different cache keys create separate instances."""
+
+        class KeyedSingleton2(metaclass=SingletonMeta):
+            def __init__(self, key: str, value: int):
+                self.key = key
+                self.value = value
+
+            @classmethod
+            def _singleton_cache_key(cls, key: str, value: int) -> tuple:
+                return (key,)
+
+        a = KeyedSingleton2("k1", 10)
+        b = KeyedSingleton2("k2", 20)
+        assert a is not b
+        assert a.value == 10
+        assert b.value == 20
 
 
 # ============================================================================
@@ -1555,6 +1621,7 @@ class TestSSLConfig:
         from uipath.llm_client.utils.ssl_config import expand_path
 
         result = expand_path("~/test")
+        assert result is not None
         assert "~" not in result
         assert result.endswith("/test")
 
@@ -2098,3 +2165,176 @@ class TestEnumConstants:
         assert isinstance(RoutingMode.PASSTHROUGH, str)
         assert isinstance(VendorType.OPENAI, str)
         assert isinstance(ApiFlavor.CHAT_COMPLETIONS, str)
+
+
+# ============================================================================
+# Test RateLimitError retry-after Parsing
+# ============================================================================
+
+
+class TestRateLimitRetryAfterParsing:
+    """Tests for UiPathRateLimitError._parse_retry_after."""
+
+    def _make_429_response(self, headers=None):
+        mock_resp = MagicMock(spec=Response)
+        mock_resp.status_code = 429
+        mock_resp.reason_phrase = "Too Many Requests"
+        mock_resp.request = MagicMock(spec=Request)
+        mock_resp.headers = Headers(headers or {})
+        mock_resp.json.return_value = {}
+        return mock_resp
+
+    def test_parses_integer_seconds_from_retry_after(self):
+        """retry-after header with integer seconds is parsed correctly."""
+        resp = self._make_429_response(headers={"retry-after": "120"})
+        result = UiPathRateLimitError._parse_retry_after(resp)
+        assert result == 120.0
+
+    def test_parses_float_seconds_from_retry_after(self):
+        """retry-after header with float seconds is parsed correctly."""
+        resp = self._make_429_response(headers={"retry-after": "2.5"})
+        result = UiPathRateLimitError._parse_retry_after(resp)
+        assert result == 2.5
+
+    def test_parses_x_retry_after_as_fallback(self):
+        """x-retry-after header is used when retry-after is absent."""
+        resp = self._make_429_response(headers={"x-retry-after": "30"})
+        result = UiPathRateLimitError._parse_retry_after(resp)
+        assert result == 30.0
+
+    def test_parses_http_date_format(self):
+        """retry-after with HTTP-date format returns positive delay."""
+        from datetime import datetime, timedelta, timezone
+
+        future = datetime.now(timezone.utc) + timedelta(seconds=60)
+        date_str = future.strftime("%a, %d %b %Y %H:%M:%S GMT")
+        resp = self._make_429_response(headers={"retry-after": date_str})
+        result = UiPathRateLimitError._parse_retry_after(resp)
+        assert result is not None
+        assert result > 0
+
+    def test_returns_none_when_no_header_present(self):
+        """Returns None when neither retry-after nor x-retry-after is set."""
+        resp = self._make_429_response(headers={})
+        result = UiPathRateLimitError._parse_retry_after(resp)
+        assert result is None
+
+    def test_returns_none_for_unparseable_value(self):
+        """Returns None for values that are neither numbers nor valid dates."""
+        resp = self._make_429_response(headers={"retry-after": "not-valid"})
+        result = UiPathRateLimitError._parse_retry_after(resp)
+        assert result is None
+
+    def test_retry_after_prefers_standard_header(self):
+        """retry-after takes precedence over x-retry-after."""
+        resp = self._make_429_response(headers={"retry-after": "10", "x-retry-after": "99"})
+        result = UiPathRateLimitError._parse_retry_after(resp)
+        assert result == 10.0
+
+    def test_retry_after_property_on_exception(self):
+        """retry_after property is set from the response header."""
+        resp = self._make_429_response(headers={"retry-after": "42"})
+        exc = UiPathRateLimitError(
+            "rate limited",
+            request=resp.request,
+            response=resp,
+        )
+        assert exc.retry_after == 42.0
+
+
+# ============================================================================
+# Test patch_raise_for_status
+# ============================================================================
+
+
+class TestPatchRaiseForStatus:
+    """Tests for patch_raise_for_status utility."""
+
+    def test_patched_response_raises_uipath_error_on_error_status(self):
+        """Patched response raises UiPathAPIError subclass on HTTP error."""
+        from httpx import HTTPStatusError
+
+        mock_resp = MagicMock(spec=Response)
+        mock_resp.status_code = 404
+        mock_resp.reason_phrase = "Not Found"
+        mock_resp.json.return_value = {"error": "not found"}
+        mock_resp.request = MagicMock(spec=Request)
+        mock_resp.headers = {}
+        original = MagicMock(
+            side_effect=HTTPStatusError("err", request=mock_resp.request, response=mock_resp)
+        )
+        mock_resp.raise_for_status = original
+
+        patched = patch_raise_for_status(mock_resp)
+        with pytest.raises(UiPathAPIError) as exc_info:
+            patched.raise_for_status()
+        assert isinstance(exc_info.value, UiPathNotFoundError)
+
+    def test_patched_response_returns_response_on_success(self):
+        """Patched response returns the response object on 2xx status."""
+        mock_resp = MagicMock(spec=Response)
+        mock_resp.status_code = 200
+        original = MagicMock(return_value=mock_resp)
+        mock_resp.raise_for_status = original
+
+        patched = patch_raise_for_status(mock_resp)
+        result = patched.raise_for_status()
+        assert result is mock_resp
+
+    def test_patched_replaces_original_method(self):
+        """The raise_for_status method is replaced, not wrapped additively."""
+        mock_resp = MagicMock(spec=Response)
+        mock_resp.status_code = 200
+        original = MagicMock(return_value=mock_resp)
+        mock_resp.raise_for_status = original
+
+        patched = patch_raise_for_status(mock_resp)
+        assert patched.raise_for_status is not original
+
+
+# ============================================================================
+# Test LLMGateway Singleton Cache Key
+# ============================================================================
+
+
+class TestLLMGatewaySingletonCacheKey:
+    """Tests for LLMGatewayS2SAuth._singleton_cache_key including base_url."""
+
+    def test_different_base_urls_produce_different_cache_keys(self, llmgw_env_vars):
+        """Different base_urls with same credentials produce different cache keys."""
+        from uipath.llm_client.settings.llmgateway.auth import LLMGatewayS2SAuth
+
+        env1 = {**llmgw_env_vars, "LLMGW_URL": "https://alpha.uipath.com"}
+        env2 = {**llmgw_env_vars, "LLMGW_URL": "https://beta.uipath.com"}
+
+        with patch.dict(os.environ, env1, clear=True):
+            settings1 = LLMGatewaySettings()
+        with patch.dict(os.environ, env2, clear=True):
+            settings2 = LLMGatewaySettings()
+
+        key1 = LLMGatewayS2SAuth._singleton_cache_key(settings1)
+        key2 = LLMGatewayS2SAuth._singleton_cache_key(settings2)
+        assert key1 != key2
+
+    def test_same_base_url_and_credentials_produce_same_cache_key(self, llmgw_env_vars):
+        """Same base_url and credentials produce identical cache keys."""
+        from uipath.llm_client.settings.llmgateway.auth import LLMGatewayS2SAuth
+
+        with patch.dict(os.environ, llmgw_env_vars, clear=True):
+            settings1 = LLMGatewaySettings()
+        with patch.dict(os.environ, llmgw_env_vars, clear=True):
+            settings2 = LLMGatewaySettings()
+
+        key1 = LLMGatewayS2SAuth._singleton_cache_key(settings1)
+        key2 = LLMGatewayS2SAuth._singleton_cache_key(settings2)
+        assert key1 == key2
+
+    def test_cache_key_includes_base_url(self, llmgw_env_vars):
+        """The cache key tuple contains the base_url as its first element."""
+        from uipath.llm_client.settings.llmgateway.auth import LLMGatewayS2SAuth
+
+        with patch.dict(os.environ, llmgw_env_vars, clear=True):
+            settings = LLMGatewaySettings()
+
+        key = LLMGatewayS2SAuth._singleton_cache_key(settings)
+        assert key[0] == settings.base_url

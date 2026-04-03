@@ -248,6 +248,9 @@ class RetryableHTTPTransport(HTTPTransport):
             The httpx Response. Returns error responses after retries are exhausted
             instead of raising exceptions.
         """
+        if self.retryer is None:
+            return super().handle_request(request)
+
         parent_handle = super().handle_request
 
         def _send() -> Response:
@@ -257,10 +260,7 @@ class RetryableHTTPTransport(HTTPTransport):
             return response
 
         try:
-            if self.retryer is not None:
-                return self.retryer(_send)
-            else:
-                return _send()
+            return self.retryer(_send)
         except UiPathAPIError as e:
             return e.response
 
@@ -312,6 +312,9 @@ class RetryableAsyncHTTPTransport(AsyncHTTPTransport):
             The httpx Response. Returns error responses after retries are exhausted
             instead of raising exceptions.
         """
+        if self.retryer is None:
+            return await super().handle_async_request(request)
+
         parent_handle = super().handle_async_request
 
         async def _send() -> Response:
@@ -321,10 +324,7 @@ class RetryableAsyncHTTPTransport(AsyncHTTPTransport):
             return response
 
         try:
-            if self.retryer is not None:
-                return await self.retryer(_send)
-            else:
-                return await _send()
+            return await self.retryer(_send)
         except UiPathAPIError as e:
             return e.response
 

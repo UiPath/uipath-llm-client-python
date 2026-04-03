@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_langchain_client` will be documented in this file.
 
+## [1.6.0] - 2026-04-03
+
+### Fixed
+- Version bump to match core package changes
+
 ## [1.5.10] - 2026-03-26
 
 ### Changed
@@ -9,17 +14,17 @@ All notable changes to `uipath_langchain_client` will be documented in this file
 
 ## [1.5.9] - 2026-03-26
 
-### Fix
+### Fixed
 - Remove `fix_host_header` event hooks from `UiPathChatOpenAI`; host header management is handled by the underlying httpx client
 
 ## [1.5.8] - 2026-03-26
 
-### Fix
+### Fixed
 - Pass `base_url` to `OpenAI` and `AsyncOpenAI` constructors in `UiPathChatOpenAI` to ensure the correct endpoint is used by the underlying SDK clients
 
 ## [1.5.7] - 2026-03-23
 
-### Fix
+### Fixed
 - Fix factory for BYO to handle the case where vendor_type is None, but api_flavor is discovered
 
 ## [1.5.6] - 2026-03-21
@@ -31,27 +36,27 @@ All notable changes to `uipath_langchain_client` will be documented in this file
 
 ## [1.5.5] - 2026-03-19
 
-### Fix headers
+### Fixed
 - Fix headers 
 
 ## [1.5.4] - 2026-03-19
 
-### Fix
+### Fixed
 - Fix bedrock clients with file attachments
 
 ## [1.5.3] - 2026-03-18
 
-### Fix
+### Fixed
 - Factory function fix
 
 ## [1.5.2] - 2026-03-18
 
-### Fix
+### Fixed
 - Factory function fix
 
 ## [1.5.1] - 2026-03-17
 
-### Fixes
+### Fixed
 - Fixes to core package, version bump
 
 ## [1.5.0] - 2026-03-16
@@ -63,13 +68,13 @@ All notable changes to `uipath_langchain_client` will be documented in this file
 
 ### New client
 - Added UiPathChatAnthropicBedrock
-- refactored factory function to se the new client
+- refactored factory function to use the new client
 - brought the enums from the base client
 
 
 ## [1.3.1] - 2026-03-12
 
-### Fix
+### Fixed
 - Fix normalized client raise error
 
 ## [1.3.0] - 2026-03-10
@@ -80,7 +85,7 @@ All notable changes to `uipath_langchain_client` will be documented in this file
 
 ## [1.2.7] - 2026-02-26
 
-### Fix
+### Fixed
 - Fix Bedrock clients model_id
 
 ## [1.2.6] - 2026-02-26
@@ -91,12 +96,12 @@ All notable changes to `uipath_langchain_client` will be documented in this file
 
 ## [1.2.5] - 2026-02-26
 
-### Fix
+### Fixed
 - Parameters on factory fix
 
 ## [1.2.4] - 2026-02-26
 
-### Fix
+### Fixed
 - Fix typing on factory method
 
 ## [1.2.3] - 2026-02-25
@@ -106,13 +111,13 @@ All notable changes to `uipath_langchain_client` will be documented in this file
 
 ## [1.2.2] - 2026-02-23
 
-### Fix
+### Fixed
 - Fixes to discovery endpoint on LLMGW
 
 ## [1.2.1] - 2026-02-18
 
-### Fix
-- TImeout fixes, change typing from int to float
+### Fixed
+- Timeout fixes, change typing from int to float
 - remove timeout=None from all clients -> caused overriding the default timeout set up on the UiPathHttpxClient
 
 ## [1.2.0] - 2026-02-18
@@ -121,7 +126,7 @@ All notable changes to `uipath_langchain_client` will be documented in this file
 
 ## [1.1.9] - 2026-02-13
 
-### Docs
+### Changed
 - Updated documentation
 
 ## [1.1.8] - 2026-02-13
@@ -136,34 +141,34 @@ All notable changes to `uipath_langchain_client` will be documented in this file
 
 ## [1.1.6] - 2026-02-12
 
-### Fixes
+### Fixed
 - Added proper type hints for factory method
 
 ## [1.1.5] - 2026-02-12
 
-### Fixes
+### Fixed
 - Fixed bedrock converse api
 
 ## [1.1.4] - 2026-02-12
 
-### Fixes
+### Fixed
 - Fixed anthropic default vendor
 
 ## [1.1.3] - 2026-02-12
 
-### Fixes
-- Fixes on openai langchain client on resposes_api
-- Allow the flavor to be set up at requst time, not just when instantiating the llm
+### Fixed
+- Fixes on openai langchain client on responses_api
+- Allow the flavor to be set up at request time, not just when instantiating the llm
 - Some fixes for the anthropic client
 
 ## [1.1.2] - 2026-02-12
 
 ### Refactor
-- Rename normalized client for better comaptibility with other packages
+- Rename normalized client for better compatibility with other packages
 
 ## [1.1.1] - 2026-02-11
 
-### Fixes
+### Fixed
 - Fix langchain fireworks client for async usage
 
 ## [1.1.0] - 2026-02-11
@@ -177,17 +182,17 @@ All notable changes to `uipath_langchain_client` will be documented in this file
 
 ## [1.0.13] - 2026-02-05
 
-### Fix
+### Fixed
 - Bump version
 
 ## [1.0.12] - 2026-02-05
 
-### Fix
+### Fixed
 - Added 295 as default llmgateway timeout to avoid problems on the backend side
 
 ## [1.0.11] - 2026-02-04
 
-### Type fix
+### Fixed
 - Import TypedDict from typing_extension
 
 ## [1.0.10] - 2026-02-04
@@ -197,12 +202,12 @@ All notable changes to `uipath_langchain_client` will be documented in this file
 
 ## [1.0.9] - 2026-02-04
 
-### Fix
+### Fixed
 - Fixed typing in core package, updated dependency
 
 ## [1.0.8] - 2026-02-04
 
-### Fix
+### Fixed
 - Added py.typed to the package
 
 ## [1.0.7] - 2026-02-04
@@ -218,27 +223,27 @@ All notable changes to `uipath_langchain_client` will be documented in this file
 
 ## [1.0.5] - 2026-02-03
 
-### Bug Fix
+### Fixed
 - Fixed retry logic on all clients
 
 ## [1.0.4] - 2026-02-03
 
-### Bug Fix
+### Fixed
 - Fix some timout issues on langchain_openai from llmgw.
 
 ## [1.0.3] - 2026-02-02
 
-### Bug Fix
+### Fixed
 - Added better dependencies for langchain-anthropic to include boto and vertex
 
 ## [1.0.2] - 2026-02-02
 
-### Bug Fix
+### Fixed
 - Removed old fix on Gemini streaming and updated with a new cleaner one
 
 ## [1.0.1] - 2026-02-02
 
-### Bug Fix
+### Fixed
 - Fixed Api Version on OpenAI Embeddings
 
 ## [1.0.0] - 2026-01-30

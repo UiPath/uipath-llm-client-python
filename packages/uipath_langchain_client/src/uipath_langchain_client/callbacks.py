@@ -1,6 +1,6 @@
 """LangChain callbacks for dynamic per-request header injection."""
 
-from abc import abstractmethod
+from abc import ABC, abstractmethod
 from typing import Any
 
 from langchain_core.callbacks import BaseCallbackHandler
@@ -8,7 +8,7 @@ from langchain_core.callbacks import BaseCallbackHandler
 from uipath.llm_client.utils.headers import set_dynamic_request_headers
 
 
-class UiPathDynamicHeadersCallback(BaseCallbackHandler):
+class UiPathDynamicHeadersCallback(BaseCallbackHandler, ABC):
     """Base callback for injecting dynamic headers into each LLM gateway request.
 
     Extend this class and implement ``get_headers()`` to return the headers to

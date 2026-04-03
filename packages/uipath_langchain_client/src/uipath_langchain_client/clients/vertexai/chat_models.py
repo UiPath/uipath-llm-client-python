@@ -41,7 +41,7 @@ class UiPathChatAnthropicVertex(UiPathBaseChatModel, ChatAnthropicVertex):  # ty
             project_id="PLACEHOLDER",
             access_token="PLACEHOLDER",
             base_url=str(self.uipath_sync_client.base_url),
-            default_headers=self.uipath_sync_client.headers,
+            default_headers=dict(self.uipath_sync_client.headers),
             max_retries=0,  # handled by the UiPath client
             http_client=self.uipath_sync_client,
         )
@@ -50,7 +50,7 @@ class UiPathChatAnthropicVertex(UiPathBaseChatModel, ChatAnthropicVertex):  # ty
             project_id="PLACEHOLDER",
             access_token="PLACEHOLDER",
             base_url=str(self.uipath_async_client.base_url),
-            default_headers=self.uipath_async_client.headers,
+            default_headers=dict(self.uipath_async_client.headers),
             max_retries=0,  # handled by the UiPath client
             http_client=self.uipath_async_client,
         )

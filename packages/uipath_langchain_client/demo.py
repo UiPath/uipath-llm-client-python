@@ -17,9 +17,7 @@ import asyncio
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_core.tools import tool
 from uipath_langchain_client import get_chat_model, get_embedding_model
-from uipath_langchain_client.settings import get_default_client_settings
-
-from uipath.llm_client.settings.constants import RoutingMode
+from uipath_langchain_client.settings import RoutingMode, get_default_client_settings
 
 
 def demo_basic_chat():
@@ -136,8 +134,31 @@ def demo_tool_calling():
         Args:
             expression: A mathematical expression to evaluate (e.g., "2 + 2").
         """
+        import ast
+
         try:
-            result = eval(expression)
+            # Restrict to a safe subset: only literals and basic arithmetic operators.
+            # This prevents arbitrary code execution via eval().
+            tree = ast.parse(expression, mode="eval")
+            allowed_node_types = (
+                ast.Expression,
+                ast.BinOp,
+                ast.UnaryOp,
+                ast.Constant,
+                ast.Add,
+                ast.Sub,
+                ast.Mult,
+                ast.Div,
+                ast.FloorDiv,
+                ast.Mod,
+                ast.Pow,
+                ast.USub,
+                ast.UAdd,
+            )
+            for node in ast.walk(tree):
+                if not isinstance(node, allowed_node_types):
+                    return "Error: unsupported operation in expression"
+            result = eval(compile(tree, "<string>", "eval"), {"__builtins__": {}})
             return str(result)
         except Exception as e:
             return f"Error: {e}"

@@ -2,6 +2,14 @@
 
 All notable changes to `uipath_llm_client` (core package) will be documented in this file.
 
+## [1.6.0] - 2026-04-03
+
+### Fixed
+- Set `api_flavor` to `None` for ANTHROPIC and AZURE vendor types
+- Add ANTHROPIC/AZURE cases to validator and remove unused `original_message` parameter
+- Fix VertexAI `default_headers` consistency and demo import path
+- Fix LLMGateway singleton cache key to include `base_url`
+
 ## [1.5.10] - 2026-03-26
 
 ### Changed
@@ -9,17 +17,17 @@ All notable changes to `uipath_llm_client` (core package) will be documented in 
 
 ## [1.5.9] - 2026-03-26
 
-### Fix
+### Fixed
 - Use `availableOperationCodes` field (instead of `operationCodes`) when validating BYOM operation codes
 
 ## [1.5.8] - 2026-03-26
 
-### Fix
+### Fixed
 - Pass `base_url` to `OpenAI` and `AsyncOpenAI` constructors in `UiPathOpenAI` and `UiPathAsyncOpenAI` to ensure the correct endpoint is forwarded to the underlying SDK clients
 
 ## [1.5.7] - 2026-03-23
 
-### Fix
+### Fixed
 - Added mapping api_flavor to vendor_type
 
 ## [1.5.6] - 2026-03-21
@@ -30,22 +38,22 @@ All notable changes to `uipath_llm_client` (core package) will be documented in 
 
 ## [1.5.5] - 2026-03-19
 
-### Fix
+### Fixed
 - Fix headers for Platform Settings
 
 ## [1.5.3] - 2026-03-18
 
-### Fix
+### Fixed
 - Factory function fix
 
 ## [1.5.2] - 2026-03-18
 
-### Fix
+### Fixed
 - Factory function fix
 
 ## [1.5.1] - 2026-03-17
 
-### Fix
+### Fixed
 - Added error message for normalized embeddings on UiPath Platform (AgentHub/Orchestrator) as there is no supported endpoint
 - Fix endpoints for platform to remove api version
 
@@ -67,7 +75,7 @@ All notable changes to `uipath_llm_client` (core package) will be documented in 
 - test updates
 - new cassettes
 
-### Fixes
+### Fixed
 - Added constants for VendorType and ApiFlavor
 
 ## [1.3.0] - 2026-03-10
@@ -89,41 +97,41 @@ All notable changes to `uipath_llm_client` (core package) will be documented in 
 
 ## [1.2.2] - 2026-02-23
 
-### Fix
+### Fixed
 - Fixes to discovery endpoint on LLMGW
 
 ## [1.2.1] - 2026-02-18
 
-### Fix
-- TImeout fixes, change typing from int to float
+### Fixed
+- Timeout fixes, change typing from int to float
 - remove timeout=None from all clients -> caused overriding the default timeout set up on the UiPathHttpxClient
 
 ## [1.2.0] - 2026-02-18
 
 ### Stable release
 
-### Fix
-- Fixed agenhub auth when token already exists
+### Fixed
+- Fixed agenthub auth when token already exists
 
 ## [1.1.1] - 2026-02-12
 
-### Fix
+### Fixed
 - Small fixes on openai client
 
 ## [1.1.0] - 2026-02-11
 
 ### Stable release
-- Adeed BYOM validation for settings
+- Added BYOM validation for settings
 - Stable release
 
 ## [1.0.13] - 2026-02-05
 
-### Fix
+### Fixed
 - Fixed headers on llmgw settings
 
 ## [1.0.12] - 2026-02-05
 
-### Fix
+### Fixed
 - Added 295 as default llmgateway timeout to avoid problems on the backend side
 
 ## [1.0.11] - 2026-02-05
@@ -133,25 +141,25 @@ All notable changes to `uipath_llm_client` (core package) will be documented in 
 
 ## [1.0.10] - 2026-02-04
 
-### Type fix
+### Fixed
 - Import TypedDict from typing_extension
 
-### Typing Fix
+### Fixed
 - import @override from typing_extension
 
 ## [1.0.8] - 2026-02-04
 
-### Bug Fix
+### Fixed
 - Fixed a typing issue of Singleton
 
 ## [1.0.7] - 2026-02-04
 
-### Fix
+### Fixed
 - Added py.typed to the package
 
 ## [1.0.6]
 
-### Bug Fix
+### Fixed
 - Fixed model discovery on AgentHub Settings.
 
 ## [1.0.5] - 2026-02-03
@@ -161,7 +169,7 @@ All notable changes to `uipath_llm_client` (core package) will be documented in 
 
 ## [1.0.4] - 2026-02-03
 
-### Bug Fix
+### Fixed
 - Adjusted retry logic, now 0 means no retries, 1 means one retry
 
 ## [1.0.3] - 2026-02-02
@@ -171,12 +179,12 @@ All notable changes to `uipath_llm_client` (core package) will be documented in 
 
 ## [1.0.2] - 2026-02-02
 
-### Bug Fixes
+### Fixed
 - Fixed endpoints on AgentHub Settings
 
 ## [1.0.1] - 2026-01-30
 
-### Bug Fixes
+### Fixed
 - Map 400 Bad requests on S2S to 401 Unauthorized for better readability
 
 ## [1.0.0] - 2026-01-30

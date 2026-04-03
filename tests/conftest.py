@@ -56,6 +56,9 @@ def pytest_recording_configure(config, vcr):
     vcr.register_persister(SQLitePersister)
 
 
+# Only "llmgw" is parameterized because Platform (agenthub) requires `uipath auth`
+# credentials that are not available in CI. Platform-specific logic is tested
+# via mocked settings in test_base_client.py.
 @pytest.fixture(scope="session", params=["llmgw"])
 def client_settings(request: pytest.FixtureRequest) -> UiPathBaseSettings:
     match request.param:

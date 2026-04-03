@@ -1,10 +1,9 @@
 from typing import Self
 
-from pydantic import model_validator
+from pydantic import Field, model_validator
 
 from uipath_langchain_client.base_client import UiPathBaseEmbeddings
 from uipath_langchain_client.settings import (
-    ApiFlavor,
     ApiType,
     RoutingMode,
     UiPathAPIConfig,
@@ -26,10 +25,11 @@ class UiPathFireworksEmbeddings(UiPathBaseEmbeddings, FireworksEmbeddings):
         api_type=ApiType.EMBEDDINGS,
         routing_mode=RoutingMode.PASSTHROUGH,
         vendor_type=VendorType.OPENAI,
-        api_flavor=ApiFlavor.CHAT_COMPLETIONS,
         api_version="2025-03-01-preview",
         freeze_base_url=True,
     )
+
+    model: str = Field(default="", alias="model_name")
 
     @model_validator(mode="after")
     def setup_uipath_client(self) -> Self:
@@ -48,7 +48,8 @@ class UiPathFireworksEmbeddings(UiPathBaseEmbeddings, FireworksEmbeddings):
     def embed_documents(self, texts: list[str]) -> list[list[float]]:
         """Embed search docs."""
         return [
-            i.embedding for i in self.client.embeddings.create(input=texts, model=self.model).data
+            i.embedding
+            for i in self.client.embeddings.create(input=texts, model=self.model_name).data
         ]
 
     def embed_query(self, text: str) -> list[float]:
@@ -59,7 +60,9 @@ class UiPathFireworksEmbeddings(UiPathBaseEmbeddings, FireworksEmbeddings):
         """Embed search docs asynchronously."""
         return [
             i.embedding
-            for i in (await self.async_client.embeddings.create(input=texts, model=self.model)).data
+            for i in (
+                await self.async_client.embeddings.create(input=texts, model=self.model_name)
+            ).data
         ]
 
     async def aembed_query(self, text: str) -> list[float]:

@@ -487,7 +487,7 @@ class TestBuildToolDefinition:
 
     def test_unsupported_type(self):
         with pytest.raises(TypeError, match="Unsupported tool type"):
-            _build_tool_definition(42)
+            _build_tool_definition(42)  # type: ignore[arg-type]
 
 
 class TestToolChoiceResolution:

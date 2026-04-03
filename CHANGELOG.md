@@ -2,6 +2,19 @@
 
 All notable changes to `uipath_llm_client` (core package) will be documented in this file.
 
+## [1.7.0] - 2026-04-03
+
+### Added
+- `UiPathNormalizedClient` — provider-agnostic LLM client with no optional dependencies
+  - `client.completions.create/acreate/stream/astream` for chat completions
+  - `client.embeddings.create/acreate` for embeddings
+  - Structured output via `response_format` (Pydantic, TypedDict, dict, json_object)
+  - Tool calling with dicts, Pydantic models, or callables
+  - Streaming with SSE parsing
+  - Full vendor parameter coverage: OpenAI (reasoning, logprobs, logit_bias), Anthropic (thinking, top_k), Google (thinking_level/budget, safety_settings, cached_content)
+  - Typed response models: `ChatCompletion`, `ChatCompletionChunk`, `EmbeddingResponse`
+  - Accepts both dict and Pydantic model messages
+
 ## [1.6.0] - 2026-04-03
 
 ### Fixed

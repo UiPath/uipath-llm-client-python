@@ -2,6 +2,13 @@
 
 All notable changes to `uipath_langchain_client` will be documented in this file.
 
+## [1.7.0] - 2026-04-03
+
+### Added
+- `UiPathChat.with_structured_output()` — supports `function_calling`, `json_schema`, and `json_mode` methods
+- `UiPathChat.bind_tools()` — added `parallel_tool_calls` parameter
+- Added vendor-specific parameters to `UiPathChat`: `logit_bias`, `logprobs`, `top_logprobs`, `parallel_tool_calls`, `top_k`, `safety_settings`, `cached_content`, `labels`, `seed`
+
 ## [1.6.0] - 2026-04-03
 
 ### Fixed

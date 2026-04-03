@@ -5,6 +5,7 @@ from typing import Any, Self
 
 from pydantic import Field, SecretStr, model_validator
 from typing_extensions import override
+from uipath.platform import UiPath
 from uipath.platform.common import EndpointManager
 
 from uipath.llm_client.settings.base import UiPathAPIConfig, UiPathBaseSettings
@@ -163,7 +164,6 @@ class PlatformBaseSettings(UiPathBaseSettings):
 
     @override
     def get_available_models(self) -> list[dict[str, Any]]:
-        from uipath.platform import UiPath
 
         models = UiPath().agenthub.get_available_llm_models(
             headers=dict(self.build_auth_headers()),

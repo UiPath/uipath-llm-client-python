@@ -78,7 +78,9 @@ class LLMGatewayBaseSettings(UiPathBaseSettings):
         if api_config is None:
             raise ValueError("api_config is required for LLMGatewaySettings.build_base_url")
         if api_config.routing_mode is None:
-            raise ValueError("api_config.routing_mode is required for LLMGatewaySettings.build_base_url")
+            raise ValueError(
+                "api_config.routing_mode is required for LLMGatewaySettings.build_base_url"
+            )
         base_url = f"{self.base_url}/{self.org_id}/{self.tenant_id}"
         if api_config.routing_mode == RoutingMode.NORMALIZED:
             url = f"{base_url}/{LLMGatewayEndpoints.NORMALIZED_ENDPOINT.value.format(api_type='chat/completions' if api_config.api_type == ApiType.COMPLETIONS else 'embeddings')}"
@@ -114,7 +116,11 @@ class LLMGatewayBaseSettings(UiPathBaseSettings):
     @override
     def get_available_models(self) -> list[dict[str, Any]]:
         discovery_url = f"{self.base_url}/{self.org_id}/{self.tenant_id}/{LLMGatewayEndpoints.DISCOVERY_ENDPOINT.value}"
-        with Client(auth=self.build_auth_pipeline(), headers=self.build_auth_headers(), **get_httpx_ssl_client_kwargs()) as client:
+        with Client(
+            auth=self.build_auth_pipeline(),
+            headers=self.build_auth_headers(),
+            **get_httpx_ssl_client_kwargs(),
+        ) as client:
             response = client.get(discovery_url)
             if response.is_error:
                 raise UiPathAPIError.from_response(response)

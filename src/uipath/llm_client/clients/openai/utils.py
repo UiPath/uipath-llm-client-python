@@ -36,9 +36,7 @@ class OpenAIRequestHandler:
             )
         )
         request.url = URL(
-            self.client_settings.build_base_url(
-                model_name=self.model_name, api_config=api_config
-            )
+            self.client_settings.build_base_url(model_name=self.model_name, api_config=api_config)
         )
 
     def fix_url_and_headers(self, request: Request):

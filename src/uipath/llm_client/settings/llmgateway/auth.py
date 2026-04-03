@@ -23,6 +23,7 @@ class LLMGatewayS2SAuth(Auth, metaclass=SingletonMeta):
     def _singleton_cache_key(cls, settings: LLMGatewayBaseSettings) -> tuple:
         """Derive a cache key from the credentials so different settings get different instances."""
         return (
+            settings.base_url,
             settings.client_id.get_secret_value() if settings.client_id else None,
             settings.client_secret.get_secret_value() if settings.client_secret else None,
         )

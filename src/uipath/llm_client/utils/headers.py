@@ -24,7 +24,9 @@ def get_captured_response_headers() -> dict[str, str]:
     return dict(_CAPTURED_RESPONSE_HEADERS.get() or {})
 
 
-def set_captured_response_headers(headers: dict[str, str]) -> contextvars.Token[dict[str, str] | None]:
+def set_captured_response_headers(
+    headers: dict[str, str],
+) -> contextvars.Token[dict[str, str] | None]:
     """Set captured response headers for the current context."""
     return _CAPTURED_RESPONSE_HEADERS.set(headers)
 
@@ -37,7 +39,9 @@ def get_dynamic_request_headers() -> dict[str, str]:
     return dict(_DYNAMIC_REQUEST_HEADERS.get() or {})
 
 
-def set_dynamic_request_headers(headers: dict[str, str]) -> contextvars.Token[dict[str, str] | None]:
+def set_dynamic_request_headers(
+    headers: dict[str, str],
+) -> contextvars.Token[dict[str, str] | None]:
     """Set headers to be injected into the next outgoing request."""
     return _DYNAMIC_REQUEST_HEADERS.set(headers)
 
@@ -77,7 +81,10 @@ def build_routing_headers(
     if api_config is not None:
         if api_config.routing_mode == RoutingMode.NORMALIZED and model_name is not None:
             headers["X-UiPath-LlmGateway-NormalizedApi-ModelName"] = model_name
-        elif api_config.routing_mode == RoutingMode.PASSTHROUGH and api_config.api_type == ApiType.COMPLETIONS:
+        elif (
+            api_config.routing_mode == RoutingMode.PASSTHROUGH
+            and api_config.api_type == ApiType.COMPLETIONS
+        ):
             if api_config.api_flavor is not None:
                 headers["X-UiPath-LlmGateway-ApiFlavor"] = api_config.api_flavor
             if api_config.api_version is not None:

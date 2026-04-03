@@ -1621,6 +1621,7 @@ class TestSSLConfig:
         from uipath.llm_client.utils.ssl_config import expand_path
 
         result = expand_path("~/test")
+        assert result is not None
         assert "~" not in result
         assert result.endswith("/test")
 

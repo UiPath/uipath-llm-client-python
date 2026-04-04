@@ -17,7 +17,7 @@ Example:
 import logging
 from collections.abc import Mapping, Sequence
 
-from uipath.llm_client.clients.utils import build_httpx_async_client, build_httpx_client
+from uipath.llm_client.httpx_client import UiPathHttpxAsyncClient, UiPathHttpxClient
 from uipath.llm_client.settings import (
     UiPathAPIConfig,
     UiPathBaseSettings,
@@ -86,14 +86,14 @@ class UiPathAnthropic(Anthropic):
         super().__init__(
             api_key="PLACEHOLDER",
             max_retries=0,
-            http_client=build_httpx_client(
+            http_client=UiPathHttpxClient(
                 model_name=model_name,
                 byo_connection_id=byo_connection_id,
                 client_settings=client_settings,
                 api_config=_build_api_config(),
                 timeout=timeout,
                 max_retries=max_retries,
-                default_headers=default_headers,
+                headers=default_headers,
                 captured_headers=captured_headers,
                 retry_config=retry_config,
                 logger=logger,
@@ -133,14 +133,14 @@ class UiPathAsyncAnthropic(AsyncAnthropic):
         super().__init__(
             api_key="PLACEHOLDER",
             max_retries=0,
-            http_client=build_httpx_async_client(
+            http_client=UiPathHttpxAsyncClient(
                 model_name=model_name,
                 byo_connection_id=byo_connection_id,
                 client_settings=client_settings,
                 api_config=_build_api_config(),
                 timeout=timeout,
                 max_retries=max_retries,
-                default_headers=default_headers,
+                headers=default_headers,
                 captured_headers=captured_headers,
                 retry_config=retry_config,
                 logger=logger,
@@ -182,14 +182,14 @@ class UiPathAnthropicBedrock(AnthropicBedrock):
             aws_secret_key="PLACEHOLDER",
             aws_region="PLACEHOLDER",
             max_retries=0,
-            http_client=build_httpx_client(
+            http_client=UiPathHttpxClient(
                 model_name=model_name,
                 byo_connection_id=byo_connection_id,
                 client_settings=client_settings,
                 api_config=_build_api_config(vendor_type=VendorType.AWSBEDROCK),
                 timeout=timeout,
                 max_retries=max_retries,
-                default_headers=default_headers,
+                headers=default_headers,
                 captured_headers=captured_headers,
                 retry_config=retry_config,
                 logger=logger,
@@ -231,14 +231,14 @@ class UiPathAsyncAnthropicBedrock(AsyncAnthropicBedrock):
             aws_secret_key="PLACEHOLDER",
             aws_region="PLACEHOLDER",
             max_retries=0,
-            http_client=build_httpx_async_client(
+            http_client=UiPathHttpxAsyncClient(
                 model_name=model_name,
                 byo_connection_id=byo_connection_id,
                 client_settings=client_settings,
                 api_config=_build_api_config(vendor_type=VendorType.AWSBEDROCK),
                 timeout=timeout,
                 max_retries=max_retries,
-                default_headers=default_headers,
+                headers=default_headers,
                 captured_headers=captured_headers,
                 retry_config=retry_config,
                 logger=logger,
@@ -280,14 +280,14 @@ class UiPathAnthropicVertex(AnthropicVertex):
             project_id="PLACEHOLDER",
             access_token="PLACEHOLDER",
             max_retries=0,
-            http_client=build_httpx_client(
+            http_client=UiPathHttpxClient(
                 model_name=model_name,
                 byo_connection_id=byo_connection_id,
                 client_settings=client_settings,
                 api_config=_build_api_config(vendor_type=VendorType.VERTEXAI),
                 timeout=timeout,
                 max_retries=max_retries,
-                default_headers=default_headers,
+                headers=default_headers,
                 captured_headers=captured_headers,
                 retry_config=retry_config,
                 logger=logger,
@@ -329,14 +329,14 @@ class UiPathAsyncAnthropicVertex(AsyncAnthropicVertex):
             project_id="PLACEHOLDER",
             access_token="PLACEHOLDER",
             max_retries=0,
-            http_client=build_httpx_async_client(
+            http_client=UiPathHttpxAsyncClient(
                 model_name=model_name,
                 byo_connection_id=byo_connection_id,
                 client_settings=client_settings,
                 api_config=_build_api_config(vendor_type=VendorType.VERTEXAI),
                 timeout=timeout,
                 max_retries=max_retries,
-                default_headers=default_headers,
+                headers=default_headers,
                 captured_headers=captured_headers,
                 retry_config=retry_config,
                 logger=logger,
@@ -376,14 +376,14 @@ class UiPathAnthropicFoundry(AnthropicFoundry):
         super().__init__(
             api_key="PLACEHOLDER",
             max_retries=0,
-            http_client=build_httpx_client(
+            http_client=UiPathHttpxClient(
                 model_name=model_name,
                 byo_connection_id=byo_connection_id,
                 client_settings=client_settings,
                 api_config=_build_api_config(vendor_type=VendorType.AZURE),
                 timeout=timeout,
                 max_retries=max_retries,
-                default_headers=default_headers,
+                headers=default_headers,
                 captured_headers=captured_headers,
                 retry_config=retry_config,
                 logger=logger,
@@ -423,14 +423,14 @@ class UiPathAsyncAnthropicFoundry(AsyncAnthropicFoundry):
         super().__init__(
             api_key="PLACEHOLDER",
             max_retries=0,
-            http_client=build_httpx_async_client(
+            http_client=UiPathHttpxAsyncClient(
                 model_name=model_name,
                 byo_connection_id=byo_connection_id,
                 client_settings=client_settings,
                 api_config=_build_api_config(vendor_type=VendorType.AZURE),
                 timeout=timeout,
                 max_retries=max_retries,
-                default_headers=default_headers,
+                headers=default_headers,
                 captured_headers=captured_headers,
                 retry_config=retry_config,
                 logger=logger,

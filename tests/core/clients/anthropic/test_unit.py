@@ -65,11 +65,11 @@ def mock_settings():
 def _patch_client_deps(mock_settings):
     with (
         patch(
-            f"{MODULE}.build_httpx_client",
+            f"{MODULE}.UiPathHttpxClient",
             side_effect=lambda **kw: _make_sync_httpx_mock(),
         ) as sync_mock,
         patch(
-            f"{MODULE}.build_httpx_async_client",
+            f"{MODULE}.UiPathHttpxAsyncClient",
             side_effect=lambda **kw: _make_async_httpx_mock(),
         ) as async_mock,
         patch(f"{MODULE}.get_default_client_settings", return_value=mock_settings),

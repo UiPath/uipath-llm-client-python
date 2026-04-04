@@ -50,7 +50,6 @@ from functools import cached_property
 
 from uipath.llm_client.clients.normalized.completions import Completions
 from uipath.llm_client.clients.normalized.embeddings import Embeddings
-from uipath.llm_client.clients.utils import build_httpx_async_client, build_httpx_client
 from uipath.llm_client.httpx_client import UiPathHttpxAsyncClient, UiPathHttpxClient
 from uipath.llm_client.settings import UiPathBaseSettings, get_default_client_settings
 from uipath.llm_client.settings.base import UiPathAPIConfig
@@ -126,31 +125,31 @@ class UiPathNormalizedClient:
     # ------------------------------------------------------------------
 
     def _build_sync(self, api_config: UiPathAPIConfig) -> UiPathHttpxClient:
-        return build_httpx_client(
+        return UiPathHttpxClient(
             model_name=self._model_name,
             byo_connection_id=self._byo_connection_id,
             client_settings=self._client_settings,
+            api_config=api_config,
             timeout=self._timeout,
             max_retries=self._max_retries,
-            default_headers=self._default_headers,
+            headers=self._default_headers,
             captured_headers=self._captured_headers,
             retry_config=self._retry_config,
             logger=self._logger,
-            api_config=api_config,
         )
 
     def _build_async(self, api_config: UiPathAPIConfig) -> UiPathHttpxAsyncClient:
-        return build_httpx_async_client(
+        return UiPathHttpxAsyncClient(
             model_name=self._model_name,
             byo_connection_id=self._byo_connection_id,
             client_settings=self._client_settings,
+            api_config=api_config,
             timeout=self._timeout,
             max_retries=self._max_retries,
-            default_headers=self._default_headers,
+            headers=self._default_headers,
             captured_headers=self._captured_headers,
             retry_config=self._retry_config,
             logger=self._logger,
-            api_config=api_config,
         )
 
     @cached_property

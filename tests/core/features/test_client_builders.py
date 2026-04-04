@@ -1,13 +1,12 @@
-"""Tests for the shared httpx client builder utilities."""
+"""Tests for UiPathHttpxClient / UiPathHttpxAsyncClient with client_settings."""
 
 from unittest.mock import MagicMock
 
-from uipath.llm_client.clients.utils import build_httpx_async_client, build_httpx_client
 from uipath.llm_client.httpx_client import UiPathHttpxAsyncClient, UiPathHttpxClient
 from uipath.llm_client.settings.base import UiPathAPIConfig
 
 
-class TestBuildHttpxClient:
+class TestUiPathHttpxClientWithSettings:
     def _make_mock_settings(self):
         settings = MagicMock()
         settings.build_base_url.return_value = "https://gateway.uipath.com/llm/v1"
@@ -19,17 +18,11 @@ class TestBuildHttpxClient:
         settings = self._make_mock_settings()
         api_config = UiPathAPIConfig(api_type="completions", routing_mode="normalized")
 
-        client = build_httpx_client(
+        client = UiPathHttpxClient(
             model_name="gpt-4o",
-            byo_connection_id=None,
             client_settings=settings,
-            timeout=30.0,
-            max_retries=3,
-            default_headers=None,
-            captured_headers=("x-uipath-",),
-            retry_config=None,
-            logger=None,
             api_config=api_config,
+            max_retries=3,
         )
 
         assert isinstance(client, UiPathHttpxClient)
@@ -38,17 +31,11 @@ class TestBuildHttpxClient:
         settings = self._make_mock_settings()
         api_config = UiPathAPIConfig(api_type="completions", routing_mode="normalized")
 
-        client = build_httpx_client(
+        client = UiPathHttpxClient(
             model_name="gpt-4o",
-            byo_connection_id=None,
             client_settings=settings,
-            timeout=30.0,
-            max_retries=0,
-            default_headers={"X-Custom": "value"},
-            captured_headers=("x-uipath-",),
-            retry_config=None,
-            logger=None,
             api_config=api_config,
+            headers={"X-Custom": "value"},
         )
 
         assert isinstance(client, UiPathHttpxClient)
@@ -60,25 +47,21 @@ class TestBuildHttpxClient:
     def test_without_api_config(self):
         settings = self._make_mock_settings()
 
-        client = build_httpx_client(
+        client = UiPathHttpxClient(
             model_name="gpt-4o",
-            byo_connection_id=None,
             client_settings=settings,
-            timeout=30.0,
-            max_retries=0,
-            default_headers=None,
-            captured_headers=("x-uipath-",),
-            retry_config=None,
-            logger=None,
-            api_config=None,
         )
 
         assert isinstance(client, UiPathHttpxClient)
         settings.build_auth_headers.assert_not_called()
         settings.build_base_url.assert_not_called()
 
+    def test_without_client_settings(self):
+        client = UiPathHttpxClient(model_name="gpt-4o")
+        assert isinstance(client, UiPathHttpxClient)
 
-class TestBuildHttpxAsyncClient:
+
+class TestUiPathHttpxAsyncClientWithSettings:
     def _make_mock_settings(self):
         settings = MagicMock()
         settings.build_base_url.return_value = "https://gateway.uipath.com/llm/v1"
@@ -90,17 +73,11 @@ class TestBuildHttpxAsyncClient:
         settings = self._make_mock_settings()
         api_config = UiPathAPIConfig(api_type="completions", routing_mode="normalized")
 
-        client = build_httpx_async_client(
+        client = UiPathHttpxAsyncClient(
             model_name="gpt-4o",
-            byo_connection_id=None,
             client_settings=settings,
-            timeout=30.0,
-            max_retries=3,
-            default_headers=None,
-            captured_headers=("x-uipath-",),
-            retry_config=None,
-            logger=None,
             api_config=api_config,
+            max_retries=3,
         )
 
         assert isinstance(client, UiPathHttpxAsyncClient)
@@ -109,17 +86,11 @@ class TestBuildHttpxAsyncClient:
         settings = self._make_mock_settings()
         api_config = UiPathAPIConfig(api_type="embeddings", routing_mode="normalized")
 
-        client = build_httpx_async_client(
+        client = UiPathHttpxAsyncClient(
             model_name="text-embedding-ada-002",
-            byo_connection_id=None,
             client_settings=settings,
-            timeout=60.0,
-            max_retries=2,
-            default_headers={"X-Custom": "header"},
-            captured_headers=("x-uipath-",),
-            retry_config=None,
-            logger=None,
             api_config=api_config,
+            headers={"X-Custom": "header"},
         )
 
         assert isinstance(client, UiPathHttpxAsyncClient)
@@ -133,17 +104,9 @@ class TestBuildHttpxAsyncClient:
     def test_without_api_config(self):
         settings = self._make_mock_settings()
 
-        client = build_httpx_async_client(
+        client = UiPathHttpxAsyncClient(
             model_name="gpt-4o",
-            byo_connection_id=None,
             client_settings=settings,
-            timeout=30.0,
-            max_retries=0,
-            default_headers=None,
-            captured_headers=("x-uipath-",),
-            retry_config=None,
-            logger=None,
-            api_config=None,
         )
 
         assert isinstance(client, UiPathHttpxAsyncClient)

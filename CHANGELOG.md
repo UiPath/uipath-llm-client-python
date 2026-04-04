@@ -5,7 +5,13 @@ All notable changes to `uipath_llm_client` (core package) will be documented in 
 ## [1.8.0] - 2026-04-05
 
 ### Added
-- `litellm` as an optional dependency for LiteLLM integration
+- `UiPathLiteLLM` — provider-agnostic LLM client powered by LiteLLM
+  - `client.completions.create/acreate/stream/astream` for chat completions
+  - `client.embeddings.create/acreate` for embeddings
+  - Accepts `api_config` to control vendor routing and auto-maps to LiteLLM's `custom_llm_provider`
+  - All HTTP routed through UiPath-configured httpx transport (auth, retry, headers)
+- `litellm` as an optional dependency
+- `**kwargs` support in `build_httpx_client` / `build_httpx_async_client`
 
 ### Changed
 - Updated dependency versions: `uipath-platform>=0.1.18`, `openai>=2.30.0`, `google-genai>=1.70.0`, `anthropic>=0.89.0`

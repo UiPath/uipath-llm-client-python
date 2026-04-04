@@ -2,6 +2,14 @@
 
 All notable changes to `uipath_llm_client` (core package) will be documented in this file.
 
+## [1.8.0] - 2026-04-05
+
+### Added
+- `litellm` as an optional dependency for LiteLLM integration
+
+### Changed
+- Updated dependency versions: `uipath-platform>=0.1.18`, `openai>=2.30.0`, `google-genai>=1.70.0`, `anthropic>=0.89.0`
+
 ## [1.7.0] - 2026-04-03
 
 ### Added

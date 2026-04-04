@@ -2,6 +2,15 @@
 
 All notable changes to `uipath_langchain_client` will be documented in this file.
 
+## [1.8.0] - 2026-04-05
+
+### Added
+- `langchain-litellm` as an optional dependency for LiteLLM integration
+
+### Changed
+- Updated dependency versions: `langchain>=1.2.15`, `langchain-openai>=1.1.12`, `anthropic[bedrock,vertex]>=0.89.0`, `langchain-aws>=1.4.3`, `langchain-azure-ai>=1.2.1`
+- Version bump to match core package 1.8.0
+
 ## [1.7.1] - 2026-04-04
 
 ### Added

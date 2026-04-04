@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_langchain_client` will be documented in this file.
 
+## [1.7.1] - 2026-04-04
+
+### Added
+- `custom_class` parameter in `get_chat_model()` and `get_embedding_model()` factory functions to allow instantiating a user-provided class instead of the auto-detected one
+
 ## [1.7.0] - 2026-04-03
 
 ### Added

@@ -40,12 +40,12 @@ jobs:
       - name: Smoke test (wheel with all extras)
         run: |
           WHEEL=$(ls dist/*.whl)
-          uv run --isolated --no-project --with "${WHEEL}[all]" tests/core/core_smoke_test.py
+          uv run --isolated --no-project --with "${WHEEL}[all]" tests/core/smoke_test.py
 
       - name: Smoke test (source distribution with all extras)
         run: |
           SDIST=$(ls dist/*.tar.gz)
-          uv run --isolated --no-project --with "${SDIST}[all]" tests/core/core_smoke_test.py
+          uv run --isolated --no-project --with "${SDIST}[all]" tests/core/smoke_test.py
 
       - name: Publish package
         run: uv publish

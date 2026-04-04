@@ -2,6 +2,18 @@
 
 All notable changes to `uipath_llm_client` (core package) will be documented in this file.
 
+## [1.8.0] - 2026-04-04
+
+### Added
+- `UiPathLiteLLM` — LiteLLM client wrapper for routing completions and embeddings through UiPath LLM Gateway
+  - Sync/async completions via `completion()` / `acompletion()`
+  - Sync/async embeddings via `embedding()` / `aembedding()`
+  - Injects UiPath-configured OpenAI client as HTTP transport
+- Added `litellm` optional dependency (`uipath-llm-client[litellm]`)
+
+### Changed
+- Bumped dependencies: `uipath-platform>=0.1.18`, `anthropic>=0.89.0`, `litellm>=1.83.1`
+
 ## [1.7.0] - 2026-04-03
 
 ### Added

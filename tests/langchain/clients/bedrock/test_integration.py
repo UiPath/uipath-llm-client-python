@@ -171,14 +171,23 @@ class TestBedrockIntegrationChatModel(ChatModelIntegrationTests):
             "I need to find flights for March 15th, accommodation from March 15th to March 20th, and things to do there.",
             "Search for accomodations, flights and attractions in parallel. Don't repeat the same tool call.",
         )
-        model_with_tools_parallel = model.bind_tools(
-            tools,
-            tool_choice={"type": "any", "disable_parallel_tool_use": False},  # type: ignore
-        )
-        model_with_tools_sequential = model.bind_tools(
-            tools,
-            tool_choice={"type": "any", "disable_parallel_tool_use": True},  # type: ignore
-        )
+        if isinstance(model, UiPathChatAnthropicBedrock):
+            # UiPathChatAnthropicBedrock uses parallel_tool_calls as a top-level param
+            model_with_tools_parallel = model.bind_tools(
+                tools, tool_choice="any", parallel_tool_calls=True
+            )
+            model_with_tools_sequential = model.bind_tools(
+                tools, tool_choice="any", parallel_tool_calls=False
+            )
+        else:
+            model_with_tools_parallel = model.bind_tools(
+                tools,
+                tool_choice={"type": "any", "disable_parallel_tool_use": False},  # type: ignore
+            )
+            model_with_tools_sequential = model.bind_tools(
+                tools,
+                tool_choice={"type": "any", "disable_parallel_tool_use": True},  # type: ignore
+            )
 
         parallel_response = model_with_tools_parallel.invoke(prompt)
         sequential_response = model_with_tools_sequential.invoke(prompt)
@@ -196,14 +205,22 @@ class TestBedrockIntegrationChatModel(ChatModelIntegrationTests):
             "I need to find flights for March 15th, accommodation from March 15th to March 20th, and things to do there.",
             "Search for accomodations, flights and attractions in parallel. Don't repeat the same tool call.",
         )
-        model_with_tools_parallel = model.bind_tools(
-            tools,
-            tool_choice={"type": "any", "disable_parallel_tool_use": False},  # type: ignore
-        )
-        model_with_tools_sequential = model.bind_tools(
-            tools,
-            tool_choice={"type": "any", "disable_parallel_tool_use": True},  # type: ignore
-        )
+        if isinstance(model, UiPathChatAnthropicBedrock):
+            model_with_tools_parallel = model.bind_tools(
+                tools, tool_choice="any", parallel_tool_calls=True
+            )
+            model_with_tools_sequential = model.bind_tools(
+                tools, tool_choice="any", parallel_tool_calls=False
+            )
+        else:
+            model_with_tools_parallel = model.bind_tools(
+                tools,
+                tool_choice={"type": "any", "disable_parallel_tool_use": False},  # type: ignore
+            )
+            model_with_tools_sequential = model.bind_tools(
+                tools,
+                tool_choice={"type": "any", "disable_parallel_tool_use": True},  # type: ignore
+            )
 
         parallel_response = await model_with_tools_parallel.ainvoke(prompt)
         sequential_response = await model_with_tools_sequential.ainvoke(prompt)

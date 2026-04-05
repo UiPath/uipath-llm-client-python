@@ -81,9 +81,6 @@ class UiPathHttpxClient(Client):
     Headers are merged in order: default headers -> api_config headers -> user headers.
     Later headers override earlier ones with the same key.
 
-    Attributes:
-        model_name: The LLM model name (for logging purposes).
-        api_config: UiPath API configuration settings.
     """
 
     _streaming_header: str = "X-UiPath-Streaming-Enabled"
@@ -98,8 +95,8 @@ class UiPathHttpxClient(Client):
         # UiPath-specific
         model_name: str | None = None,
         byo_connection_id: str | None = None,
-        client_settings: UiPathBaseSettings | None = None,
         api_config: UiPathAPIConfig | None = None,
+        client_settings: UiPathBaseSettings | None = None,
         captured_headers: Sequence[str] = ("x-uipath-",),
         max_retries: int | None = None,
         retry_config: RetryConfig | None = None,
@@ -167,9 +164,6 @@ class UiPathHttpxClient(Client):
             transport: Custom transport; when None a retryable transport is created.
             default_encoding: Default text encoding (same as httpx.Client).
         """
-        self.model_name = model_name
-        self.byo_connection_id = byo_connection_id
-        self.api_config = api_config
         self._captured_headers = tuple(captured_headers)
 
         # Derive auth, base_url, and extra headers from client_settings
@@ -196,7 +190,7 @@ class UiPathHttpxClient(Client):
         if headers is not None:
             merged_headers.update(headers)
 
-        self._freeze_base_url = self.api_config is not None and self.api_config.freeze_base_url
+        self._freeze_base_url = api_config is not None and api_config.freeze_base_url
 
         # Setup retry transport if not provided
         if transport is None:
@@ -289,9 +283,6 @@ class UiPathHttpxAsyncClient(AsyncClient):
     Headers are merged in order: default headers -> api_config headers -> user headers.
     Later headers override earlier ones with the same key.
 
-    Attributes:
-        model_name: The LLM model name (for logging purposes).
-        api_config: UiPath API configuration settings.
     """
 
     _streaming_header: str = "X-UiPath-Streaming-Enabled"
@@ -337,9 +328,6 @@ class UiPathHttpxAsyncClient(AsyncClient):
 
         See :class:`UiPathHttpxClient` for full parameter documentation.
         """
-        self.model_name = model_name
-        self.byo_connection_id = byo_connection_id
-        self.api_config = api_config
         self._captured_headers = tuple(captured_headers)
 
         # Derive auth, base_url, and extra headers from client_settings
@@ -366,7 +354,7 @@ class UiPathHttpxAsyncClient(AsyncClient):
         if headers is not None:
             merged_headers.update(headers)
 
-        self._freeze_base_url = self.api_config is not None and self.api_config.freeze_base_url
+        self._freeze_base_url = api_config is not None and api_config.freeze_base_url
 
         # Setup retry transport if not provided
         if transport is None:

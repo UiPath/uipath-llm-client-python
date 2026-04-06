@@ -81,11 +81,13 @@ class UiPathAnthropic(Anthropic):
         captured_headers: Sequence[str] = ("x-uipath-",),
         retry_config: RetryConfig | None = None,
         logger: logging.Logger | None = None,
+        _strict_response_validation: bool = False,
     ):
         client_settings = client_settings or get_default_client_settings()
         super().__init__(
             api_key="PLACEHOLDER",
             max_retries=0,
+            _strict_response_validation=_strict_response_validation,
             http_client=UiPathHttpxClient(
                 model_name=model_name,
                 byo_connection_id=byo_connection_id,
@@ -128,11 +130,13 @@ class UiPathAsyncAnthropic(AsyncAnthropic):
         captured_headers: Sequence[str] = ("x-uipath-",),
         retry_config: RetryConfig | None = None,
         logger: logging.Logger | None = None,
+        _strict_response_validation: bool = False,
     ):
         client_settings = client_settings or get_default_client_settings()
         super().__init__(
             api_key="PLACEHOLDER",
             max_retries=0,
+            _strict_response_validation=_strict_response_validation,
             http_client=UiPathHttpxAsyncClient(
                 model_name=model_name,
                 byo_connection_id=byo_connection_id,
@@ -175,6 +179,7 @@ class UiPathAnthropicBedrock(AnthropicBedrock):
         captured_headers: Sequence[str] = ("x-uipath-",),
         retry_config: RetryConfig | None = None,
         logger: logging.Logger | None = None,
+        _strict_response_validation: bool = False,
     ):
         client_settings = client_settings or get_default_client_settings()
         super().__init__(
@@ -182,6 +187,7 @@ class UiPathAnthropicBedrock(AnthropicBedrock):
             aws_secret_key="PLACEHOLDER",
             aws_region="PLACEHOLDER",
             max_retries=0,
+            _strict_response_validation=_strict_response_validation,
             http_client=UiPathHttpxClient(
                 model_name=model_name,
                 byo_connection_id=byo_connection_id,
@@ -224,6 +230,7 @@ class UiPathAsyncAnthropicBedrock(AsyncAnthropicBedrock):
         captured_headers: Sequence[str] = ("x-uipath-",),
         retry_config: RetryConfig | None = None,
         logger: logging.Logger | None = None,
+        _strict_response_validation: bool = False,
     ):
         client_settings = client_settings or get_default_client_settings()
         super().__init__(
@@ -231,6 +238,7 @@ class UiPathAsyncAnthropicBedrock(AsyncAnthropicBedrock):
             aws_secret_key="PLACEHOLDER",
             aws_region="PLACEHOLDER",
             max_retries=0,
+            _strict_response_validation=_strict_response_validation,
             http_client=UiPathHttpxAsyncClient(
                 model_name=model_name,
                 byo_connection_id=byo_connection_id,
@@ -273,6 +281,7 @@ class UiPathAnthropicVertex(AnthropicVertex):
         captured_headers: Sequence[str] = ("x-uipath-",),
         retry_config: RetryConfig | None = None,
         logger: logging.Logger | None = None,
+        _strict_response_validation: bool = False,
     ):
         client_settings = client_settings or get_default_client_settings()
         super().__init__(
@@ -280,6 +289,7 @@ class UiPathAnthropicVertex(AnthropicVertex):
             project_id="PLACEHOLDER",
             access_token="PLACEHOLDER",
             max_retries=0,
+            _strict_response_validation=_strict_response_validation,
             http_client=UiPathHttpxClient(
                 model_name=model_name,
                 byo_connection_id=byo_connection_id,
@@ -322,6 +332,7 @@ class UiPathAsyncAnthropicVertex(AsyncAnthropicVertex):
         captured_headers: Sequence[str] = ("x-uipath-",),
         retry_config: RetryConfig | None = None,
         logger: logging.Logger | None = None,
+        _strict_response_validation: bool = False,
     ):
         client_settings = client_settings or get_default_client_settings()
         super().__init__(
@@ -329,6 +340,7 @@ class UiPathAsyncAnthropicVertex(AsyncAnthropicVertex):
             project_id="PLACEHOLDER",
             access_token="PLACEHOLDER",
             max_retries=0,
+            _strict_response_validation=_strict_response_validation,
             http_client=UiPathHttpxAsyncClient(
                 model_name=model_name,
                 byo_connection_id=byo_connection_id,
@@ -371,11 +383,13 @@ class UiPathAnthropicFoundry(AnthropicFoundry):
         captured_headers: Sequence[str] = ("x-uipath-",),
         retry_config: RetryConfig | None = None,
         logger: logging.Logger | None = None,
+        _strict_response_validation: bool = False,
     ):
         client_settings = client_settings or get_default_client_settings()
         super().__init__(
             api_key="PLACEHOLDER",
             max_retries=0,
+            _strict_response_validation=_strict_response_validation,
             http_client=UiPathHttpxClient(
                 model_name=model_name,
                 byo_connection_id=byo_connection_id,
@@ -418,11 +432,13 @@ class UiPathAsyncAnthropicFoundry(AsyncAnthropicFoundry):
         captured_headers: Sequence[str] = ("x-uipath-",),
         retry_config: RetryConfig | None = None,
         logger: logging.Logger | None = None,
+        _strict_response_validation: bool = False,
     ):
         client_settings = client_settings or get_default_client_settings()
         super().__init__(
             api_key="PLACEHOLDER",
             max_retries=0,
+            _strict_response_validation=_strict_response_validation,
             http_client=UiPathHttpxAsyncClient(
                 model_name=model_name,
                 byo_connection_id=byo_connection_id,

@@ -9,7 +9,7 @@ dependencies = [
     "tenacity>=9.1.4",
     "pydantic>=2.12.5",
     "pydantic-settings>=2.13.1",
-    "uipath-platform>=0.1.18",
+    "uipath-platform>=0.1.21",
 ]
 
 authors = [
@@ -25,10 +25,10 @@ google = [
     "google-genai>=1.70.0",
 ]
 anthropic = [
-    "anthropic>=0.89.0",
+    "anthropic>=0.91.0",
 ]
 litellm = [
-    "litellm>=1.83.2",
+    "litellm>=1.83.4",
 ]
 all = [
     "uipath-llm-client[openai,google,anthropic,litellm]",

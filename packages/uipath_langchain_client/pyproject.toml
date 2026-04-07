@@ -18,7 +18,7 @@ google = [
 ]
 anthropic = [
     "langchain-anthropic>=1.4.0",
-    "anthropic[bedrock,vertex]>=0.89.0",
+    "anthropic[bedrock,vertex]>=0.91.0",
 ]
 aws = [
     "langchain-aws[anthropic]>=1.4.3",

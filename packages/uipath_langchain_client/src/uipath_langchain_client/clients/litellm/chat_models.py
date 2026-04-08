@@ -12,8 +12,12 @@ Example:
     >>> print(response.content)
 """
 
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
+from langchain_core.callbacks import (
+    AsyncCallbackManagerForLLMRun,
+    CallbackManagerForLLMRun,
+)
 from pydantic import Field, model_validator
 from typing_extensions import Self
 
@@ -29,6 +33,23 @@ except ImportError as e:
         "The 'litellm' extra is required to use UiPathChatLiteLLM. "
         "Install it with: uv add uipath-langchain-client[litellm]"
     ) from e
+
+# Keys that the core UiPathLiteLLM handles internally — strip them
+# from ChatLiteLLM's kwargs before delegating to the core client.
+_CORE_HANDLED_KEYS = frozenset(
+    {
+        "model",
+        "api_base",
+        "api_key",
+        "custom_llm_provider",
+        "client",
+        "async_client",
+        "num_retries",
+        "max_retries",
+        "num_ctx",
+        "base_model",
+    }
+)
 
 
 class UiPathChatLiteLLM(UiPathBaseChatModel, ChatLiteLLM):  # type: ignore[override]
@@ -57,12 +78,12 @@ class UiPathChatLiteLLM(UiPathBaseChatModel, ChatLiteLLM):  # type: ignore[overr
     vendor_type: VendorType | str | None = Field(default=None, exclude=True)
     api_flavor: ApiFlavor | str | None = Field(default=None, exclude=True)
 
-    # Internal core client
+    # Internal core client — handles discovery, HTTPHandler lifecycle, provider resolution
     _core: UiPathLiteLLM | None = None
 
     @model_validator(mode="after")
     def _setup_uipath(self) -> Self:
-        """Create a UiPathLiteLLM core client and inject into ChatLiteLLM."""
+        """Create a UiPathLiteLLM core client and configure ChatLiteLLM fields."""
         core = UiPathLiteLLM(
             model_name=self.model_name,
             byo_connection_id=self.byo_connection_id,
@@ -84,7 +105,7 @@ class UiPathChatLiteLLM(UiPathBaseChatModel, ChatLiteLLM):  # type: ignore[overr
             api_flavor=core._api_config.api_flavor,
         )
 
-        # Inject into ChatLiteLLM's fields
+        # Set ChatLiteLLM fields so _default_params builds correct kwargs
         self.custom_llm_provider = core._custom_llm_provider
         self.api_key = "PLACEHOLDER"
         self.api_base = str(core._completion_client.client.base_url)
@@ -92,16 +113,23 @@ class UiPathChatLiteLLM(UiPathBaseChatModel, ChatLiteLLM):  # type: ignore[overr
 
         return self
 
-    @property
-    def _client_params(self) -> Dict[str, Any]:
-        """Inject UiPath HTTPHandler into every litellm call."""
-        params = super()._client_params
-        if self._core is not None:
-            params["client"] = self._core._completion_client
-            params["num_retries"] = 0
-            params["max_retries"] = 0
-            params.update(self._core._extra_litellm_kwargs)
-        return params
+    def completion_with_retry(
+        self, run_manager: Optional[CallbackManagerForLLMRun] = None, **kwargs: Any
+    ) -> Any:
+        """Delegate to the core UiPathLiteLLM.completion()."""
+        assert self._core is not None
+        for key in _CORE_HANDLED_KEYS:
+            kwargs.pop(key, None)
+        return self._core.completion(**kwargs)
+
+    async def acompletion_with_retry(
+        self, run_manager: Optional[AsyncCallbackManagerForLLMRun] = None, **kwargs: Any
+    ) -> Any:
+        """Delegate to the core UiPathLiteLLM.acompletion()."""
+        assert self._core is not None
+        for key in _CORE_HANDLED_KEYS:
+            kwargs.pop(key, None)
+        return await self._core.acompletion(**kwargs)
 
     @property
     def _llm_type(self) -> str:

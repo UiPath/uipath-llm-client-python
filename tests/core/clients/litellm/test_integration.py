@@ -20,8 +20,18 @@ from uipath.llm_client.settings.constants import ApiFlavor
 
 
 @pytest.fixture
+def openai_gpt4o_client(client_settings: UiPathBaseSettings) -> UiPathLiteLLM:
+    return UiPathLiteLLM(model_name="gpt-4o-2024-11-20", client_settings=client_settings)
+
+
+@pytest.fixture
 def openai_client(client_settings: UiPathBaseSettings) -> UiPathLiteLLM:
     return UiPathLiteLLM(model_name="gpt-5.2-2025-12-11", client_settings=client_settings)
+
+
+@pytest.fixture
+def openai_gpt54_client(client_settings: UiPathBaseSettings) -> UiPathLiteLLM:
+    return UiPathLiteLLM(model_name="gpt-5.4-2026-03-05", client_settings=client_settings)
 
 
 @pytest.fixture
@@ -36,6 +46,11 @@ def openai_responses_client(client_settings: UiPathBaseSettings) -> UiPathLiteLL
 @pytest.fixture
 def gemini_client(client_settings: UiPathBaseSettings) -> UiPathLiteLLM:
     return UiPathLiteLLM(model_name="gemini-2.5-flash", client_settings=client_settings)
+
+
+@pytest.fixture
+def gemini_pro_client(client_settings: UiPathBaseSettings) -> UiPathLiteLLM:
+    return UiPathLiteLLM(model_name="gemini-2.5-pro", client_settings=client_settings)
 
 
 @pytest.fixture
@@ -61,9 +76,33 @@ def bedrock_converse_client(client_settings: UiPathBaseSettings) -> UiPathLiteLL
 
 
 @pytest.fixture
+def bedrock_haiku_client(client_settings: UiPathBaseSettings) -> UiPathLiteLLM:
+    return UiPathLiteLLM(
+        model_name="anthropic.claude-haiku-4-5-20251001-v1:0",
+        client_settings=client_settings,
+    )
+
+
+@pytest.fixture
+def bedrock_opus_client(client_settings: UiPathBaseSettings) -> UiPathLiteLLM:
+    return UiPathLiteLLM(
+        model_name="anthropic.claude-opus-4-5-20251101-v1:0",
+        client_settings=client_settings,
+    )
+
+
+@pytest.fixture
 def vertex_claude_client(client_settings: UiPathBaseSettings) -> UiPathLiteLLM:
     return UiPathLiteLLM(
         model_name="claude-sonnet-4-5@20250929",
+        client_settings=client_settings,
+    )
+
+
+@pytest.fixture
+def vertex_haiku_client(client_settings: UiPathBaseSettings) -> UiPathLiteLLM:
+    return UiPathLiteLLM(
+        model_name="claude-haiku-4-5@20251001",
         client_settings=client_settings,
     )
 
@@ -110,8 +149,24 @@ WEATHER_TOOL = {
 
 class TestOpenAICompletions:
     @pytest.mark.vcr()
+    def test_gpt4o_completion(self, openai_gpt4o_client: UiPathLiteLLM):
+        response = openai_gpt4o_client.completion(
+            messages=[{"role": "user", "content": "Say hello in one word."}],
+        )
+        assert response.choices[0].message.content
+        assert response.choices[0].finish_reason == "stop"
+
+    @pytest.mark.vcr()
     def test_basic_completion(self, openai_client: UiPathLiteLLM):
         response = openai_client.completion(
+            messages=[{"role": "user", "content": "Say hello in one word."}],
+        )
+        assert response.choices[0].message.content
+        assert response.choices[0].finish_reason == "stop"
+
+    @pytest.mark.vcr()
+    def test_gpt54_completion(self, openai_gpt54_client: UiPathLiteLLM):
+        response = openai_gpt54_client.completion(
             messages=[{"role": "user", "content": "Say hello in one word."}],
         )
         assert response.choices[0].message.content
@@ -123,6 +178,14 @@ class TestOpenAICompletions:
             messages=[{"role": "user", "content": "Say hi."}],
             max_tokens=10,
             temperature=0.0,
+        )
+        assert response.choices[0].message.content
+
+    @pytest.mark.vcr()
+    def test_reasoning_effort(self, openai_client: UiPathLiteLLM):
+        response = openai_client.completion(
+            messages=[{"role": "user", "content": "What is 2+2?"}],
+            reasoning_effort="medium",
         )
         assert response.choices[0].message.content
 
@@ -210,6 +273,13 @@ class TestGeminiCompletions:
         assert response.choices[0].message.content
 
     @pytest.mark.vcr()
+    def test_gemini_pro_completion(self, gemini_pro_client: UiPathLiteLLM):
+        response = gemini_pro_client.completion(
+            messages=[{"role": "user", "content": "Say hello in one word."}],
+        )
+        assert response.choices[0].message.content
+
+    @pytest.mark.vcr()
     def test_gemini3_completion(self, gemini3_client: UiPathLiteLLM):
         response = gemini3_client.completion(
             messages=[{"role": "user", "content": "Say hello in one word."}],
@@ -237,6 +307,22 @@ class TestBedrockInvokeCompletions:
     @pytest.mark.vcr()
     def test_basic_completion(self, bedrock_invoke_client: UiPathLiteLLM):
         response = bedrock_invoke_client.completion(
+            messages=[{"role": "user", "content": "Say hello in one word."}],
+            max_tokens=50,
+        )
+        assert response.choices[0].message.content
+
+    @pytest.mark.vcr()
+    def test_haiku_completion(self, bedrock_haiku_client: UiPathLiteLLM):
+        response = bedrock_haiku_client.completion(
+            messages=[{"role": "user", "content": "Say hello in one word."}],
+            max_tokens=50,
+        )
+        assert response.choices[0].message.content
+
+    @pytest.mark.vcr()
+    def test_opus_completion(self, bedrock_opus_client: UiPathLiteLLM):
+        response = bedrock_opus_client.completion(
             messages=[{"role": "user", "content": "Say hello in one word."}],
             max_tokens=50,
         )
@@ -272,6 +358,14 @@ class TestVertexClaudeCompletions:
     @pytest.mark.vcr()
     def test_basic_completion(self, vertex_claude_client: UiPathLiteLLM):
         response = vertex_claude_client.completion(
+            messages=[{"role": "user", "content": "Say hello in one word."}],
+            max_tokens=50,
+        )
+        assert response.choices[0].message.content
+
+    @pytest.mark.vcr()
+    def test_vertex_haiku_completion(self, vertex_haiku_client: UiPathLiteLLM):
+        response = vertex_haiku_client.completion(
             messages=[{"role": "user", "content": "Say hello in one word."}],
             max_tokens=50,
         )

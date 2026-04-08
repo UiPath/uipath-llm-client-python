@@ -60,14 +60,17 @@ class TestLiteLLMIntegrationChatModel(ChatModelIntegrationTests):
         if test_name in ["test_no_overrides_DO_NOT_OVERRIDE", "test_unicode_tool_call_integration"]:
             pytest.skip(f"Skipping {test_name}: not relevant")
 
-        # Streaming tests — litellm streaming through UiPath gateway can be flaky
-        if test_name in [
+        # Streaming tests — Bedrock invoke streaming returns 500 from gateway
+        # ("Unable to extract claim sub_type from token")
+        if is_bedrock and test_name in [
             "test_stream",
             "test_astream",
             "test_stream_time",
             "test_usage_metadata_streaming",
         ]:
-            pytest.skip(f"Skipping {test_name}: streaming not stable via litellm + UiPath gateway")
+            pytest.skip(
+                f"Skipping {test_name}: Bedrock streaming not supported via gateway S2S auth"
+            )
 
         # Bedrock/Vertex Claude: structured output with tool_choice can be unreliable
         if (is_bedrock or is_vertex_claude) and test_name in [
@@ -86,6 +89,17 @@ class TestLiteLLMIntegrationChatModel(ChatModelIntegrationTests):
         ]:
             pytest.skip(
                 f"Skipping {test_name}: tool message history format incompatible with Gemini via litellm"
+            )
+
+        # Bedrock streaming: tool_calling/tool_choice tests use stream() which
+        # fails with gateway 500 on Bedrock invoke
+        if is_bedrock and test_name in [
+            "test_tool_calling",
+            "test_tool_calling_async",
+            "test_tool_calling_with_no_arguments",
+        ]:
+            pytest.skip(
+                f"Skipping {test_name}: Bedrock streaming not supported via gateway S2S auth"
             )
 
     @property

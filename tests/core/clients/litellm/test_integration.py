@@ -401,6 +401,63 @@ class TestEmbeddings:
 
 
 # ============================================================================
+# Streaming tests
+# ============================================================================
+
+
+class TestStreaming:
+    @pytest.mark.vcr()
+    def test_openai_streaming(self, openai_client: UiPathLiteLLM):
+        response = openai_client.completion(
+            messages=[{"role": "user", "content": "Say hello in one word."}],
+            stream=True,
+        )
+        chunks = []
+        for chunk in response:
+            if chunk.choices and chunk.choices[0].delta.content:
+                chunks.append(chunk.choices[0].delta.content)
+        assert len(chunks) > 0
+
+    @pytest.mark.vcr()
+    def test_gemini_streaming(self, gemini_client: UiPathLiteLLM):
+        response = gemini_client.completion(
+            messages=[{"role": "user", "content": "Say hello in one word."}],
+            stream=True,
+        )
+        chunks = []
+        for chunk in response:
+            if chunk.choices and chunk.choices[0].delta.content:
+                chunks.append(chunk.choices[0].delta.content)
+        assert len(chunks) > 0
+
+    @pytest.mark.vcr()
+    def test_gemini_streaming_tool_calling(self, gemini_client: UiPathLiteLLM):
+        response = gemini_client.completion(
+            messages=[{"role": "user", "content": "What is the weather in London?"}],
+            tools=[WEATHER_TOOL],
+            stream=True,
+        )
+        tool_calls_found = False
+        for chunk in response:
+            if chunk.choices and chunk.choices[0].delta.tool_calls:
+                tool_calls_found = True
+        assert tool_calls_found
+
+    @pytest.mark.vcr()
+    def test_vertex_claude_streaming(self, vertex_claude_client: UiPathLiteLLM):
+        response = vertex_claude_client.completion(
+            messages=[{"role": "user", "content": "Say hello in one word."}],
+            max_tokens=50,
+            stream=True,
+        )
+        chunks = []
+        for chunk in response:
+            if chunk.choices and chunk.choices[0].delta.content:
+                chunks.append(chunk.choices[0].delta.content)
+        assert len(chunks) > 0
+
+
+# ============================================================================
 # Async tests
 # ============================================================================
 

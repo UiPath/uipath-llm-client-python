@@ -277,40 +277,6 @@ class TestEmbeddingProviderOverride:
 
 
 # ============================================================================
-# Extra litellm kwargs (provider auth bypass)
-# ============================================================================
-
-
-class TestExtraLiteLLMKwargs:
-    def _make_client(self, model_data: dict, **kwargs) -> UiPathLiteLLM:
-        settings = _mock_settings([model_data])
-        return UiPathLiteLLM(
-            model_name=model_data["modelName"],
-            client_settings=settings,
-            **kwargs,
-        )
-
-    def test_bedrock_injects_aws_placeholders(self):
-        client = self._make_client(_BEDROCK_CLAUDE_MODEL)
-        assert "aws_access_key_id" in client._extra_litellm_kwargs
-        assert "aws_secret_access_key" in client._extra_litellm_kwargs
-        assert "aws_session_token" in client._extra_litellm_kwargs
-        assert "aws_region_name" in client._extra_litellm_kwargs
-
-    def test_openai_has_no_extra_kwargs(self):
-        client = self._make_client(_OPENAI_MODEL)
-        assert client._extra_litellm_kwargs == {}
-
-    def test_gemini_has_no_extra_kwargs(self):
-        client = self._make_client(_GEMINI_MODEL)
-        assert client._extra_litellm_kwargs == {}
-
-    def test_vertex_claude_has_no_extra_kwargs(self):
-        client = self._make_client(_VERTEX_CLAUDE_MODEL)
-        assert client._extra_litellm_kwargs == {}
-
-
-# ============================================================================
 # Mapping tables
 # ============================================================================
 

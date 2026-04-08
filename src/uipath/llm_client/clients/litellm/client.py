@@ -60,15 +60,6 @@ except ImportError as e:
 # Skip Google OAuth for Vertex AI — the UiPath httpx client handles auth.
 VertexBase._ensure_access_token = lambda self, *a, **kw: ("unused", "unused")  # type: ignore[assignment]
 
-# Dummy AWS credentials injected for Bedrock so litellm takes the session-token
-# auth path (no STS/boto3 HTTP calls). The UiPath httpx client handles auth.
-_BEDROCK_PLACEHOLDER_KWARGS: dict[str, str] = {
-    "aws_access_key_id": "PLACEHOLDER",
-    "aws_secret_access_key": "PLACEHOLDER",
-    "aws_session_token": "PLACEHOLDER",
-    "aws_region_name": "us-east-1",
-}
-
 # ---------------------------------------------------------------------------
 # VendorType / ApiFlavor → litellm custom_llm_provider
 # ---------------------------------------------------------------------------
@@ -172,12 +163,6 @@ class UiPathLiteLLM:
             self._custom_llm_provider, self._custom_llm_provider
         )
         self._litellm_model = self._resolve_litellm_model()
-
-        # Extra kwargs injected into litellm calls to bypass provider auth.
-        # Bedrock: dummy AWS creds → session-token path (no STS calls).
-        self._extra_litellm_kwargs: dict[str, Any] = (
-            _BEDROCK_PLACEHOLDER_KWARGS if self._custom_llm_provider == "bedrock" else {}
-        )
 
     # ------------------------------------------------------------------
     # Discovery & provider resolution
@@ -450,7 +435,6 @@ class UiPathLiteLLM:
             client=self._completion_client,
             num_retries=0,
             max_retries=0,
-            **self._extra_litellm_kwargs,
             **optional,
             **kwargs,
         )
@@ -530,7 +514,6 @@ class UiPathLiteLLM:
             client=self._completion_async_client,
             num_retries=0,
             max_retries=0,
-            **self._extra_litellm_kwargs,
             **optional,
             **kwargs,
         )

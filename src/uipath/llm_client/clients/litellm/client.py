@@ -19,6 +19,7 @@ from collections.abc import Mapping, Sequence
 from functools import cached_property
 from typing import Any, Literal, Union
 
+from httpx import Request
 from pydantic import BaseModel
 
 from uipath.llm_client.httpx_client import UiPathHttpxAsyncClient, UiPathHttpxClient
@@ -297,6 +298,26 @@ class UiPathLiteLLM:
     # LiteLLM HTTP handlers (lazily created)
     # ------------------------------------------------------------------
 
+    @staticmethod
+    def _add_gemini_sse_hook(httpx_client: UiPathHttpxClient | UiPathHttpxAsyncClient) -> None:
+        """Append an event hook that adds ``alt=sse`` for Gemini streaming requests.
+
+        The UiPath LLM Gateway needs this query parameter to return SSE-formatted
+        chunks instead of raw Gemini JSON arrays.
+        """
+
+        def _fix_url(request: Request) -> None:
+            if request.headers.get("X-UiPath-Streaming-Enabled") == "true":
+                request.url = request.url.copy_add_param("alt", "sse")
+
+        async def _fix_url_async(request: Request) -> None:
+            _fix_url(request)
+
+        if isinstance(httpx_client, UiPathHttpxAsyncClient):
+            httpx_client.event_hooks["request"].append(_fix_url_async)
+        else:
+            httpx_client.event_hooks["request"].append(_fix_url)
+
     def _build_client(
         self, api_type: ApiType, *, async_: bool = False
     ) -> HTTPHandler | AsyncHTTPHandler:
@@ -321,11 +342,18 @@ class UiPathLiteLLM:
             retry_config=self._retry_config,
             logger=self._logger,
         )
+        is_gemini = self._custom_llm_provider == "gemini"
         if async_:
             handler = AsyncHTTPHandler()
-            handler.client = UiPathHttpxAsyncClient(**httpx_kwargs)  # type: ignore[arg-type]
+            httpx_async = UiPathHttpxAsyncClient(**httpx_kwargs)  # type: ignore[arg-type]
+            if is_gemini:
+                self._add_gemini_sse_hook(httpx_async)
+            handler.client = httpx_async
             return handler
-        return HTTPHandler(client=UiPathHttpxClient(**httpx_kwargs))  # type: ignore[arg-type]
+        httpx_sync = UiPathHttpxClient(**httpx_kwargs)  # type: ignore[arg-type]
+        if is_gemini:
+            self._add_gemini_sse_hook(httpx_sync)
+        return HTTPHandler(client=httpx_sync)  # type: ignore[arg-type]
 
     @cached_property
     def _completion_client(self) -> HTTPHandler:

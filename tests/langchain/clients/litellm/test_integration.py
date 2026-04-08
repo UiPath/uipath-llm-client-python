@@ -102,6 +102,29 @@ class TestLiteLLMIntegrationChatModel(ChatModelIntegrationTests):
                 f"Skipping {test_name}: Bedrock streaming not supported via gateway S2S auth"
             )
 
+        # tool_choice: gateway rejects function-name tool_choice (only none/auto/required)
+        if test_name == "test_tool_choice":
+            pytest.skip(
+                f"Skipping {test_name}: gateway only supports none/auto/required tool_choice"
+            )
+
+        # stop param: litellm rejects 'stop' for newer OpenAI models
+        if test_name == "test_stop_sequence" and "gpt-5" in model_name:
+            pytest.skip(f"Skipping {test_name}: litellm rejects stop param for {model_name}")
+
+        # structured_output: ChatLiteLLM.with_structured_output doesn't propagate
+        # ls_structured_output_format metadata that langchain-tests expects
+        if test_name in [
+            "test_structured_output",
+            "test_structured_output_async",
+            "test_structured_output_optional_param",
+            "test_structured_output_pydantic_2_v1",
+        ]:
+            pytest.skip(
+                f"Skipping {test_name}: ChatLiteLLM.with_structured_output missing "
+                "ls_structured_output_format (upstream langchain-litellm issue)"
+            )
+
     @property
     def tool_choice_value(self) -> str:
         return "required"

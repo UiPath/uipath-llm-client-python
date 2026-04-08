@@ -1,3 +1,5 @@
+"""LangChain provider-agnostic chat model and embeddings via UiPath's normalized API."""
+
 from uipath_langchain_client.clients.normalized.chat_models import UiPathChat
 from uipath_langchain_client.clients.normalized.embeddings import UiPathEmbeddings
 

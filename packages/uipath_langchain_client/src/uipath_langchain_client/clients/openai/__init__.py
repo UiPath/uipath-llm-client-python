@@ -1,3 +1,5 @@
+"""LangChain chat models and embeddings for OpenAI/Azure OpenAI via UiPath."""
+
 from uipath_langchain_client.clients.openai.chat_models import (
     UiPathAzureChatOpenAI,
     UiPathChatOpenAI,

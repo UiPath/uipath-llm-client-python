@@ -1,3 +1,8 @@
+"""UiPath Platform Settings Module.
+
+Configuration and authentication for UiPath Platform (AgentHub/Orchestrator).
+"""
+
 from typing_extensions import override
 
 from uipath.llm_client.settings.platform.auth import PlatformAuth

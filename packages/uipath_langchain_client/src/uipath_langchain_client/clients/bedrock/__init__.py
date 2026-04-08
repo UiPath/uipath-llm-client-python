@@ -1,3 +1,5 @@
+"""LangChain chat models and embeddings for AWS Bedrock via UiPath."""
+
 from uipath_langchain_client.clients.bedrock.chat_models import (
     UiPathChatAnthropicBedrock,
     UiPathChatBedrock,

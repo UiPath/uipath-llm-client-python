@@ -4,9 +4,7 @@ UiPath LLM Client
 A Python client for interacting with UiPath's LLM services. This package provides
 the core HTTP client with authentication, retry logic, and request handling.
 
-For framework-specific integrations, see:
-    - uipath_langchain_client: LangChain-compatible models
-    - uipath_llamaindex_client: LlamaIndex-compatible models
+For LangChain-compatible models, see the ``uipath_langchain_client`` package.
 
 Quick Start:
     >>> from uipath.llm_client import UiPathHttpxClient

@@ -82,6 +82,7 @@ class UiPathGoogle(Client):
             logger=logger,
         )
         super().__init__(
+            vertexai=True,
             api_key="PLACEHOLDER",
             http_options=HttpOptions(
                 base_url=str(httpx_client.base_url),

@@ -31,6 +31,7 @@ class UiPathOpenAI(OpenAI):
         captured_headers: Response header prefixes to capture (case-insensitive).
         retry_config: Custom retry configuration.
         logger: Logger instance for request/response logging.
+        _strict_response_validation: Enable strict response validation.
     """
 
     def __init__(
@@ -45,6 +46,7 @@ class UiPathOpenAI(OpenAI):
         captured_headers: Sequence[str] = ("x-uipath-",),
         retry_config: RetryConfig | None = None,
         logger: logging.Logger | None = None,
+        _strict_response_validation: bool = False,
     ):
         client_settings = client_settings or get_default_client_settings()
         httpx_client = UiPathHttpxClient(
@@ -68,6 +70,7 @@ class UiPathOpenAI(OpenAI):
         super().__init__(
             api_key="PLACEHOLDER",
             max_retries=0,
+            _strict_response_validation=_strict_response_validation,
             http_client=httpx_client,
             base_url=str(httpx_client.base_url).rstrip("/"),
         )
@@ -89,6 +92,7 @@ class UiPathAsyncOpenAI(AsyncOpenAI):
         captured_headers: Response header prefixes to capture (case-insensitive).
         retry_config: Custom retry configuration.
         logger: Logger instance for request/response logging.
+        _strict_response_validation: Enable strict response validation.
     """
 
     def __init__(
@@ -103,6 +107,7 @@ class UiPathAsyncOpenAI(AsyncOpenAI):
         captured_headers: Sequence[str] = ("x-uipath-",),
         retry_config: RetryConfig | None = None,
         logger: logging.Logger | None = None,
+        _strict_response_validation: bool = False,
     ):
         client_settings = client_settings or get_default_client_settings()
         httpx_client = UiPathHttpxAsyncClient(
@@ -126,6 +131,7 @@ class UiPathAsyncOpenAI(AsyncOpenAI):
         super().__init__(
             api_key="PLACEHOLDER",
             max_retries=0,
+            _strict_response_validation=_strict_response_validation,
             http_client=httpx_client,
             base_url=str(httpx_client.base_url).rstrip("/"),
         )
@@ -147,6 +153,7 @@ class UiPathAzureOpenAI(AzureOpenAI):
         captured_headers: Response header prefixes to capture (case-insensitive).
         retry_config: Custom retry configuration.
         logger: Logger instance for request/response logging.
+        _strict_response_validation: Enable strict response validation.
     """
 
     def __init__(
@@ -161,6 +168,7 @@ class UiPathAzureOpenAI(AzureOpenAI):
         captured_headers: Sequence[str] = ("x-uipath-",),
         retry_config: RetryConfig | None = None,
         logger: logging.Logger | None = None,
+        _strict_response_validation: bool = False,
     ):
         client_settings = client_settings or get_default_client_settings()
         httpx_client = UiPathHttpxClient(
@@ -186,6 +194,7 @@ class UiPathAzureOpenAI(AzureOpenAI):
             api_version="PLACEHOLDER",
             api_key="PLACEHOLDER",
             max_retries=0,
+            _strict_response_validation=_strict_response_validation,
             http_client=httpx_client,
         )
 
@@ -206,6 +215,7 @@ class UiPathAsyncAzureOpenAI(AsyncAzureOpenAI):
         captured_headers: Response header prefixes to capture (case-insensitive).
         retry_config: Custom retry configuration.
         logger: Logger instance for request/response logging.
+        _strict_response_validation: Enable strict response validation.
     """
 
     def __init__(
@@ -220,6 +230,7 @@ class UiPathAsyncAzureOpenAI(AsyncAzureOpenAI):
         captured_headers: Sequence[str] = ("x-uipath-",),
         retry_config: RetryConfig | None = None,
         logger: logging.Logger | None = None,
+        _strict_response_validation: bool = False,
     ):
         client_settings = client_settings or get_default_client_settings()
         httpx_client = UiPathHttpxAsyncClient(
@@ -245,5 +256,6 @@ class UiPathAsyncAzureOpenAI(AsyncAzureOpenAI):
             api_version="PLACEHOLDER",
             api_key="PLACEHOLDER",
             max_retries=0,
+            _strict_response_validation=_strict_response_validation,
             http_client=httpx_client,
         )

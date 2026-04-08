@@ -1,3 +1,10 @@
+"""LangChain chat models and embeddings for AWS Bedrock via UiPath.
+
+Requires the ``aws`` optional extra::
+
+    uv add uipath-langchain-client[aws]
+"""
+
 from uipath_langchain_client.clients.bedrock.chat_models import (
     UiPathChatAnthropicBedrock,
     UiPathChatBedrock,

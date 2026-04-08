@@ -307,7 +307,7 @@ def _mock_httpx_async_client():
 
 
 class TestUiPathOpenAIInit:
-    @patch(f"{_CLIENT_MODULE}.build_httpx_client", return_value=_mock_httpx_sync_client())
+    @patch(f"{_CLIENT_MODULE}.UiPathHttpxClient", return_value=_mock_httpx_sync_client())
     @patch(f"{_CLIENT_MODULE}.get_default_client_settings")
     def test_uses_default_settings_when_none(self, mock_get_settings, mock_build):
         mock_settings = MagicMock()
@@ -320,7 +320,7 @@ class TestUiPathOpenAIInit:
 
         mock_get_settings.assert_called_once()
 
-    @patch(f"{_CLIENT_MODULE}.build_httpx_client", return_value=_mock_httpx_sync_client())
+    @patch(f"{_CLIENT_MODULE}.UiPathHttpxClient", return_value=_mock_httpx_sync_client())
     @patch(f"{_CLIENT_MODULE}.get_default_client_settings")
     def test_passes_event_hooks_with_fix_url(self, mock_get_settings, mock_build):
         mock_settings = MagicMock()
@@ -340,7 +340,7 @@ class TestUiPathOpenAIInit:
         hook_fn = hooks["request"][0]
         assert hook_fn.__func__.__name__ == "fix_url_and_headers"
 
-    @patch(f"{_CLIENT_MODULE}.build_httpx_client", return_value=_mock_httpx_sync_client())
+    @patch(f"{_CLIENT_MODULE}.UiPathHttpxClient", return_value=_mock_httpx_sync_client())
     @patch(f"{_CLIENT_MODULE}.get_default_client_settings")
     def test_sets_max_retries_zero(self, mock_get_settings, mock_build):
         mock_settings = MagicMock()
@@ -356,7 +356,7 @@ class TestUiPathOpenAIInit:
 
 class TestUiPathAsyncOpenAIInit:
     @patch(
-        f"{_CLIENT_MODULE}.build_httpx_async_client",
+        f"{_CLIENT_MODULE}.UiPathHttpxAsyncClient",
         return_value=_mock_httpx_async_client(),
     )
     @patch(f"{_CLIENT_MODULE}.get_default_client_settings")
@@ -375,7 +375,7 @@ class TestUiPathAsyncOpenAIInit:
         assert hook_fn.__func__.__name__ == "fix_url_and_headers_async"
 
     @patch(
-        f"{_CLIENT_MODULE}.build_httpx_async_client",
+        f"{_CLIENT_MODULE}.UiPathHttpxAsyncClient",
         return_value=_mock_httpx_async_client(),
     )
     @patch(f"{_CLIENT_MODULE}.get_default_client_settings")
@@ -392,7 +392,7 @@ class TestUiPathAsyncOpenAIInit:
 
 
 class TestUiPathAzureOpenAIInit:
-    @patch(f"{_CLIENT_MODULE}.build_httpx_client", return_value=_mock_httpx_sync_client())
+    @patch(f"{_CLIENT_MODULE}.UiPathHttpxClient", return_value=_mock_httpx_sync_client())
     @patch(f"{_CLIENT_MODULE}.get_default_client_settings")
     def test_passes_placeholder_values(self, mock_get_settings, mock_build):
         mock_settings = MagicMock()
@@ -407,7 +407,7 @@ class TestUiPathAzureOpenAIInit:
         # successfully with PLACEHOLDER values (no real Azure config needed)
         assert client.max_retries == 0
 
-    @patch(f"{_CLIENT_MODULE}.build_httpx_client", return_value=_mock_httpx_sync_client())
+    @patch(f"{_CLIENT_MODULE}.UiPathHttpxClient", return_value=_mock_httpx_sync_client())
     @patch(f"{_CLIENT_MODULE}.get_default_client_settings")
     def test_uses_sync_event_hook(self, mock_get_settings, mock_build):
         mock_settings = MagicMock()
@@ -426,7 +426,7 @@ class TestUiPathAzureOpenAIInit:
 
 class TestUiPathAsyncAzureOpenAIInit:
     @patch(
-        f"{_CLIENT_MODULE}.build_httpx_async_client",
+        f"{_CLIENT_MODULE}.UiPathHttpxAsyncClient",
         return_value=_mock_httpx_async_client(),
     )
     @patch(f"{_CLIENT_MODULE}.get_default_client_settings")
@@ -442,7 +442,7 @@ class TestUiPathAsyncAzureOpenAIInit:
         assert client.max_retries == 0
 
     @patch(
-        f"{_CLIENT_MODULE}.build_httpx_async_client",
+        f"{_CLIENT_MODULE}.UiPathHttpxAsyncClient",
         return_value=_mock_httpx_async_client(),
     )
     @patch(f"{_CLIENT_MODULE}.get_default_client_settings")

@@ -1,7 +1,7 @@
 import logging
 from collections.abc import Mapping, Sequence
 
-from uipath.llm_client.clients.utils import build_httpx_async_client, build_httpx_client
+from uipath.llm_client.httpx_client import UiPathHttpxAsyncClient, UiPathHttpxClient
 from uipath.llm_client.settings import (
     UiPathAPIConfig,
     UiPathBaseSettings,
@@ -57,31 +57,32 @@ class UiPathGoogle(Client):
             api_version="v1beta1",
             freeze_base_url=True,
         )
-        httpx_client = build_httpx_client(
+        httpx_client = UiPathHttpxClient(
             model_name=model_name,
             byo_connection_id=byo_connection_id,
             client_settings=client_settings,
             api_config=api_config,
             timeout=timeout,
             max_retries=max_retries,
-            default_headers=default_headers,
+            headers=default_headers,
             captured_headers=captured_headers,
             retry_config=retry_config,
             logger=logger,
         )
-        httpx_async_client = build_httpx_async_client(
+        httpx_async_client = UiPathHttpxAsyncClient(
             model_name=model_name,
             byo_connection_id=byo_connection_id,
             client_settings=client_settings,
             api_config=api_config,
             timeout=timeout,
             max_retries=max_retries,
-            default_headers=default_headers,
+            headers=default_headers,
             captured_headers=captured_headers,
             retry_config=retry_config,
             logger=logger,
         )
         super().__init__(
+            vertexai=True,
             api_key="PLACEHOLDER",
             http_options=HttpOptions(
                 base_url=str(httpx_client.base_url),

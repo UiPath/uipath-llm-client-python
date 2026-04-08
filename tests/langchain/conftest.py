@@ -13,6 +13,8 @@ from uipath_langchain_client.clients.bedrock.chat_models import (
 from uipath_langchain_client.clients.bedrock.embeddings import UiPathBedrockEmbeddings
 from uipath_langchain_client.clients.google.chat_models import UiPathChatGoogleGenerativeAI
 from uipath_langchain_client.clients.google.embeddings import UiPathGoogleGenerativeAIEmbeddings
+from uipath_langchain_client.clients.litellm.chat_models import UiPathChatLiteLLM
+from uipath_langchain_client.clients.litellm.embeddings import UiPathLiteLLMEmbeddings
 from uipath_langchain_client.clients.normalized.chat_models import UiPathChat
 from uipath_langchain_client.clients.normalized.embeddings import UiPathEmbeddings
 from uipath_langchain_client.clients.openai.chat_models import (
@@ -35,6 +37,7 @@ COMPLETION_CLIENTS_CLASSES = [
     UiPathChatAnthropicVertex,
     UiPathChatBedrock,
     UiPathChatBedrockConverse,
+    UiPathChatLiteLLM,
 ]
 EMBEDDINGS_CLIENTS_CLASSES = [
     UiPathEmbeddings,
@@ -42,6 +45,7 @@ EMBEDDINGS_CLIENTS_CLASSES = [
     UiPathAzureOpenAIEmbeddings,
     UiPathGoogleGenerativeAIEmbeddings,
     UiPathBedrockEmbeddings,
+    UiPathLiteLLMEmbeddings,
 ]
 
 COMPLETION_MODEL_NAMES = [

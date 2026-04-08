@@ -1,6 +1,6 @@
 # UiPath LLM Client
 
-A Python client for interacting with UiPath's LLM services. This package provides both a low-level HTTP client and framework-specific integrations (LangChain, LlamaIndex) for accessing LLMs through UiPath's infrastructure.
+A Python client for interacting with UiPath's LLM services. This package provides both a low-level HTTP client and a LangChain integration for accessing LLMs through UiPath's infrastructure.
 
 ## Architecture Overview
 
@@ -8,7 +8,6 @@ This repository is organized as a monorepo with the following packages:
 
 - **`uipath_llm_client`** (root): Core HTTP client with authentication, retry logic, and request handling
 - **`uipath_langchain_client`** (packages/): LangChain-compatible chat models and embeddings
-- **`uipath_llamaindex_client`** (packages/): LlamaIndex-compatible integrations
 
 ### Supported Backends
 
@@ -816,7 +815,7 @@ uv run pyright
 
 ### Testing
 
-Tests use [VCR.py](https://vcrpy.readthedocs.io/) to record and replay HTTP interactions. Cassettes (recorded responses) are stored in `tests/cassettes/` using Git LFS.
+Tests use [VCR.py](https://vcrpy.readthedocs.io/) to record and replay HTTP interactions. Cassettes (recorded responses) are stored in `tests/cassettes.db` (SQLite) via `pytest-recording`.
 
 **Important:** Tests must pass locally before submitting a PR. The CI pipeline does not make any real API requests—it only runs tests using the pre-recorded cassettes.
 
@@ -855,7 +854,9 @@ uipath-llm-client/
 │   ├── clients/                        # Native SDK wrappers
 │   │   ├── openai/                     # UiPathOpenAI, UiPathAzureOpenAI, etc.
 │   │   ├── anthropic/                  # UiPathAnthropic, UiPathAnthropicBedrock, etc.
-│   │   └── google/                     # UiPathGoogle
+│   │   ├── google/                     # UiPathGoogle
+│   │   ├── normalized/                 # UiPathNormalizedClient (provider-agnostic)
+│   │   └── litellm/                    # UiPathLiteLLM (via LiteLLM)
 │   ├── settings/                       # Backend-specific settings & auth
 │   │   ├── base.py                     # UiPathBaseSettings, UiPathAPIConfig
 │   │   ├── platform/                   # PlatformSettings, PlatformAuth
@@ -878,9 +879,9 @@ uipath-llm-client/
 │   │           ├── vertexai/           # UiPathChatAnthropicVertex
 │   │           ├── bedrock/            # UiPathChatBedrock, UiPathChatBedrockConverse
 │   │           ├── fireworks/          # UiPathChatFireworks, UiPathFireworksEmbeddings
+│   │           ├── litellm/           # UiPathChatLiteLLM, UiPathLiteLLMEmbeddings
 │   │           └── azure/              # UiPathAzureAIChatCompletionsModel
-│   └── uipath_llamaindex_client/       # LlamaIndex integration (planned)
-└── tests/                              # Test suite with VCR cassettes
+└── tests/                              # Test suite with VCR cassettes (SQLite)
 ```
 
 ## License

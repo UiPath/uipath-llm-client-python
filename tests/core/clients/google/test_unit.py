@@ -54,8 +54,8 @@ def _make_mock_async_client():
 class TestUiPathGoogleInit:
     """Tests for UiPathGoogle client construction with mocked dependencies."""
 
-    @patch("uipath.llm_client.clients.google.client.build_httpx_async_client")
-    @patch("uipath.llm_client.clients.google.client.build_httpx_client")
+    @patch("uipath.llm_client.clients.google.client.UiPathHttpxAsyncClient")
+    @patch("uipath.llm_client.clients.google.client.UiPathHttpxClient")
     @patch("uipath.llm_client.clients.google.client.get_default_client_settings")
     def test_placeholder_api_key(
         self,
@@ -80,8 +80,8 @@ class TestUiPathGoogleInit:
             call_kwargs = mock_init.call_args[1]
             assert call_kwargs["api_key"] == "PLACEHOLDER"
 
-    @patch("uipath.llm_client.clients.google.client.build_httpx_async_client")
-    @patch("uipath.llm_client.clients.google.client.build_httpx_client")
+    @patch("uipath.llm_client.clients.google.client.UiPathHttpxAsyncClient")
+    @patch("uipath.llm_client.clients.google.client.UiPathHttpxClient")
     @patch("uipath.llm_client.clients.google.client.get_default_client_settings")
     def test_httpx_clients_passed_via_http_options(
         self,
@@ -112,8 +112,8 @@ class TestUiPathGoogleInit:
             assert str(http_options.base_url) == "https://example.com/base"
             assert http_options.retry_options is None
 
-    @patch("uipath.llm_client.clients.google.client.build_httpx_async_client")
-    @patch("uipath.llm_client.clients.google.client.build_httpx_client")
+    @patch("uipath.llm_client.clients.google.client.UiPathHttpxAsyncClient")
+    @patch("uipath.llm_client.clients.google.client.UiPathHttpxClient")
     @patch("uipath.llm_client.clients.google.client.get_default_client_settings")
     def test_uses_provided_client_settings(
         self,
@@ -137,8 +137,8 @@ class TestUiPathGoogleInit:
             assert mock_build_sync.call_args[1]["client_settings"] is custom_settings
             assert mock_build_async.call_args[1]["client_settings"] is custom_settings
 
-    @patch("uipath.llm_client.clients.google.client.build_httpx_async_client")
-    @patch("uipath.llm_client.clients.google.client.build_httpx_client")
+    @patch("uipath.llm_client.clients.google.client.UiPathHttpxAsyncClient")
+    @patch("uipath.llm_client.clients.google.client.UiPathHttpxClient")
     @patch("uipath.llm_client.clients.google.client.get_default_client_settings")
     def test_api_config_forwarded_to_builders(
         self,

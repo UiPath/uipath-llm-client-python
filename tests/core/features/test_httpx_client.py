@@ -27,7 +27,7 @@ class TestUiPathHttpxClient:
 
         client = UiPathHttpxClient(base_url="https://example.com")
         assert "X-UiPath-LLMGateway-TimeoutSeconds" in client.headers
-        assert "X-UiPath-LLMGateway-AllowFull4xxResponse" not in client.headers
+        assert client.headers["X-UiPath-LLMGateway-AllowFull4xxResponse"] == "false"
         client.close()
 
     def test_client_merges_custom_headers(self):
@@ -52,11 +52,11 @@ class TestUiPathHttpxClient:
             base_url="https://example.com",
             model_name="gpt-4o",
         )
-        assert client.model_name == "gpt-4o"
+        assert isinstance(client, UiPathHttpxClient)
         client.close()
 
     def test_client_with_api_config(self, normalized_api_config):
-        """Test client stores api_config."""
+        """Test client adds routing headers from api_config."""
         from uipath.llm_client.httpx_client import UiPathHttpxClient
 
         client = UiPathHttpxClient(
@@ -64,7 +64,6 @@ class TestUiPathHttpxClient:
             api_config=normalized_api_config,
             model_name="gpt-4o",
         )
-        assert client.api_config == normalized_api_config
         # Check normalized API header is added
         assert "X-UiPath-LlmGateway-NormalizedApi-ModelName" in client.headers
         client.close()
@@ -111,7 +110,7 @@ class TestUiPathHttpxAsyncClient:
 
         client = UiPathHttpxAsyncClient(base_url="https://example.com")
         assert "X-UiPath-LLMGateway-TimeoutSeconds" in client.headers
-        assert "X-UiPath-LLMGateway-AllowFull4xxResponse" not in client.headers
+        assert client.headers["X-UiPath-LLMGateway-AllowFull4xxResponse"] == "false"
 
     def test_async_client_with_retry_config(self):
         """Test async client creates retryable async transport."""

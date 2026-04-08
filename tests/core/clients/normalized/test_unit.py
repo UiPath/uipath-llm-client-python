@@ -574,9 +574,8 @@ class TestParseToolCallChunk:
 
 
 class TestUiPathNormalizedClientInit:
-    @patch(f"{_CLIENT_MODULE}.build_httpx_client")
     @patch(f"{_CLIENT_MODULE}.get_default_client_settings")
-    def test_default_settings(self, mock_get_settings, mock_build):
+    def test_default_settings(self, mock_get_settings):
         mock_settings = MagicMock()
         mock_settings.build_auth_pipeline.return_value = None
         mock_get_settings.return_value = mock_settings
@@ -585,33 +584,28 @@ class TestUiPathNormalizedClientInit:
         assert client._model_name == "gpt-4o"
         mock_get_settings.assert_called_once()
 
-    @patch(f"{_CLIENT_MODULE}.build_httpx_client")
-    def test_custom_settings(self, mock_build):
+    def test_custom_settings(self):
         settings = MagicMock()
         settings.build_auth_pipeline.return_value = None
 
         client = UiPathNormalizedClient(model_name="gpt-4o", client_settings=settings)
         assert client._client_settings is settings
 
-    @patch(f"{_CLIENT_MODULE}.build_httpx_client")
     @patch(f"{_CLIENT_MODULE}.get_default_client_settings")
-    def test_has_completions_namespace(self, mock_get_settings, mock_build):
+    def test_has_completions_namespace(self, mock_get_settings):
         mock_settings = MagicMock()
         mock_settings.build_auth_pipeline.return_value = None
         mock_get_settings.return_value = mock_settings
-        mock_build.return_value = MagicMock()
 
         client = UiPathNormalizedClient(model_name="gpt-4o")
         assert hasattr(client, "completions")
         assert isinstance(client.completions, Completions)
 
-    @patch(f"{_CLIENT_MODULE}.build_httpx_client")
     @patch(f"{_CLIENT_MODULE}.get_default_client_settings")
-    def test_has_embeddings_namespace(self, mock_get_settings, mock_build):
+    def test_has_embeddings_namespace(self, mock_get_settings):
         mock_settings = MagicMock()
         mock_settings.build_auth_pipeline.return_value = None
         mock_get_settings.return_value = mock_settings
-        mock_build.return_value = MagicMock()
 
         client = UiPathNormalizedClient(model_name="gpt-4o")
         from uipath.llm_client.clients.normalized.embeddings import Embeddings
@@ -619,9 +613,8 @@ class TestUiPathNormalizedClientInit:
         assert hasattr(client, "embeddings")
         assert isinstance(client.embeddings, Embeddings)
 
-    @patch(f"{_CLIENT_MODULE}.build_httpx_client")
     @patch(f"{_CLIENT_MODULE}.get_default_client_settings")
-    def test_completions_api_config(self, mock_get_settings, mock_build):
+    def test_completions_api_config(self, mock_get_settings):
         mock_settings = MagicMock()
         mock_settings.build_auth_pipeline.return_value = None
         mock_get_settings.return_value = mock_settings
@@ -631,9 +624,8 @@ class TestUiPathNormalizedClientInit:
         assert client._completions_api_config.routing_mode == "normalized"
         assert client._completions_api_config.freeze_base_url is True
 
-    @patch(f"{_CLIENT_MODULE}.build_httpx_client")
     @patch(f"{_CLIENT_MODULE}.get_default_client_settings")
-    def test_embeddings_api_config(self, mock_get_settings, mock_build):
+    def test_embeddings_api_config(self, mock_get_settings):
         mock_settings = MagicMock()
         mock_settings.build_auth_pipeline.return_value = None
         mock_get_settings.return_value = mock_settings

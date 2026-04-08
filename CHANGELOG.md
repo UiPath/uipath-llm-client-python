@@ -2,6 +2,23 @@
 
 All notable changes to `uipath_llm_client` (core package) will be documented in this file.
 
+## [1.8.0] - 2026-04-08
+
+### Added
+- `UiPathLiteLLM` — provider-agnostic LLM client powered by LiteLLM
+  - `completion` / `acompletion` for chat completions across all providers
+  - `embedding` / `aembedding` for embeddings
+  - Automatic model discovery from the UiPath backend — detects vendor, api_flavor, and model family
+  - Optional `vendor_type` and `api_flavor` overrides (same pattern as LangChain factory)
+  - Supports OpenAI (chat-completions + responses API), Gemini, Bedrock (invoke + converse), and Vertex AI Claude
+  - All HTTP routed through UiPath httpx transport (auth, retry, headers) — no direct calls to Google/AWS/OpenAI
+  - Explicit completion parameters with full IDE autocomplete
+- `litellm` as an optional dependency (`uv add uipath-llm-client[litellm]`)
+- `_strict_response_validation` parameter to all Anthropic client classes
+
+### Changed
+- Updated dependency versions: `uipath-platform>=0.1.21`, `anthropic>=0.91.0`, `litellm>=1.83.4`
+
 ## [1.7.0] - 2026-04-03
 
 ### Added

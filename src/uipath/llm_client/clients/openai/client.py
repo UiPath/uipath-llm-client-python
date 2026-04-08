@@ -2,7 +2,7 @@ import logging
 from collections.abc import Mapping, Sequence
 
 from uipath.llm_client.clients.openai.utils import OpenAIRequestHandler
-from uipath.llm_client.clients.utils import build_httpx_async_client, build_httpx_client
+from uipath.llm_client.httpx_client import UiPathHttpxAsyncClient, UiPathHttpxClient
 from uipath.llm_client.settings import UiPathBaseSettings, get_default_client_settings
 from uipath.llm_client.utils.retry import RetryConfig
 
@@ -31,6 +31,7 @@ class UiPathOpenAI(OpenAI):
         captured_headers: Response header prefixes to capture (case-insensitive).
         retry_config: Custom retry configuration.
         logger: Logger instance for request/response logging.
+        _strict_response_validation: Enable strict response validation.
     """
 
     def __init__(
@@ -45,15 +46,16 @@ class UiPathOpenAI(OpenAI):
         captured_headers: Sequence[str] = ("x-uipath-",),
         retry_config: RetryConfig | None = None,
         logger: logging.Logger | None = None,
+        _strict_response_validation: bool = False,
     ):
         client_settings = client_settings or get_default_client_settings()
-        httpx_client = build_httpx_client(
+        httpx_client = UiPathHttpxClient(
             model_name=model_name,
             byo_connection_id=byo_connection_id,
             client_settings=client_settings,
             timeout=timeout,
             max_retries=max_retries,
-            default_headers=default_headers,
+            headers=default_headers,
             captured_headers=captured_headers,
             retry_config=retry_config,
             logger=logger,
@@ -68,6 +70,7 @@ class UiPathOpenAI(OpenAI):
         super().__init__(
             api_key="PLACEHOLDER",
             max_retries=0,
+            _strict_response_validation=_strict_response_validation,
             http_client=httpx_client,
             base_url=str(httpx_client.base_url).rstrip("/"),
         )
@@ -89,6 +92,7 @@ class UiPathAsyncOpenAI(AsyncOpenAI):
         captured_headers: Response header prefixes to capture (case-insensitive).
         retry_config: Custom retry configuration.
         logger: Logger instance for request/response logging.
+        _strict_response_validation: Enable strict response validation.
     """
 
     def __init__(
@@ -103,15 +107,16 @@ class UiPathAsyncOpenAI(AsyncOpenAI):
         captured_headers: Sequence[str] = ("x-uipath-",),
         retry_config: RetryConfig | None = None,
         logger: logging.Logger | None = None,
+        _strict_response_validation: bool = False,
     ):
         client_settings = client_settings or get_default_client_settings()
-        httpx_client = build_httpx_async_client(
+        httpx_client = UiPathHttpxAsyncClient(
             model_name=model_name,
             byo_connection_id=byo_connection_id,
             client_settings=client_settings,
             timeout=timeout,
             max_retries=max_retries,
-            default_headers=default_headers,
+            headers=default_headers,
             captured_headers=captured_headers,
             retry_config=retry_config,
             logger=logger,
@@ -126,6 +131,7 @@ class UiPathAsyncOpenAI(AsyncOpenAI):
         super().__init__(
             api_key="PLACEHOLDER",
             max_retries=0,
+            _strict_response_validation=_strict_response_validation,
             http_client=httpx_client,
             base_url=str(httpx_client.base_url).rstrip("/"),
         )
@@ -147,6 +153,7 @@ class UiPathAzureOpenAI(AzureOpenAI):
         captured_headers: Response header prefixes to capture (case-insensitive).
         retry_config: Custom retry configuration.
         logger: Logger instance for request/response logging.
+        _strict_response_validation: Enable strict response validation.
     """
 
     def __init__(
@@ -161,15 +168,16 @@ class UiPathAzureOpenAI(AzureOpenAI):
         captured_headers: Sequence[str] = ("x-uipath-",),
         retry_config: RetryConfig | None = None,
         logger: logging.Logger | None = None,
+        _strict_response_validation: bool = False,
     ):
         client_settings = client_settings or get_default_client_settings()
-        httpx_client = build_httpx_client(
+        httpx_client = UiPathHttpxClient(
             model_name=model_name,
             byo_connection_id=byo_connection_id,
             client_settings=client_settings,
             timeout=timeout,
             max_retries=max_retries,
-            default_headers=default_headers,
+            headers=default_headers,
             captured_headers=captured_headers,
             retry_config=retry_config,
             logger=logger,
@@ -186,6 +194,7 @@ class UiPathAzureOpenAI(AzureOpenAI):
             api_version="PLACEHOLDER",
             api_key="PLACEHOLDER",
             max_retries=0,
+            _strict_response_validation=_strict_response_validation,
             http_client=httpx_client,
         )
 
@@ -206,6 +215,7 @@ class UiPathAsyncAzureOpenAI(AsyncAzureOpenAI):
         captured_headers: Response header prefixes to capture (case-insensitive).
         retry_config: Custom retry configuration.
         logger: Logger instance for request/response logging.
+        _strict_response_validation: Enable strict response validation.
     """
 
     def __init__(
@@ -220,15 +230,16 @@ class UiPathAsyncAzureOpenAI(AsyncAzureOpenAI):
         captured_headers: Sequence[str] = ("x-uipath-",),
         retry_config: RetryConfig | None = None,
         logger: logging.Logger | None = None,
+        _strict_response_validation: bool = False,
     ):
         client_settings = client_settings or get_default_client_settings()
-        httpx_client = build_httpx_async_client(
+        httpx_client = UiPathHttpxAsyncClient(
             model_name=model_name,
             byo_connection_id=byo_connection_id,
             client_settings=client_settings,
             timeout=timeout,
             max_retries=max_retries,
-            default_headers=default_headers,
+            headers=default_headers,
             captured_headers=captured_headers,
             retry_config=retry_config,
             logger=logger,
@@ -245,5 +256,6 @@ class UiPathAsyncAzureOpenAI(AsyncAzureOpenAI):
             api_version="PLACEHOLDER",
             api_key="PLACEHOLDER",
             max_retries=0,
+            _strict_response_validation=_strict_response_validation,
             http_client=httpx_client,
         )

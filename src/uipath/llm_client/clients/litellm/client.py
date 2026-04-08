@@ -42,6 +42,7 @@ try:
     import litellm
     from litellm import CustomStreamWrapper, EmbeddingResponse, ModelResponse
     from litellm.llms.custom_httpx.http_handler import AsyncHTTPHandler, HTTPHandler
+    from litellm.llms.vertex_ai.vertex_llm_base import VertexBase
     from litellm.types.llms.anthropic import AnthropicThinkingParam
     from litellm.types.llms.openai import (
         ChatCompletionAudioParam,
@@ -55,6 +56,18 @@ except ImportError as e:
         "Install it with: uv add uipath-llm-client[litellm]"
     ) from e
 
+# Skip Google OAuth for Vertex AI — the UiPath httpx client handles auth.
+VertexBase._ensure_access_token = lambda self, *a, **kw: ("unused", "unused")  # type: ignore[assignment]
+
+# Dummy AWS credentials injected for Bedrock so litellm takes the session-token
+# auth path (no STS/boto3 HTTP calls). The UiPath httpx client handles auth.
+_BEDROCK_PLACEHOLDER_KWARGS: dict[str, str] = {
+    "aws_access_key_id": "PLACEHOLDER",
+    "aws_secret_access_key": "PLACEHOLDER",
+    "aws_session_token": "PLACEHOLDER",
+    "aws_region_name": "us-east-1",
+}
+
 # ---------------------------------------------------------------------------
 # VendorType / ApiFlavor → litellm custom_llm_provider
 # ---------------------------------------------------------------------------
@@ -67,6 +80,14 @@ _VENDOR_TO_LITELLM: dict[str, str] = {
     "anthropic": "anthropic",
 }
 
+# Providers where litellm's embedding() path expects an OpenAI SDK client.
+# For these, we use "hosted_vllm" which routes through base_llm_http_handler
+# and accepts HTTPHandler (same OpenAI-compatible format).
+_EMBEDDING_PROVIDER_OVERRIDE: dict[str, str] = {
+    "openai": "hosted_vllm",
+    "azure": "hosted_vllm",
+}
+
 _FLAVOR_TO_LITELLM: dict[str, str] = {
     "chat-completions": "openai",
     "responses": "openai",
@@ -77,12 +98,6 @@ _FLAVOR_TO_LITELLM: dict[str, str] = {
 }
 
 _ANTHROPIC_FAMILY = "anthropicclaude"
-
-# ApiFlavor → litellm bedrock route prefix
-_BEDROCK_ROUTE_PREFIX: dict[str, str] = {
-    "converse": "converse/",
-    "invoke": "invoke/",
-}
 
 
 def _drop_nones(**kwargs: Any) -> dict[str, Any]:
@@ -152,7 +167,16 @@ class UiPathLiteLLM:
             api_flavor=api_flavor,
         )
         self._custom_llm_provider = self._resolve_llm_provider()
+        self._embedding_llm_provider = _EMBEDDING_PROVIDER_OVERRIDE.get(
+            self._custom_llm_provider, self._custom_llm_provider
+        )
         self._litellm_model = self._resolve_litellm_model()
+
+        # Extra kwargs injected into litellm calls to bypass provider auth.
+        # Bedrock: dummy AWS creds → session-token path (no STS calls).
+        self._extra_litellm_kwargs: dict[str, Any] = (
+            _BEDROCK_PLACEHOLDER_KWARGS if self._custom_llm_provider == "bedrock" else {}
+        )
 
     # ------------------------------------------------------------------
     # Discovery & provider resolution
@@ -239,7 +263,7 @@ class UiPathLiteLLM:
         is_claude = self._model_family == _ANTHROPIC_FAMILY
         vendor = str(self._api_config.vendor_type or "openai")
 
-        # Claude on Vertex AI → vertex_ai
+        # Claude on Vertex AI → vertex_ai (uses VertexAIAnthropicConfig)
         if vendor == "vertexai" and is_claude:
             return "vertex_ai"
 
@@ -255,13 +279,8 @@ class UiPathLiteLLM:
         return _VENDOR_TO_LITELLM.get(vendor, vendor)
 
     def _resolve_litellm_model(self) -> str:
-        """Build the fully-qualified model name litellm expects: ``provider/model``.
-
-        For bedrock, defaults to invoke/ for Claude models when no explicit flavor is set.
-        """
-        provider = self._custom_llm_provider
+        """Build the model name litellm expects, with route prefixes where needed."""
         model = self._model_name
-
         flavor = str(self._api_config.api_flavor) if self._api_config.api_flavor else None
 
         # OpenAI Responses API: prepend responses/ so litellm bridges to /v1/responses
@@ -269,12 +288,10 @@ class UiPathLiteLLM:
             model = f"responses/{model}"
 
         # Bedrock route prefixes (invoke/, converse/)
-        if provider == "bedrock" and flavor:
-            prefix = _BEDROCK_ROUTE_PREFIX.get(flavor, "")
-            if prefix:
-                model = f"{prefix}{model}"
+        if self._custom_llm_provider == "bedrock" and flavor in ("invoke", "converse"):
+            model = f"{flavor}/{model}"
 
-        return f"{provider}/{model}"
+        return model
 
     # ------------------------------------------------------------------
     # LiteLLM HTTP handlers (lazily created)
@@ -399,11 +416,13 @@ class UiPathLiteLLM:
         return litellm.completion(
             model=self._litellm_model,
             messages=messages,
+            custom_llm_provider=self._custom_llm_provider,
             api_key="PLACEHOLDER",
             api_base=str(self._completion_client.client.base_url),
             client=self._completion_client,
             num_retries=0,
             max_retries=0,
+            **self._extra_litellm_kwargs,
             **optional,
             **kwargs,
         )
@@ -477,11 +496,13 @@ class UiPathLiteLLM:
         return await litellm.acompletion(
             model=self._litellm_model,
             messages=messages,
+            custom_llm_provider=self._custom_llm_provider,
             api_key="PLACEHOLDER",
             api_base=str(self._completion_async_client.client.base_url),
             client=self._completion_async_client,
             num_retries=0,
             max_retries=0,
+            **self._extra_litellm_kwargs,
             **optional,
             **kwargs,
         )
@@ -499,6 +520,7 @@ class UiPathLiteLLM:
         return litellm.embedding(  # type: ignore[return-value]
             model=self._litellm_model,
             input=input,
+            custom_llm_provider=self._embedding_llm_provider,
             api_key="PLACEHOLDER",
             api_base=str(self._embedding_client.client.base_url),
             client=self._embedding_client,
@@ -524,6 +546,7 @@ class UiPathLiteLLM:
         return await litellm.aembedding(
             model=self._litellm_model,
             input=input,
+            custom_llm_provider=self._embedding_llm_provider,
             api_key="PLACEHOLDER",
             api_base=str(self._embedding_async_client.client.base_url),
             client=self._embedding_async_client,

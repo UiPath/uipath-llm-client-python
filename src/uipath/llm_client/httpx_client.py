@@ -86,7 +86,7 @@ class UiPathHttpxClient(Client):
     _streaming_header: str = "X-UiPath-Streaming-Enabled"
     _default_headers: dict[str, str] = {
         "X-UiPath-LLMGateway-TimeoutSeconds": "295",  # server side timeout, default is 10, maximum is 300
-        "X-UiPath-LLMGateway-AllowFull4xxResponse": "true",  # allow full 4xx responses (default is false) — removed from default to avoid PII leakage in logs
+        "X-UiPath-LLMGateway-AllowFull4xxResponse": "false",  # allow full 4xx responses (default is false) — removed from default to avoid PII leakage in logs
     }
 
     def __init__(
@@ -288,7 +288,7 @@ class UiPathHttpxAsyncClient(AsyncClient):
     _streaming_header: str = "X-UiPath-Streaming-Enabled"
     _default_headers: dict[str, str] = {
         "X-UiPath-LLMGateway-TimeoutSeconds": "295",  # server side timeout, default is 10, maximum is 300
-        "X-UiPath-LLMGateway-AllowFull4xxResponse": "true",  # allow full 4xx responses (default is false) — removed from default to avoid PII leakage in logs
+        "X-UiPath-LLMGateway-AllowFull4xxResponse": "false",  # allow full 4xx responses (default is false) — removed from default to avoid PII leakage in logs
     }
 
     def __init__(

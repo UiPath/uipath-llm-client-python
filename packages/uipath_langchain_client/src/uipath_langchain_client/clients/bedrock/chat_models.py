@@ -43,8 +43,8 @@ try:
 
 except ImportError as e:
     raise ImportError(
-        "The 'aws' extra is required to use UiPathBedrockChatModel and UiPathBedrockChatModelConverse. "
-        "Install it with: uv add uipath-langchain-client[aws]"
+        "The 'bedrock' extra is required to use UiPathBedrockChatModel and UiPathBedrockChatModelConverse. "
+        "Install it with: uv add uipath-langchain-client[bedrock]"
     ) from e
 
 

@@ -13,7 +13,7 @@ pip install "uipath-langchain-client[openai]"      # OpenAI/Azure models
 pip install "uipath-langchain-client[google]"      # Google Gemini models
 pip install "uipath-langchain-client[anthropic]"   # Anthropic Claude models
 pip install "uipath-langchain-client[azure]"       # Azure AI models
-pip install "uipath-langchain-client[aws]"         # AWS Bedrock models
+pip install "uipath-langchain-client[bedrock]"      # AWS Bedrock models
 pip install "uipath-langchain-client[vertexai]"    # Google VertexAI models
 pip install "uipath-langchain-client[fireworks]"   # Fireworks AI models
 pip install "uipath-langchain-client[all]"         # All providers
@@ -94,8 +94,8 @@ Uses vendor-specific APIs through UiPath's gateway. Full feature parity with nat
 | `UiPathChatGoogleGenerativeAI` | Google | `[google]` | Gemini 2.5, 2.0, 1.5 |
 | `UiPathChatAnthropic` | Anthropic (via Bedrock) | `[anthropic]` | Claude Sonnet 4.5, Opus, etc. |
 | `UiPathChatAnthropicVertex` | Anthropic (via VertexAI) | `[vertexai]` | Claude models |
-| `UiPathChatBedrock` | AWS Bedrock (invoke API) | `[aws]` | Bedrock-hosted models |
-| `UiPathChatBedrockConverse` | AWS Bedrock (Converse API) | `[aws]` | Bedrock-hosted models |
+| `UiPathChatBedrock` | AWS Bedrock (invoke API) | `[bedrock]` | Bedrock-hosted models |
+| `UiPathChatBedrockConverse` | AWS Bedrock (Converse API) | `[bedrock]` | Bedrock-hosted models |
 | `UiPathChatFireworks` | Fireworks AI | `[fireworks]` | Various open-source models |
 | `UiPathAzureAIChatCompletionsModel` | Azure AI | `[azure]` | Various Azure AI models |
 
@@ -106,7 +106,7 @@ Uses vendor-specific APIs through UiPath's gateway. Full feature parity with nat
 | `UiPathAzureOpenAIEmbeddings` | OpenAI/Azure (UiPath-owned) | `[openai]` | text-embedding-3-large/small |
 | `UiPathOpenAIEmbeddings` | OpenAI (BYO) | `[openai]` | text-embedding-3-large/small |
 | `UiPathGoogleGenerativeAIEmbeddings` | Google | `[google]` | text-embedding-004 |
-| `UiPathBedrockEmbeddings` | AWS Bedrock | `[aws]` | Titan Embeddings, etc. |
+| `UiPathBedrockEmbeddings` | AWS Bedrock | `[bedrock]` | Titan Embeddings, etc. |
 | `UiPathFireworksEmbeddings` | Fireworks AI | `[fireworks]` | Various |
 | `UiPathAzureAIEmbeddingsModel` | Azure AI | `[azure]` | Various Azure AI models |
 

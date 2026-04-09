@@ -11,8 +11,8 @@ try:
     from uipath_langchain_client.clients.bedrock.utils import WrappedBotoClient
 except ImportError as e:
     raise ImportError(
-        "The 'aws' extra is required to use UiPathBedrockEmbeddings. "
-        "Install it with: uv add uipath-langchain-client[aws]"
+        "The 'bedrock' extra is required to use UiPathBedrockEmbeddings. "
+        "Install it with: uv add uipath-langchain-client[bedrock]"
     ) from e
 
 

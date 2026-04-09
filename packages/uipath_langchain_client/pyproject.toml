@@ -20,7 +20,7 @@ anthropic = [
     "langchain-anthropic>=1.4.0",
     "anthropic[bedrock,vertex]>=0.91.0",
 ]
-aws = [
+bedrock = [
     "langchain-aws[anthropic]>=1.4.3",
 ]
 vertexai = [
@@ -36,7 +36,7 @@ litellm = [
     "langchain-litellm>=0.6.4",
 ]
 all = [
-    "uipath-langchain-client[openai,aws,google,anthropic,azure,vertexai,fireworks,litellm]"
+    "uipath-langchain-client[openai,bedrock,google,anthropic,azure,vertexai,fireworks,litellm]"
 ]
 
 [build-system]

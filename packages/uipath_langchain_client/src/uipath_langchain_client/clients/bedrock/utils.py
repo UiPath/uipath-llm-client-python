@@ -9,8 +9,8 @@ try:
     from botocore.eventstream import EventStreamBuffer
 except ImportError as e:
     raise ImportError(
-        "The 'aws' extra is required to use WrappedBotoClient. "
-        "Install it with: uv add uipath-langchain-client[aws]"
+        "The 'bedrock' extra is required to use WrappedBotoClient. "
+        "Install it with: uv add uipath-langchain-client[bedrock]"
     ) from e
 
 

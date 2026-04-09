@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_langchain_client` will be documented in this file.
 
+## [1.8.1] - 2026-04-09
+
+### Changed
+- Renamed `aws` optional dependency to `bedrock` for clarity
+
 ## [1.8.0] - 2026-04-08
 
 ### Added

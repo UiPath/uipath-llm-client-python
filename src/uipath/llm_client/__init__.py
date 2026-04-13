@@ -26,7 +26,6 @@ Quick Start:
 """
 
 from uipath.llm_client.__version__ import __version__
-from uipath.llm_client.clients.litellm import UiPathLiteLLM
 from uipath.llm_client.clients.normalized import UiPathNormalizedClient
 from uipath.llm_client.httpx_client import (
     UiPathHttpxAsyncClient,
@@ -62,8 +61,6 @@ __all__ = [
     "LLMGatewaySettings",
     # Normalized client
     "UiPathNormalizedClient",
-    # LiteLLM client
-    "UiPathLiteLLM",
     # HTTPX clients
     "UiPathHttpxClient",
     "UiPathHttpxAsyncClient",

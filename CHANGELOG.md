@@ -2,7 +2,7 @@
 
 All notable changes to `uipath_llm_client` (core package) will be documented in this file.
 
-## [1.8.1] - 2026-04-13
+## [1.8.2] - 2026-04-13
 
 ### Fixed
 - Removed top-level import of `UiPathLiteLLM` from `__init__.py` to avoid `ImportError` when the optional `litellm` dependency is not installed

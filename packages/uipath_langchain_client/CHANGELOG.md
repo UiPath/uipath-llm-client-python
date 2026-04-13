@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_langchain_client` will be documented in this file.
 
+## [1.8.2] - 2026-04-13
+
+### Changed
+- Version bump to match core package 1.8.2
+
 ## [1.8.1] - 2026-04-09
 
 ### Changed

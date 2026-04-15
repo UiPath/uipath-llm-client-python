@@ -2,7 +2,7 @@
 
 All notable changes to `uipath_langchain_client` will be documented in this file.
 
-## [1.9.0] - 2026-04-16
+## [1.8.3] - 2026-04-16
 
 ### Added
 - Factory functions (`get_chat_model`, `get_embedding_model`) now automatically resolve BYOM discovery API flavors to the correct client and routing flavor

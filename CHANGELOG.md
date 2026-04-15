@@ -2,7 +2,7 @@
 
 All notable changes to `uipath_llm_client` (core package) will be documented in this file.
 
-## [1.9.0] - 2026-04-16
+## [1.8.3] - 2026-04-16
 
 ### Added
 - BYOM API flavor constants for discovery endpoint: `OpenAiChatCompletions`, `OpenAiResponses`, `OpenAiEmbeddings`, `GeminiGenerateContent`, `GeminiEmbeddings`, `AwsBedrockInvoke`, `AwsBedrockConverse`

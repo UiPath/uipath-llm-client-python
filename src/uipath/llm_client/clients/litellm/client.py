@@ -30,6 +30,7 @@ from uipath.llm_client.settings.constants import (
     BYOM_TO_ROUTING_FLAVOR,
     ApiFlavor,
     ApiType,
+    ByomApiFlavor,
     RoutingMode,
     VendorType,
 )
@@ -88,14 +89,14 @@ _FLAVOR_TO_LITELLM: dict[str, str] = {
     "converse": "bedrock",
     "invoke": "bedrock",
     "anthropic-claude": "vertex_ai",
-    # BYOM discovery flavors (mapped via routing flavor resolution)
-    "OpenAiChatCompletions": "openai",
-    "OpenAiResponses": "openai",
-    "OpenAiEmbeddings": "openai",
-    "GeminiGenerateContent": "gemini",
-    "GeminiEmbeddings": "gemini",
-    "AwsBedrockInvoke": "bedrock",
-    "AwsBedrockConverse": "bedrock",
+    # BYOM discovery flavors
+    ByomApiFlavor.OPENAI_CHAT_COMPLETIONS: "openai",
+    ByomApiFlavor.OPENAI_RESPONSES: "openai",
+    ByomApiFlavor.OPENAI_EMBEDDINGS: "openai",
+    ByomApiFlavor.GEMINI_GENERATE_CONTENT: "gemini",
+    ByomApiFlavor.GEMINI_EMBEDDINGS: "gemini",
+    ByomApiFlavor.AWS_BEDROCK_INVOKE: "bedrock",
+    ByomApiFlavor.AWS_BEDROCK_CONVERSE: "bedrock",
 }
 
 _ANTHROPIC_FAMILY = "anthropicclaude"

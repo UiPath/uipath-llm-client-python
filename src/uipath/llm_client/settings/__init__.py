@@ -30,7 +30,13 @@ import os
 from typing import Literal
 
 from uipath.llm_client.settings.base import UiPathAPIConfig, UiPathBaseSettings
-from uipath.llm_client.settings.constants import ApiFlavor, ApiType, RoutingMode, VendorType
+from uipath.llm_client.settings.constants import (
+    ApiFlavor,
+    ApiType,
+    ByomApiFlavor,
+    RoutingMode,
+    VendorType,
+)
 from uipath.llm_client.settings.llmgateway import LLMGatewaySettings
 from uipath.llm_client.settings.platform import PlatformSettings
 
@@ -96,4 +102,5 @@ __all__ = [
     "RoutingMode",
     "VendorType",
     "ApiFlavor",
+    "ByomApiFlavor",
 ]

@@ -28,6 +28,7 @@ from uipath_langchain_client.base_client import (
 )
 from uipath_langchain_client.settings import (
     API_FLAVOR_TO_VENDOR_TYPE,
+    BYOM_TO_ROUTING_FLAVOR,
     ApiFlavor,
     RoutingMode,
     UiPathBaseSettings,
@@ -159,6 +160,10 @@ def get_chat_model(
     if discovered_vendor_type is None:
         raise ValueError("No vendor type or api flavor found in model info")
     discovered_vendor_type = discovered_vendor_type.lower()
+
+    # For BYOM models, derive routing api_flavor from the discovered BYOM flavor
+    if api_flavor is None and discovered_api_flavor is not None:
+        api_flavor = BYOM_TO_ROUTING_FLAVOR.get(discovered_api_flavor)
 
     match discovered_vendor_type:
         case VendorType.OPENAI:

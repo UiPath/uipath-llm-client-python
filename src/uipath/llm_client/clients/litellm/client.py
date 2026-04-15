@@ -27,6 +27,7 @@ from uipath.llm_client.settings import UiPathBaseSettings, get_default_client_se
 from uipath.llm_client.settings.base import UiPathAPIConfig
 from uipath.llm_client.settings.constants import (
     API_FLAVOR_TO_VENDOR_TYPE,
+    BYOM_TO_ROUTING_FLAVOR,
     ApiFlavor,
     ApiType,
     RoutingMode,
@@ -87,6 +88,14 @@ _FLAVOR_TO_LITELLM: dict[str, str] = {
     "converse": "bedrock",
     "invoke": "bedrock",
     "anthropic-claude": "vertex_ai",
+    # BYOM discovery flavors (mapped via routing flavor resolution)
+    "OpenAiChatCompletions": "openai",
+    "OpenAiResponses": "openai",
+    "OpenAiEmbeddings": "openai",
+    "GeminiGenerateContent": "gemini",
+    "GeminiEmbeddings": "gemini",
+    "AwsBedrockInvoke": "bedrock",
+    "AwsBedrockConverse": "bedrock",
 }
 
 _ANTHROPIC_FAMILY = "anthropicclaude"
@@ -211,6 +220,10 @@ class UiPathLiteLLM:
 
         resolved_vendor = str(vendor_type or discovered_vendor).lower()
         resolved_flavor = str(api_flavor) if api_flavor is not None else discovered_flavor
+
+        # Resolve BYOM discovery flavors to routing-level flavors
+        if resolved_flavor is not None:
+            resolved_flavor = BYOM_TO_ROUTING_FLAVOR.get(resolved_flavor, resolved_flavor)
 
         # OpenAI defaults to chat-completions when no flavor is discovered
         if resolved_flavor is None and resolved_vendor in ("openai", "azure"):

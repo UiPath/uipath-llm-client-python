@@ -28,6 +28,7 @@ from uipath_langchain_client.base_client import (
 )
 from uipath_langchain_client.settings import (
     API_FLAVOR_TO_VENDOR_TYPE,
+    BYOM_TO_ROUTING_FLAVOR,
     ApiFlavor,
     RoutingMode,
     UiPathBaseSettings,
@@ -160,11 +161,16 @@ def get_chat_model(
         raise ValueError("No vendor type or api flavor found in model info")
     discovered_vendor_type = discovered_vendor_type.lower()
 
+    # Discovered api_flavor takes precedence over user-supplied api_flavor
+    if discovered_api_flavor is not None:
+        routing_flavor = BYOM_TO_ROUTING_FLAVOR.get(discovered_api_flavor)
+        if routing_flavor is not None:
+            api_flavor = routing_flavor
+        else:
+            api_flavor = discovered_api_flavor
+
     match discovered_vendor_type:
         case VendorType.OPENAI:
-            if api_flavor == ApiFlavor.RESPONSES:
-                model_kwargs["use_responses_api"] = True
-
             if is_uipath_owned:
                 from uipath_langchain_client.clients.openai.chat_models import (
                     UiPathAzureChatOpenAI,
@@ -173,6 +179,7 @@ def get_chat_model(
                 return UiPathAzureChatOpenAI(
                     model=model_name,
                     settings=client_settings,
+                    api_flavor=api_flavor,
                     byo_connection_id=byo_connection_id,
                     **model_kwargs,
                 )
@@ -184,6 +191,7 @@ def get_chat_model(
                 return UiPathChatOpenAI(
                     model=model_name,
                     settings=client_settings,
+                    api_flavor=api_flavor,
                     byo_connection_id=byo_connection_id,
                     **model_kwargs,
                 )
@@ -323,10 +331,9 @@ def get_embedding_model(
         )
 
     discovered_vendor_type = model_info.get("vendor")
-    if discovered_vendor_type is None:
-        discovered_api_flavor = model_info.get("apiFlavor")
-        if discovered_api_flavor is not None:
-            discovered_vendor_type = API_FLAVOR_TO_VENDOR_TYPE.get(discovered_api_flavor)
+    discovered_api_flavor = model_info.get("apiFlavor")
+    if discovered_vendor_type is None and discovered_api_flavor is not None:
+        discovered_vendor_type = API_FLAVOR_TO_VENDOR_TYPE.get(discovered_api_flavor)
     if discovered_vendor_type is None:
         raise ValueError(
             f"No vendor type found in model info for embedding model '{model_name}'. "

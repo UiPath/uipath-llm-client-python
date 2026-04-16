@@ -7,6 +7,7 @@ from pydantic import Field, SecretStr, model_validator
 from uipath_langchain_client.base_client import UiPathBaseChatModel
 from uipath_langchain_client.clients.openai.utils import fix_url_and_api_flavor_header
 from uipath_langchain_client.settings import (
+    ApiFlavor,
     ApiType,
     RoutingMode,
     UiPathAPIConfig,
@@ -31,6 +32,7 @@ class UiPathChatOpenAI(UiPathBaseChatModel, ChatOpenAI):  # type: ignore[overrid
         api_version="2025-03-01-preview",
         freeze_base_url=False,
     )
+    api_flavor: ApiFlavor | str | None = None
 
     # Override fields to avoid errors when instantiating the class
     openai_api_key: SecretStr | None | Callable[[], str] | Callable[[], Awaitable[str]] = Field(
@@ -39,13 +41,24 @@ class UiPathChatOpenAI(UiPathBaseChatModel, ChatOpenAI):  # type: ignore[overrid
 
     @model_validator(mode="after")
     def setup_uipath_client(self) -> Self:
+        if self.api_flavor is not None:
+            self.api_config.api_flavor = self.api_flavor
+            # Lock LangChain's use_responses_api to match the discovered flavor.
+            # Without this, features like reasoning={} or certain model names
+            # silently switch LangChain to the Responses API, which would fail
+            # if the model only supports chat-completions (or vice versa).
+            if self.api_flavor == ApiFlavor.CHAT_COMPLETIONS:
+                self.use_responses_api = False
+            elif self.api_flavor == ApiFlavor.RESPONSES:
+                self.use_responses_api = True
         base_url = str(self.uipath_sync_client.base_url).rstrip("/")
+        locked_flavor = str(self.api_config.api_flavor) if self.api_config.api_flavor else None
 
         def on_request(request: Request) -> None:
-            fix_url_and_api_flavor_header(base_url, request)
+            fix_url_and_api_flavor_header(base_url, request, api_flavor=locked_flavor)
 
         async def on_request_async(request: Request) -> None:
-            fix_url_and_api_flavor_header(base_url, request)
+            fix_url_and_api_flavor_header(base_url, request, api_flavor=locked_flavor)
 
         self.uipath_sync_client.event_hooks["request"].append(on_request)
         self.uipath_async_client.event_hooks["request"].append(on_request_async)
@@ -75,6 +88,7 @@ class UiPathAzureChatOpenAI(UiPathBaseChatModel, AzureChatOpenAI):  # type: igno
         api_version="2025-03-01-preview",
         freeze_base_url=False,
     )
+    api_flavor: ApiFlavor | str | None = None
 
     # Override fields to avoid errors when instantiating the class
     azure_endpoint: str | None = Field(default="PLACEHOLDER")
@@ -83,13 +97,20 @@ class UiPathAzureChatOpenAI(UiPathBaseChatModel, AzureChatOpenAI):  # type: igno
 
     @model_validator(mode="after")
     def setup_uipath_client(self) -> Self:
+        if self.api_flavor is not None:
+            self.api_config.api_flavor = self.api_flavor
+            if self.api_flavor == ApiFlavor.CHAT_COMPLETIONS:
+                self.use_responses_api = False
+            elif self.api_flavor == ApiFlavor.RESPONSES:
+                self.use_responses_api = True
         base_url = str(self.uipath_sync_client.base_url).rstrip("/")
+        locked_flavor = str(self.api_config.api_flavor) if self.api_config.api_flavor else None
 
         def on_request(request: Request) -> None:
-            fix_url_and_api_flavor_header(base_url, request)
+            fix_url_and_api_flavor_header(base_url, request, api_flavor=locked_flavor)
 
         async def on_request_async(request: Request) -> None:
-            fix_url_and_api_flavor_header(base_url, request)
+            fix_url_and_api_flavor_header(base_url, request, api_flavor=locked_flavor)
 
         self.uipath_sync_client.event_hooks["request"].append(on_request)
         self.uipath_async_client.event_hooks["request"].append(on_request_async)

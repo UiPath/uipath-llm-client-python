@@ -2,6 +2,14 @@
 
 All notable changes to `uipath_llm_client` (core package) will be documented in this file.
 
+## [1.8.3] - 2026-04-16
+
+### Added
+- BYOM API flavor constants for discovery endpoint: `OpenAiChatCompletions`, `OpenAiResponses`, `OpenAiEmbeddings`, `GeminiGenerateContent`, `GeminiEmbeddings`, `AwsBedrockInvoke`, `AwsBedrockConverse`
+- `BYOM_TO_ROUTING_FLAVOR` mapping to resolve BYOM discovery flavors to routing-level API flavors
+- Extended `API_FLAVOR_TO_VENDOR_TYPE` with BYOM flavor entries for automatic vendor resolution
+- LiteLLM client now resolves BYOM discovery flavors to correct routing flavors and litellm providers
+
 ## [1.8.2] - 2026-04-13
 
 ### Fixed

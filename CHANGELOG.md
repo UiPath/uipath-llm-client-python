@@ -2,6 +2,12 @@
 
 All notable changes to `uipath_llm_client` (core package) will be documented in this file.
 
+## [1.8.4] - 2026-04-16
+
+### Added
+- TTL-based caching for `get_available_models()` — discovery endpoint results are cached for 5 minutes per settings instance, avoiding redundant network calls when creating multiple models in a session
+- `get_model_info()` shared utility for looking up a model by name from the discovery endpoint results, with optional vendor and BYOM connection ID filters
+
 ## [1.8.3] - 2026-04-16
 
 ### Added

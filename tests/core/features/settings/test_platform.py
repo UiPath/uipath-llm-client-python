@@ -1,6 +1,7 @@
 """Tests for PlatformSettings."""
 
 import os
+import time
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -238,6 +239,50 @@ class TestPlatformSettings:
             settings = PlatformSettings()
             result = settings.validate_byo_model({"modelName": "custom-model"})
             assert result is None
+
+
+class TestPlatformDiscoveryCache:
+    """Tests for get_available_models TTL caching on PlatformSettings."""
+
+    def test_second_call_returns_cached_result(self, platform_env_vars, mock_platform_auth):
+        """Second call within TTL should not query the backend again."""
+        with patch.dict(os.environ, platform_env_vars, clear=True):
+            settings = PlatformSettings()
+
+            mock_model = MagicMock()
+            mock_model.model_dump.return_value = {"modelName": "gpt-4o", "vendor": "openai"}
+
+            with patch("uipath.llm_client.settings.platform.settings.UiPath") as mock_uipath:
+                mock_uipath.return_value.agenthub.get_available_llm_models.return_value = [
+                    mock_model
+                ]
+                first = settings.get_available_models()
+                second = settings.get_available_models()
+                assert first == second
+                mock_uipath.return_value.agenthub.get_available_llm_models.assert_called_once()
+
+    def test_cache_expires_after_ttl(self, platform_env_vars, mock_platform_auth):
+        """After TTL expires, the backend should be queried again."""
+        with patch.dict(os.environ, platform_env_vars, clear=True):
+            settings = PlatformSettings()
+
+            mock_model = MagicMock()
+            mock_model.model_dump.return_value = {"modelName": "gpt-4o", "vendor": "openai"}
+
+            with patch("uipath.llm_client.settings.platform.settings.UiPath") as mock_uipath:
+                mock_uipath.return_value.agenthub.get_available_llm_models.return_value = [
+                    mock_model
+                ]
+                settings.get_available_models()
+                assert mock_uipath.return_value.agenthub.get_available_llm_models.call_count == 1
+
+                # Simulate TTL expiry
+                settings._models_cache_timestamp = (
+                    time.monotonic() - settings.DISCOVERY_CACHE_TTL_SECONDS - 1
+                )
+
+                settings.get_available_models()
+                assert mock_uipath.return_value.agenthub.get_available_llm_models.call_count == 2
 
 
 class TestPlatformAuthRefresh:

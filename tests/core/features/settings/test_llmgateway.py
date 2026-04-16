@@ -1,6 +1,7 @@
 """Tests for LLMGatewaySettings."""
 
 import os
+import time
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -151,6 +152,61 @@ class TestLLMGatewaySettings:
                 with pytest.raises(UiPathAuthenticationError) as exc_info:
                     settings.get_available_models()
                 assert exc_info.value.status_code == 401
+
+
+class TestLLMGatewayDiscoveryCache:
+    """Tests for get_available_models TTL caching."""
+
+    def test_second_call_returns_cached_result(self, llmgw_env_vars):
+        """Second call within TTL should not hit the endpoint again."""
+        with patch.dict(os.environ, llmgw_env_vars, clear=True):
+            settings = LLMGatewaySettings()
+
+            mock_response = MagicMock()
+            mock_response.is_error = False
+            mock_response.json.return_value = [{"modelName": "gpt-4o", "vendor": "openai"}]
+
+            with patch.object(Client, "get", return_value=mock_response) as mock_get:
+                first = settings.get_available_models()
+                second = settings.get_available_models()
+                assert first == second
+                mock_get.assert_called_once()
+
+    def test_cache_expires_after_ttl(self, llmgw_env_vars):
+        """After TTL expires, the endpoint should be called again."""
+        with patch.dict(os.environ, llmgw_env_vars, clear=True):
+            settings = LLMGatewaySettings()
+
+            mock_response = MagicMock()
+            mock_response.is_error = False
+            mock_response.json.return_value = [{"modelName": "gpt-4o", "vendor": "openai"}]
+
+            with patch.object(Client, "get", return_value=mock_response) as mock_get:
+                settings.get_available_models()
+                assert mock_get.call_count == 1
+
+                # Simulate TTL expiry by rewinding the cache timestamp
+                settings._models_cache_timestamp = (
+                    time.monotonic() - settings.DISCOVERY_CACHE_TTL_SECONDS - 1
+                )
+
+                settings.get_available_models()
+                assert mock_get.call_count == 2
+
+    def test_cache_is_per_instance(self, llmgw_env_vars):
+        """Each settings instance should have its own independent cache."""
+        with patch.dict(os.environ, llmgw_env_vars, clear=True):
+            settings1 = LLMGatewaySettings()
+            settings2 = LLMGatewaySettings()
+
+            mock_response = MagicMock()
+            mock_response.is_error = False
+            mock_response.json.return_value = [{"modelName": "gpt-4o", "vendor": "openai"}]
+
+            with patch.object(Client, "get", return_value=mock_response) as mock_get:
+                settings1.get_available_models()
+                settings2.get_available_models()
+                assert mock_get.call_count == 2
 
 
 class TestLLMGatewayAuthRefresh:

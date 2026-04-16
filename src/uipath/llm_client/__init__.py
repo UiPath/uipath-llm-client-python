@@ -36,6 +36,7 @@ from uipath.llm_client.settings import (
     PlatformSettings,
     get_default_client_settings,
 )
+from uipath.llm_client.utils.discovery import get_model_info
 from uipath.llm_client.utils.exceptions import (
     UiPathAPIError,
     UiPathAuthenticationError,
@@ -64,6 +65,8 @@ __all__ = [
     # HTTPX clients
     "UiPathHttpxClient",
     "UiPathHttpxAsyncClient",
+    # Discovery
+    "get_model_info",
     # Retry
     "RetryConfig",
     # Exceptions

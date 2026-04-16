@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_langchain_client` will be documented in this file.
 
+## [1.8.4] - 2026-04-16
+
+### Changed
+- Factory functions (`get_chat_model`, `get_embedding_model`) now use the shared `get_model_info()` utility from the core package instead of an inline implementation
+
 ## [1.8.3] - 2026-04-16
 
 ### Added

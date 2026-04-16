@@ -114,7 +114,7 @@ class LLMGatewayBaseSettings(UiPathBaseSettings):
         return headers
 
     @override
-    def get_available_models(self) -> list[dict[str, Any]]:
+    def _fetch_available_models(self) -> list[dict[str, Any]]:
         discovery_url = f"{self.base_url}/{self.org_id}/{self.tenant_id}/{LLMGatewayEndpoints.DISCOVERY_ENDPOINT.value}"
         with Client(
             auth=self.build_auth_pipeline(),

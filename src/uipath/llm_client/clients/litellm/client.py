@@ -34,6 +34,7 @@ from uipath.llm_client.settings.constants import (
     RoutingMode,
     VendorType,
 )
+from uipath.llm_client.utils.discovery import get_model_info
 from uipath.llm_client.utils.retry import RetryConfig
 
 # Route OpenAI chat completions through base_llm_http_handler (accepts HTTPHandler)
@@ -189,22 +190,11 @@ class UiPathLiteLLM:
         User-supplied ``vendor_type`` filters models during discovery.
         User-supplied ``api_flavor`` overrides the discovered value.
         """
-        available_models = self._client_settings.get_available_models()
-        matching = [
-            m for m in available_models if m["modelName"].lower() == self._model_name.lower()
-        ]
-
-        if vendor_type is not None:
-            matching = [
-                m for m in matching if m.get("vendor", "").lower() == str(vendor_type).lower()
-            ]
-
-        if not matching:
-            raise ValueError(
-                f"Model '{self._model_name}' not found. "
-                f"Available: {[m['modelName'] for m in available_models]}"
-            )
-        model_info = matching[0]
+        model_info = get_model_info(
+            self._client_settings.get_available_models(),
+            self._model_name,
+            vendor_type=str(vendor_type) if vendor_type is not None else None,
+        )
 
         model_family: str | None = None
         raw_family = model_info.get("modelFamily", None)

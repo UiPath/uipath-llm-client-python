@@ -163,8 +163,7 @@ class PlatformBaseSettings(UiPathBaseSettings):
         return headers
 
     @override
-    def get_available_models(self) -> list[dict[str, Any]]:
-
+    def _fetch_available_models(self) -> list[dict[str, Any]]:
         models = UiPath().agenthub.get_available_llm_models(
             headers=dict(self.build_auth_headers()),
         )

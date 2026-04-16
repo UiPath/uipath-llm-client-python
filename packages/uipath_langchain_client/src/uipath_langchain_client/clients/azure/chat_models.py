@@ -6,6 +6,7 @@ from pydantic import Field, model_validator
 from uipath_langchain_client.base_client import UiPathBaseChatModel
 from uipath_langchain_client.clients.openai.utils import fix_url_and_api_flavor_header
 from uipath_langchain_client.settings import (
+    ApiFlavor,
     ApiType,
     RoutingMode,
     UiPathAPIConfig,
@@ -31,6 +32,7 @@ class UiPathAzureAIChatCompletionsModel(UiPathBaseChatModel, AzureAIOpenAIApiCha
         vendor_type=VendorType.AZURE,
         freeze_base_url=False,
     )
+    api_flavor: ApiFlavor | str | None = None
 
     # Override fields to avoid env var lookup / validation errors at instantiation
     endpoint: str | None = Field(default="PLACEHOLDER")
@@ -40,6 +42,8 @@ class UiPathAzureAIChatCompletionsModel(UiPathBaseChatModel, AzureAIOpenAIApiCha
 
     @model_validator(mode="after")
     def setup_uipath_client(self) -> Self:
+        if self.api_flavor is not None:
+            self.api_config.api_flavor = self.api_flavor
         base_url = str(self.uipath_sync_client.base_url).rstrip("/")
         locked_flavor = str(self.api_config.api_flavor) if self.api_config.api_flavor else None
 

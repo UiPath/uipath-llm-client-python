@@ -30,9 +30,7 @@ from uipath_langchain_client.settings import (
     API_FLAVOR_TO_VENDOR_TYPE,
     BYOM_TO_ROUTING_FLAVOR,
     ApiFlavor,
-    ApiType,
     RoutingMode,
-    UiPathAPIConfig,
     UiPathBaseSettings,
     VendorType,
     get_default_client_settings,
@@ -176,18 +174,6 @@ def get_chat_model(
             if api_flavor == ApiFlavor.RESPONSES:
                 model_kwargs["use_responses_api"] = True
 
-            # Lock the api_flavor into the api_config so the request hook
-            # uses it instead of dynamically detecting from the URL path.
-            if api_flavor is not None:
-                model_kwargs["api_config"] = UiPathAPIConfig(
-                    api_type=ApiType.COMPLETIONS,
-                    routing_mode=RoutingMode.PASSTHROUGH,
-                    vendor_type=VendorType.OPENAI,
-                    api_version="2025-03-01-preview",
-                    api_flavor=str(api_flavor),
-                    freeze_base_url=False,
-                )
-
             if is_uipath_owned:
                 from uipath_langchain_client.clients.openai.chat_models import (
                     UiPathAzureChatOpenAI,
@@ -196,6 +182,7 @@ def get_chat_model(
                 return UiPathAzureChatOpenAI(
                     model=model_name,
                     settings=client_settings,
+                    api_flavor=api_flavor,
                     byo_connection_id=byo_connection_id,
                     **model_kwargs,
                 )
@@ -207,6 +194,7 @@ def get_chat_model(
                 return UiPathChatOpenAI(
                     model=model_name,
                     settings=client_settings,
+                    api_flavor=api_flavor,
                     byo_connection_id=byo_connection_id,
                     **model_kwargs,
                 )

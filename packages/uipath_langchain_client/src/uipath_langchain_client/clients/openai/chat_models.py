@@ -7,6 +7,7 @@ from pydantic import Field, SecretStr, model_validator
 from uipath_langchain_client.base_client import UiPathBaseChatModel
 from uipath_langchain_client.clients.openai.utils import fix_url_and_api_flavor_header
 from uipath_langchain_client.settings import (
+    ApiFlavor,
     ApiType,
     RoutingMode,
     UiPathAPIConfig,
@@ -31,6 +32,7 @@ class UiPathChatOpenAI(UiPathBaseChatModel, ChatOpenAI):  # type: ignore[overrid
         api_version="2025-03-01-preview",
         freeze_base_url=False,
     )
+    api_flavor: ApiFlavor | str | None = None
 
     # Override fields to avoid errors when instantiating the class
     openai_api_key: SecretStr | None | Callable[[], str] | Callable[[], Awaitable[str]] = Field(
@@ -39,6 +41,8 @@ class UiPathChatOpenAI(UiPathBaseChatModel, ChatOpenAI):  # type: ignore[overrid
 
     @model_validator(mode="after")
     def setup_uipath_client(self) -> Self:
+        if self.api_flavor is not None:
+            self.api_config.api_flavor = self.api_flavor
         base_url = str(self.uipath_sync_client.base_url).rstrip("/")
         locked_flavor = str(self.api_config.api_flavor) if self.api_config.api_flavor else None
 
@@ -76,6 +80,7 @@ class UiPathAzureChatOpenAI(UiPathBaseChatModel, AzureChatOpenAI):  # type: igno
         api_version="2025-03-01-preview",
         freeze_base_url=False,
     )
+    api_flavor: ApiFlavor | str | None = None
 
     # Override fields to avoid errors when instantiating the class
     azure_endpoint: str | None = Field(default="PLACEHOLDER")
@@ -84,6 +89,8 @@ class UiPathAzureChatOpenAI(UiPathBaseChatModel, AzureChatOpenAI):  # type: igno
 
     @model_validator(mode="after")
     def setup_uipath_client(self) -> Self:
+        if self.api_flavor is not None:
+            self.api_config.api_flavor = self.api_flavor
         base_url = str(self.uipath_sync_client.base_url).rstrip("/")
         locked_flavor = str(self.api_config.api_flavor) if self.api_config.api_flavor else None
 

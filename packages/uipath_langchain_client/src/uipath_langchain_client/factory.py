@@ -30,7 +30,9 @@ from uipath_langchain_client.settings import (
     API_FLAVOR_TO_VENDOR_TYPE,
     BYOM_TO_ROUTING_FLAVOR,
     ApiFlavor,
+    ApiType,
     RoutingMode,
+    UiPathAPIConfig,
     UiPathBaseSettings,
     VendorType,
     get_default_client_settings,
@@ -161,16 +163,30 @@ def get_chat_model(
         raise ValueError("No vendor type or api flavor found in model info")
     discovered_vendor_type = discovered_vendor_type.lower()
 
-    # Discovered BYOM api_flavor takes precedence over user-supplied api_flavor
+    # Discovered api_flavor takes precedence over user-supplied api_flavor
     if discovered_api_flavor is not None:
         routing_flavor = BYOM_TO_ROUTING_FLAVOR.get(discovered_api_flavor)
         if routing_flavor is not None:
             api_flavor = routing_flavor
+        else:
+            api_flavor = discovered_api_flavor
 
     match discovered_vendor_type:
         case VendorType.OPENAI:
             if api_flavor == ApiFlavor.RESPONSES:
                 model_kwargs["use_responses_api"] = True
+
+            # Lock the api_flavor into the api_config so the request hook
+            # uses it instead of dynamically detecting from the URL path.
+            if api_flavor is not None:
+                model_kwargs["api_config"] = UiPathAPIConfig(
+                    api_type=ApiType.COMPLETIONS,
+                    routing_mode=RoutingMode.PASSTHROUGH,
+                    vendor_type=VendorType.OPENAI,
+                    api_version="2025-03-01-preview",
+                    api_flavor=str(api_flavor),
+                    freeze_base_url=False,
+                )
 
             if is_uipath_owned:
                 from uipath_langchain_client.clients.openai.chat_models import (

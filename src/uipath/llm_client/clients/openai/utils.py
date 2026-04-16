@@ -11,10 +11,12 @@ class OpenAIRequestHandler:
         model_name: str,
         client_settings: UiPathBaseSettings,
         byo_connection_id: str | None = None,
+        api_flavor: ApiFlavor | str | None = None,
     ):
         self.model_name = model_name
         self.client_settings = client_settings
         self.byo_connection_id = byo_connection_id
+        self.locked_api_flavor = str(api_flavor) if api_flavor else None
         self.base_api_config = UiPathAPIConfig(
             routing_mode=RoutingMode.PASSTHROUGH,
             vendor_type=VendorType.OPENAI,
@@ -37,13 +39,15 @@ class OpenAIRequestHandler:
 
     def fix_url_and_headers(self, request: Request):
         if request.url.path.endswith("/completions"):
+            flavor = self.locked_api_flavor or ApiFlavor.CHAT_COMPLETIONS
             api_config = self.base_api_config.model_copy(
-                update={"api_flavor": ApiFlavor.CHAT_COMPLETIONS, "api_type": ApiType.COMPLETIONS}
+                update={"api_flavor": flavor, "api_type": ApiType.COMPLETIONS}
             )
             self._apply_routing(request, api_config)
         elif request.url.path.endswith("/responses"):
+            flavor = self.locked_api_flavor or ApiFlavor.RESPONSES
             api_config = self.base_api_config.model_copy(
-                update={"api_flavor": ApiFlavor.RESPONSES, "api_type": ApiType.COMPLETIONS}
+                update={"api_flavor": flavor, "api_type": ApiType.COMPLETIONS}
             )
             self._apply_routing(request, api_config)
         elif request.url.path.endswith("/embeddings"):

@@ -41,12 +41,13 @@ class UiPathAzureAIChatCompletionsModel(UiPathBaseChatModel, AzureAIOpenAIApiCha
     @model_validator(mode="after")
     def setup_uipath_client(self) -> Self:
         base_url = str(self.uipath_sync_client.base_url).rstrip("/")
+        locked_flavor = str(self.api_config.api_flavor) if self.api_config.api_flavor else None
 
         def on_request(request: Request) -> None:
-            fix_url_and_api_flavor_header(base_url, request)
+            fix_url_and_api_flavor_header(base_url, request, api_flavor=locked_flavor)
 
         async def on_request_async(request: Request) -> None:
-            fix_url_and_api_flavor_header(base_url, request)
+            fix_url_and_api_flavor_header(base_url, request, api_flavor=locked_flavor)
 
         self.uipath_sync_client.event_hooks["request"].append(on_request)
         self.uipath_async_client.event_hooks["request"].append(on_request_async)

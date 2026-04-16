@@ -43,6 +43,14 @@ class UiPathChatOpenAI(UiPathBaseChatModel, ChatOpenAI):  # type: ignore[overrid
     def setup_uipath_client(self) -> Self:
         if self.api_flavor is not None:
             self.api_config.api_flavor = self.api_flavor
+            # Lock LangChain's use_responses_api to match the discovered flavor.
+            # Without this, features like reasoning={} or certain model names
+            # silently switch LangChain to the Responses API, which would fail
+            # if the model only supports chat-completions (or vice versa).
+            if self.api_flavor == ApiFlavor.CHAT_COMPLETIONS:
+                self.use_responses_api = False
+            elif self.api_flavor == ApiFlavor.RESPONSES:
+                self.use_responses_api = True
         base_url = str(self.uipath_sync_client.base_url).rstrip("/")
         locked_flavor = str(self.api_config.api_flavor) if self.api_config.api_flavor else None
 
@@ -91,6 +99,10 @@ class UiPathAzureChatOpenAI(UiPathBaseChatModel, AzureChatOpenAI):  # type: igno
     def setup_uipath_client(self) -> Self:
         if self.api_flavor is not None:
             self.api_config.api_flavor = self.api_flavor
+            if self.api_flavor == ApiFlavor.CHAT_COMPLETIONS:
+                self.use_responses_api = False
+            elif self.api_flavor == ApiFlavor.RESPONSES:
+                self.use_responses_api = True
         base_url = str(self.uipath_sync_client.base_url).rstrip("/")
         locked_flavor = str(self.api_config.api_flavor) if self.api_config.api_flavor else None
 

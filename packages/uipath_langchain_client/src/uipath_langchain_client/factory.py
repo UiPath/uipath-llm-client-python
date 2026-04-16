@@ -171,9 +171,6 @@ def get_chat_model(
 
     match discovered_vendor_type:
         case VendorType.OPENAI:
-            if api_flavor == ApiFlavor.RESPONSES:
-                model_kwargs["use_responses_api"] = True
-
             if is_uipath_owned:
                 from uipath_langchain_client.clients.openai.chat_models import (
                     UiPathAzureChatOpenAI,

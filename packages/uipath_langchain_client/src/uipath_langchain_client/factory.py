@@ -161,9 +161,11 @@ def get_chat_model(
         raise ValueError("No vendor type or api flavor found in model info")
     discovered_vendor_type = discovered_vendor_type.lower()
 
-    # For BYOM models, derive routing api_flavor from the discovered BYOM flavor
-    if api_flavor is None and discovered_api_flavor is not None:
-        api_flavor = BYOM_TO_ROUTING_FLAVOR.get(discovered_api_flavor)
+    # Discovered BYOM api_flavor takes precedence over user-supplied api_flavor
+    if discovered_api_flavor is not None:
+        routing_flavor = BYOM_TO_ROUTING_FLAVOR.get(discovered_api_flavor)
+        if routing_flavor is not None:
+            api_flavor = routing_flavor
 
     match discovered_vendor_type:
         case VendorType.OPENAI:
@@ -328,10 +330,9 @@ def get_embedding_model(
         )
 
     discovered_vendor_type = model_info.get("vendor")
-    if discovered_vendor_type is None:
-        discovered_api_flavor = model_info.get("apiFlavor")
-        if discovered_api_flavor is not None:
-            discovered_vendor_type = API_FLAVOR_TO_VENDOR_TYPE.get(discovered_api_flavor)
+    discovered_api_flavor = model_info.get("apiFlavor")
+    if discovered_vendor_type is None and discovered_api_flavor is not None:
+        discovered_vendor_type = API_FLAVOR_TO_VENDOR_TYPE.get(discovered_api_flavor)
     if discovered_vendor_type is None:
         raise ValueError(
             f"No vendor type found in model info for embedding model '{model_name}'. "

@@ -220,11 +220,17 @@ class UiPathLiteLLM:
             raise ValueError(f"Cannot determine vendor for model '{self._model_name}'")
 
         resolved_vendor = str(vendor_type or discovered_vendor).lower()
-        resolved_flavor = str(api_flavor) if api_flavor is not None else discovered_flavor
 
-        # Resolve BYOM discovery flavors to routing-level flavors
-        if resolved_flavor is not None:
-            resolved_flavor = BYOM_TO_ROUTING_FLAVOR.get(resolved_flavor, resolved_flavor)
+        # Discovered BYOM api_flavor takes precedence over user-supplied api_flavor
+        routing_flavor = (
+            BYOM_TO_ROUTING_FLAVOR.get(discovered_flavor) if discovered_flavor is not None else None
+        )
+        if routing_flavor is not None:
+            resolved_flavor: str | None = routing_flavor
+        elif api_flavor is not None:
+            resolved_flavor = str(api_flavor)
+        else:
+            resolved_flavor = discovered_flavor
 
         # OpenAI defaults to chat-completions when no flavor is discovered
         if resolved_flavor is None and resolved_vendor in ("openai", "azure"):

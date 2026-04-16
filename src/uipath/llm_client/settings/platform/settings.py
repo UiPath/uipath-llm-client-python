@@ -1,6 +1,7 @@
 """Base settings for UiPath Platform (AgentHub/Orchestrator) client."""
 
 from collections.abc import Mapping
+from functools import lru_cache
 from typing import Any, Self
 
 from pydantic import Field, SecretStr, model_validator
@@ -163,7 +164,8 @@ class PlatformBaseSettings(UiPathBaseSettings):
         return headers
 
     @override
-    def _fetch_available_models(self) -> list[dict[str, Any]]:
+    @lru_cache  # noqa: B019
+    def get_available_models(self) -> list[dict[str, Any]]:  # type: ignore[override]
         models = UiPath().agenthub.get_available_llm_models(
             headers=dict(self.build_auth_headers()),
         )

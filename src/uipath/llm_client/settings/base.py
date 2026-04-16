@@ -5,13 +5,12 @@ This module defines the abstract base classes and data models for UiPath API set
 Concrete implementations are provided in the `platform` and `llmgateway` submodules.
 """
 
-import time
 from abc import ABC, abstractmethod
 from collections.abc import Mapping
-from typing import Any, ClassVar, Self
+from typing import Any, Self
 
 from httpx import Auth
-from pydantic import BaseModel, PrivateAttr, model_validator
+from pydantic import BaseModel, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from uipath.llm_client.settings.constants import ApiFlavor, ApiType, RoutingMode, VendorType
@@ -75,16 +74,15 @@ class UiPathBaseSettings(BaseSettings, ABC):
     with validation aliases allowing flexible naming conventions.
     """
 
-    DISCOVERY_CACHE_TTL_SECONDS: ClassVar[int] = 300
-
     model_config = SettingsConfigDict(
         validate_by_alias=True,
         populate_by_name=True,
         extra="allow",
     )
 
-    _models_cache: list[dict[str, Any]] | None = PrivateAttr(default=None)
-    _models_cache_timestamp: float = PrivateAttr(default=0.0)
+    # Pydantic models are not hashable by default; restore object identity
+    # hashing so that @lru_cache can be used on instance methods.
+    __hash__ = object.__hash__  # type: ignore[assignment]
 
     @abstractmethod
     def build_base_url(
@@ -137,33 +135,13 @@ class UiPathBaseSettings(BaseSettings, ABC):
         """
         ...
 
-    def get_available_models(self) -> list[dict[str, Any]]:
-        """Get the list of available models from the backend, with TTL caching.
-
-        Results are cached for ``DISCOVERY_CACHE_TTL_SECONDS`` (default 300s).
-        Subsequent calls within the TTL window return the cached list.
-
-        Returns:
-            A list of dictionaries containing model information.
-        """
-        now = time.monotonic()
-        if (
-            self._models_cache is not None
-            and (now - self._models_cache_timestamp) < self.DISCOVERY_CACHE_TTL_SECONDS
-        ):
-            return self._models_cache
-        models = self._fetch_available_models()
-        self._models_cache = models
-        self._models_cache_timestamp = now
-        return models
-
     @abstractmethod
-    def _fetch_available_models(self) -> list[dict[str, Any]]:
-        """Fetch the list of available models from the backend.
+    def get_available_models(self) -> list[dict[str, Any]]:
+        """Get the list of available models from the backend.
 
         Subclasses must implement this method to query the backend's
-        model discovery endpoint. Called by :meth:`get_available_models`
-        when the cache is stale or empty.
+        model discovery endpoint. Implementations should use
+        ``@lru_cache`` to avoid redundant network calls.
 
         Returns:
             A list of dictionaries containing model information.

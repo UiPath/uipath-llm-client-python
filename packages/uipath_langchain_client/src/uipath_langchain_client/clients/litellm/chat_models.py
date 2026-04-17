@@ -22,9 +22,14 @@ from pydantic import Field, model_validator
 from typing_extensions import Self
 
 from uipath.llm_client.clients.litellm import UiPathLiteLLM
-from uipath.llm_client.settings.constants import ApiFlavor, ApiType, RoutingMode, VendorType
 from uipath_langchain_client.base_client import UiPathBaseChatModel
-from uipath_langchain_client.settings import UiPathAPIConfig
+from uipath_langchain_client.settings import (
+    ApiFlavor,
+    ApiType,
+    RoutingMode,
+    UiPathAPIConfig,
+    VendorType,
+)
 
 try:
     from langchain_litellm import ChatLiteLLM

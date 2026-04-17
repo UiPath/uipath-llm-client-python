@@ -34,6 +34,7 @@ from uipath.llm_client.settings.constants import (
     ModelFamily,
     RoutingMode,
     VendorType,
+    is_anthropic_model_name,
 )
 from uipath.llm_client.utils.retry import RetryConfig
 
@@ -191,7 +192,6 @@ class UiPathLiteLLM:
         model_info = self._client_settings.get_model_info(self._model_name, vendor_type=vendor_type)
 
         model_family = model_info.get("modelFamily", None)
-
         discovered_vendor = model_info.get("vendor", None)
         discovered_flavor = model_info.get("apiFlavor", None)
 
@@ -217,20 +217,18 @@ class UiPathLiteLLM:
         if resolved_flavor is None and resolved_vendor in ("openai", "azure"):
             resolved_flavor = ApiFlavor.CHAT_COMPLETIONS
 
+        # Claude detection: modelFamily from discovery, or name heuristic for BYOM
+        # (BYOM discovery does not expose modelFamily).
+        is_claude = model_family == ModelFamily.ANTHROPIC_CLAUDE or (
+            model_family is None and is_anthropic_model_name(self._model_name)
+        )
+
         # Claude on Bedrock defaults to invoke
-        if (
-            resolved_flavor is None
-            and resolved_vendor == "awsbedrock"
-            and model_family == ModelFamily.ANTHROPIC_CLAUDE
-        ):
+        if resolved_flavor is None and resolved_vendor == "awsbedrock" and is_claude:
             resolved_flavor = ApiFlavor.INVOKE
 
         # Claude on Vertex defaults to anthropic-claude
-        if (
-            resolved_flavor is None
-            and resolved_vendor == "vertexai"
-            and model_family == ModelFamily.ANTHROPIC_CLAUDE
-        ):
+        if resolved_flavor is None and resolved_vendor == "vertexai" and is_claude:
             resolved_flavor = ApiFlavor.ANTHROPIC_CLAUDE
 
         api_config = UiPathAPIConfig(
@@ -247,7 +245,9 @@ class UiPathLiteLLM:
         The model_family disambiguates cases where the same vendor hosts
         models from different providers (e.g. Claude on Vertex AI or Bedrock).
         """
-        is_claude = self._model_family == ModelFamily.ANTHROPIC_CLAUDE
+        is_claude = self._model_family == ModelFamily.ANTHROPIC_CLAUDE or (
+            self._model_family is None and is_anthropic_model_name(self._model_name)
+        )
         vendor = str(self._api_config.vendor_type or "openai")
 
         # Claude on Vertex AI → vertex_ai (uses VertexAIAnthropicConfig)

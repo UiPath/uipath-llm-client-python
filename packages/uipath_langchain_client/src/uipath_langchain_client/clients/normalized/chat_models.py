@@ -65,7 +65,12 @@ from langchain_core.utils.pydantic import is_basemodel_subclass
 from pydantic import AliasChoices, BaseModel, Field
 
 from uipath_langchain_client.base_client import UiPathBaseChatModel
-from uipath_langchain_client.settings import ApiType, RoutingMode, UiPathAPIConfig
+from uipath_langchain_client.settings import (
+    ApiType,
+    RoutingMode,
+    UiPathAPIConfig,
+    is_anthropic_model_name,
+)
 
 _DictOrPydanticClass = Union[dict[str, Any], type[BaseModel], type]
 _DictOrPydantic = Union[dict[str, Any], BaseModel]
@@ -412,10 +417,7 @@ class UiPathChat(UiPathBaseChatModel):
                         converted_message["content"] = ""
                 if (
                     self.model_name
-                    and any(
-                        kw in self.model_name.lower()
-                        for kw in ("anthropic", "claude", "opus", "sonnet", "haiku", "mythos")
-                    )
+                    and is_anthropic_model_name(self.model_name)
                     and not converted_message["content"]
                 ):
                     converted_message["content"] = "tool_call"

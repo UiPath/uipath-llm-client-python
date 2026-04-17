@@ -31,6 +31,7 @@ from uipath.llm_client.settings.constants import (
     ModelFamily,
     RoutingMode,
     VendorType,
+    is_anthropic_model_name,
 )
 
 __all__ = [
@@ -47,4 +48,5 @@ __all__ = [
     "VendorType",
     "API_FLAVOR_TO_VENDOR_TYPE",
     "BYOM_TO_ROUTING_FLAVOR",
+    "is_anthropic_model_name",
 ]

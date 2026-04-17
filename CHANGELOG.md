@@ -2,6 +2,14 @@
 
 All notable changes to `uipath_llm_client` (core package) will be documented in this file.
 
+## [1.9.1] - 2026-04-17
+
+### Added
+- `is_anthropic_model_name()` helper and `ANTHROPIC_MODEL_NAME_KEYWORDS` tuple in `settings.constants` — name-based Claude detection for BYOM deployments where discovery does not expose `modelFamily`
+
+### Fixed
+- `UiPathLiteLLM` now detects Claude-family models by name when `modelFamily` is unavailable (BYOM), correctly routing Bedrock/Vertex provider selection and default flavors
+
 ## [1.9.0] - 2026-04-17
 
 ### Added

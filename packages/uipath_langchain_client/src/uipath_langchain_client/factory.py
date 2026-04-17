@@ -22,6 +22,7 @@ Example:
 
 from typing import Any
 
+from uipath.llm_client.utils.model_family import is_anthropic_model_name
 from uipath_langchain_client.base_client import (
     UiPathBaseChatModel,
     UiPathBaseEmbeddings,
@@ -35,7 +36,6 @@ from uipath_langchain_client.settings import (
     UiPathBaseSettings,
     VendorType,
     get_default_client_settings,
-    is_anthropic_model_name,
 )
 
 

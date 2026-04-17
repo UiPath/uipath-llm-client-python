@@ -34,8 +34,8 @@ from uipath.llm_client.settings.constants import (
     ModelFamily,
     RoutingMode,
     VendorType,
-    is_anthropic_model_name,
 )
+from uipath.llm_client.utils.model_family import is_anthropic_model_name
 from uipath.llm_client.utils.retry import RetryConfig
 
 # Route OpenAI chat completions through base_llm_http_handler (accepts HTTPHandler)

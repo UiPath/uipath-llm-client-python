@@ -70,19 +70,3 @@ BYOM_TO_ROUTING_FLAVOR: dict[str, ApiFlavor] = {
     ByomApiFlavor.AWS_BEDROCK_INVOKE: ApiFlavor.INVOKE,
     ByomApiFlavor.AWS_BEDROCK_CONVERSE: ApiFlavor.CONVERSE,
 }
-
-
-ANTHROPIC_MODEL_NAME_KEYWORDS: tuple[str, ...] = (
-    "anthropic",
-    "claude",
-    "opus",
-    "sonnet",
-    "haiku",
-    "mythos",
-)
-
-
-def is_anthropic_model_name(model_name: str) -> bool:
-    """Heuristic fallback for when discovery's ``modelFamily`` is unavailable (e.g. BYOM)."""
-    lower = model_name.lower()
-    return any(kw in lower for kw in ANTHROPIC_MODEL_NAME_KEYWORDS)

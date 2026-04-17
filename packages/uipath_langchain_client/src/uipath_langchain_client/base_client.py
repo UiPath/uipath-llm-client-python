@@ -115,7 +115,7 @@ class UiPathBaseLLMClient(BaseModel, ABC):
     captured_headers: tuple[str, ...] = Field(
         default=("x-uipath-",),
         description="Case-insensitive response header prefixes to capture from LLM Gateway responses. "
-        "Captured headers appear in response_metadata under the 'uipath_llmgateway_headers' key. "
+        "Captured headers appear in response_metadata under the 'headers' key. "
         "Set to an empty tuple to disable.",
     )
 
@@ -343,7 +343,7 @@ class UiPathBaseChatModel(UiPathBaseLLMClient, BaseChatModel):
 
     Wraps _generate/_agenerate/_stream/_astream to automatically read captured headers
     from the ContextVar (populated by the httpx client's send()) and inject them into
-    the AIMessage's response_metadata under the 'uipath_llmgateway_headers' key.
+    the AIMessage's response_metadata under the 'headers' key.
 
     Dynamic request headers are injected via UiPathDynamicHeadersCallback: set
     ``run_inline = True`` (already the default) so LangChain calls
@@ -475,7 +475,7 @@ class UiPathBaseChatModel(UiPathBaseLLMClient, BaseChatModel):
         if not headers:
             return
         for generation in generations:
-            generation.message.response_metadata["uipath_llmgateway_headers"] = headers
+            generation.message.response_metadata["headers"] = headers
 
 
 class UiPathBaseEmbeddings(UiPathBaseLLMClient, Embeddings):

@@ -2,6 +2,15 @@
 
 All notable changes to `uipath_llm_client` (core package) will be documented in this file.
 
+## [1.9.2] - 2026-04-17
+
+### Changed
+- `PlatformBaseSettings.build_auth_headers()` now uses the header-name constants from `uipath.platform.common.constants` (lowercase canonical form). HTTP header names are case-insensitive so wire-level behavior is unchanged.
+- `UIPATH_PROCESS_KEY` is now URL-encoded (`urllib.parse.quote(..., safe="")`) before being placed in `X-UiPath-ProcessKey`, matching the platform-wide convention.
+
+### Added
+- `HEADER_LICENSING_CONTEXT` header populated dynamically from `UiPathConfig.licensing_context` when set.
+
 ## [1.9.1] - 2026-04-17
 
 ### Added

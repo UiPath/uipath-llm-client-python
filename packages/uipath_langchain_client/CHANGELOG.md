@@ -2,6 +2,12 @@
 
 All notable changes to `uipath_langchain_client` will be documented in this file.
 
+## [1.9.2] - 2026-04-17
+
+### Changed
+- **Breaking:** captured gateway headers are now exposed on `AIMessage.response_metadata` under the `headers` key (previously `uipath_llmgateway_headers`). Update any consumers that read this key.
+- Minimum `uipath-llm-client` bumped to 1.9.2 for the platform-headers refactor and licensing-context support.
+
 ## [1.9.1] - 2026-04-17
 
 ### Fixed

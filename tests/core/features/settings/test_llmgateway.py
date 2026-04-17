@@ -7,11 +7,16 @@ import pytest
 from httpx import Client, Request, Response
 
 from uipath.llm_client.settings import LLMGatewaySettings
+from uipath.llm_client.settings.base import UiPathBaseSettings
 from uipath.llm_client.utils.exceptions import UiPathAPIError, UiPathAuthenticationError
 
 
 class TestLLMGatewaySettings:
     """Tests for LLMGatewaySettings."""
+
+    @pytest.fixture(autouse=True)
+    def _clear_discovery_cache(self):
+        UiPathBaseSettings._discovery_cache.clear()
 
     def test_build_base_url_passthrough(self, llmgw_env_vars, passthrough_api_config):
         """Test build_base_url for passthrough mode."""
@@ -449,3 +454,168 @@ class TestLLMGatewaySingletonCacheKey:
 
         key = LLMGatewayS2SAuth._singleton_cache_key(settings)
         assert key[0] == settings.base_url
+
+
+class TestDiscoveryCache:
+    """Tests for get_available_models caching behavior."""
+
+    @pytest.fixture(autouse=True)
+    def _clear_discovery_cache(self):
+        UiPathBaseSettings._discovery_cache.clear()
+
+    def test_second_call_returns_cached_result(self, llmgw_env_vars):
+        """Second call should not hit the network."""
+        with patch.dict(os.environ, llmgw_env_vars, clear=True):
+            settings = LLMGatewaySettings()
+
+            mock_response = MagicMock()
+            mock_response.is_error = False
+            mock_response.json.return_value = [{"modelName": "gpt-4o", "vendor": "openai"}]
+
+            with patch.object(Client, "get", return_value=mock_response) as mock_get:
+                first = settings.get_available_models()
+                second = settings.get_available_models()
+
+                assert first == second
+                mock_get.assert_called_once()
+
+    def test_refresh_bypasses_cache(self, llmgw_env_vars):
+        """refresh=True should fetch again even if cached."""
+        with patch.dict(os.environ, llmgw_env_vars, clear=True):
+            settings = LLMGatewaySettings()
+
+            mock_response = MagicMock()
+            mock_response.is_error = False
+            mock_response.json.return_value = [{"modelName": "gpt-4o", "vendor": "openai"}]
+
+            with patch.object(Client, "get", return_value=mock_response) as mock_get:
+                settings.get_available_models()
+                settings.get_available_models(refresh=True)
+
+                assert mock_get.call_count == 2
+
+    def test_different_settings_have_separate_caches(self, llmgw_env_vars):
+        """Different cache keys should not share cached results."""
+        env1 = {**llmgw_env_vars, "LLMGW_REQUESTING_PRODUCT": "product-a"}
+        env2 = {**llmgw_env_vars, "LLMGW_REQUESTING_PRODUCT": "product-b"}
+
+        mock_response = MagicMock()
+        mock_response.is_error = False
+        mock_response.json.return_value = [{"modelName": "gpt-4o", "vendor": "openai"}]
+
+        with patch.object(Client, "get", return_value=mock_response) as mock_get:
+            with patch.dict(os.environ, env1, clear=True):
+                settings1 = LLMGatewaySettings()
+                settings1.get_available_models()
+
+            with patch.dict(os.environ, env2, clear=True):
+                settings2 = LLMGatewaySettings()
+                settings2.get_available_models()
+
+            assert mock_get.call_count == 2
+
+    def test_cache_key_includes_requesting_product(self, llmgw_env_vars):
+        """LLMGateway cache key should include requesting_product."""
+        with patch.dict(os.environ, llmgw_env_vars, clear=True):
+            settings = LLMGatewaySettings()
+            key = settings._discovery_cache_key()
+            assert settings.requesting_product in key
+
+
+class TestGetModelInfo:
+    """Tests for UiPathBaseSettings.get_model_info."""
+
+    @pytest.fixture(autouse=True)
+    def _clear_discovery_cache(self):
+        UiPathBaseSettings._discovery_cache.clear()
+
+    _MODELS = [
+        {"modelName": "gpt-4o", "vendor": "OpenAi", "modelSubscriptionType": "UiPathOwned"},
+        {
+            "modelName": "gpt-4o",
+            "vendor": "OpenAi",
+            "modelSubscriptionType": "BYO",
+            "byomDetails": {
+                "integrationServiceConnectionId": "conn-123",
+                "availableOperationCodes": ["op1"],
+            },
+        },
+        {
+            "modelName": "claude-3-opus",
+            "vendor": "Anthropic",
+            "modelSubscriptionType": "UiPathOwned",
+        },
+        {
+            "modelName": "gemini-2.0-flash",
+            "vendor": "VertexAi",
+            "modelSubscriptionType": "UiPathOwned",
+        },
+    ]
+
+    def _make_settings(self, llmgw_env_vars, models=None):
+        with patch.dict(os.environ, llmgw_env_vars, clear=True):
+            settings = LLMGatewaySettings()
+        mock_response = MagicMock()
+        mock_response.is_error = False
+        mock_response.json.return_value = models if models is not None else self._MODELS
+        # Pre-populate the cache so we don't need to mock Client.get on every call
+        with patch.object(Client, "get", return_value=mock_response):
+            settings.get_available_models()
+        return settings
+
+    def test_finds_model_by_name(self, llmgw_env_vars):
+        settings = self._make_settings(llmgw_env_vars)
+        info = settings.get_model_info("claude-3-opus")
+        assert info["modelName"] == "claude-3-opus"
+
+    def test_case_insensitive_lookup(self, llmgw_env_vars):
+        settings = self._make_settings(llmgw_env_vars)
+        info = settings.get_model_info("Claude-3-Opus")
+        assert info["modelName"] == "claude-3-opus"
+
+    def test_raises_on_unknown_model(self, llmgw_env_vars):
+        settings = self._make_settings(llmgw_env_vars)
+        with pytest.raises(ValueError, match="not found"):
+            settings.get_model_info("nonexistent-model")
+
+    def test_filters_by_vendor_type(self, llmgw_env_vars):
+        models = [
+            {
+                "modelName": "shared-name",
+                "vendor": "OpenAi",
+                "modelSubscriptionType": "UiPathOwned",
+            },
+            {
+                "modelName": "shared-name",
+                "vendor": "Anthropic",
+                "modelSubscriptionType": "UiPathOwned",
+            },
+        ]
+        settings = self._make_settings(llmgw_env_vars, models=models)
+        info = settings.get_model_info("shared-name", vendor_type="anthropic")
+        assert info["vendor"] == "Anthropic"
+
+    def test_filters_by_byo_connection_id(self, llmgw_env_vars):
+        settings = self._make_settings(llmgw_env_vars)
+        info = settings.get_model_info("gpt-4o", byo_connection_id="conn-123")
+        assert info["modelSubscriptionType"] == "BYO"
+
+    def test_prefers_uipath_owned_when_no_byo_id(self, llmgw_env_vars):
+        """When multiple matches exist and no byo_connection_id, prefer UiPathOwned."""
+        settings = self._make_settings(llmgw_env_vars)
+        info = settings.get_model_info("gpt-4o")
+        assert info["modelSubscriptionType"] == "UiPathOwned"
+
+    def test_calls_validate_byo_model_for_non_uipath_owned(self, llmgw_env_vars):
+        """get_model_info should call validate_byo_model for BYO models."""
+        settings = self._make_settings(llmgw_env_vars)
+        with patch.object(settings, "validate_byo_model") as mock_validate:
+            settings.get_model_info("gpt-4o", byo_connection_id="conn-123")
+            mock_validate.assert_called_once()
+
+    def test_skips_validate_byo_model_for_uipath_owned(self, llmgw_env_vars):
+        """get_model_info should not call validate_byo_model for UiPath-owned models."""
+        settings = self._make_settings(llmgw_env_vars)
+        with patch.object(settings, "validate_byo_model") as mock_validate:
+            settings.get_model_info("claude-3-opus")
+            mock_validate.assert_not_called()

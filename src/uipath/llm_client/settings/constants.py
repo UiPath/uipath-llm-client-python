@@ -19,6 +19,12 @@ class VendorType(StrEnum):
     ANTHROPIC = "anthropic"
 
 
+class ModelFamily(StrEnum):
+    OPENAI = "OpenAi"
+    GOOGLE_GEMINI = "GoogleGemini"
+    ANTHROPIC_CLAUDE = "AnthropicClaude"
+
+
 class ApiFlavor(StrEnum):
     CHAT_COMPLETIONS = "chat-completions"
     RESPONSES = "responses"

@@ -31,6 +31,7 @@ from uipath.llm_client.settings.constants import (
     ApiFlavor,
     ApiType,
     ByomApiFlavor,
+    ModelFamily,
     RoutingMode,
     VendorType,
 )
@@ -98,8 +99,6 @@ _FLAVOR_TO_LITELLM: dict[str, str] = {
     ByomApiFlavor.AWS_BEDROCK_INVOKE: "bedrock",
     ByomApiFlavor.AWS_BEDROCK_CONVERSE: "bedrock",
 }
-
-_ANTHROPIC_FAMILY = "anthropicclaude"
 
 
 def _drop_nones(**kwargs: Any) -> dict[str, Any]:
@@ -189,27 +188,9 @@ class UiPathLiteLLM:
         User-supplied ``vendor_type`` filters models during discovery.
         User-supplied ``api_flavor`` overrides the discovered value.
         """
-        available_models = self._client_settings.get_available_models()
-        matching = [
-            m for m in available_models if m["modelName"].lower() == self._model_name.lower()
-        ]
+        model_info = self._client_settings.get_model_info(self._model_name, vendor_type=vendor_type)
 
-        if vendor_type is not None:
-            matching = [
-                m for m in matching if m.get("vendor", "").lower() == str(vendor_type).lower()
-            ]
-
-        if not matching:
-            raise ValueError(
-                f"Model '{self._model_name}' not found. "
-                f"Available: {[m['modelName'] for m in available_models]}"
-            )
-        model_info = matching[0]
-
-        model_family: str | None = None
-        raw_family = model_info.get("modelFamily", None)
-        if raw_family is not None:
-            model_family = raw_family.lower()
+        model_family = model_info.get("modelFamily", None)
 
         discovered_vendor = model_info.get("vendor", None)
         discovered_flavor = model_info.get("apiFlavor", None)
@@ -240,7 +221,7 @@ class UiPathLiteLLM:
         if (
             resolved_flavor is None
             and resolved_vendor == "awsbedrock"
-            and model_family == _ANTHROPIC_FAMILY
+            and model_family == ModelFamily.ANTHROPIC_CLAUDE
         ):
             resolved_flavor = ApiFlavor.INVOKE
 
@@ -248,7 +229,7 @@ class UiPathLiteLLM:
         if (
             resolved_flavor is None
             and resolved_vendor == "vertexai"
-            and model_family == _ANTHROPIC_FAMILY
+            and model_family == ModelFamily.ANTHROPIC_CLAUDE
         ):
             resolved_flavor = ApiFlavor.ANTHROPIC_CLAUDE
 
@@ -266,7 +247,7 @@ class UiPathLiteLLM:
         The model_family disambiguates cases where the same vendor hosts
         models from different providers (e.g. Claude on Vertex AI or Bedrock).
         """
-        is_claude = self._model_family == _ANTHROPIC_FAMILY
+        is_claude = self._model_family == ModelFamily.ANTHROPIC_CLAUDE
         vendor = str(self._api_config.vendor_type or "openai")
 
         # Claude on Vertex AI → vertex_ai (uses VertexAIAnthropicConfig)

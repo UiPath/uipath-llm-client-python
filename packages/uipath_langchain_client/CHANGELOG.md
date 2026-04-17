@@ -2,6 +2,12 @@
 
 All notable changes to `uipath_langchain_client` will be documented in this file.
 
+## [1.9.0] - 2026-04-17
+
+### Changed
+- Factory functions use `ModelFamily` constants and `get_model_info()` from core instead of inline discovery logic
+- Azure vs non-Azure OpenAI routing now uses `modelFamily` instead of `modelSubscriptionType`
+
 ## [1.8.3] - 2026-04-16
 
 ### Added

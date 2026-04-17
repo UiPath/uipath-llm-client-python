@@ -28,6 +28,7 @@ from uipath.llm_client.settings.constants import (
     ApiFlavor,
     ApiType,
     ByomApiFlavor,
+    ModelFamily,
     RoutingMode,
     VendorType,
 )
@@ -42,6 +43,7 @@ __all__ = [
     "RoutingMode",
     "ApiFlavor",
     "ByomApiFlavor",
+    "ModelFamily",
     "VendorType",
     "API_FLAVOR_TO_VENDOR_TYPE",
     "BYOM_TO_ROUTING_FLAVOR",

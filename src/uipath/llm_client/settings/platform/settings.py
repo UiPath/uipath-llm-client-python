@@ -163,13 +163,12 @@ class PlatformBaseSettings(UiPathBaseSettings):
         return headers
 
     @override
-    def get_available_models(self) -> list[dict[str, Any]]:
+    def _discovery_cache_key(self) -> tuple[str, ...]:
+        return (self.base_url or "", self.organization_id or "", self.tenant_id or "")
 
+    @override
+    def _fetch_available_models(self) -> list[dict[str, Any]]:
         models = UiPath().agenthub.get_available_llm_models(
             headers=dict(self.build_auth_headers()),
         )
         return [model.model_dump(by_alias=True) for model in models]
-
-    @override
-    def validate_byo_model(self, model_info: dict[str, Any]) -> None:
-        return

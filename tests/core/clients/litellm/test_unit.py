@@ -9,13 +9,12 @@ from unittest.mock import MagicMock
 import pytest
 
 from uipath.llm_client.clients.litellm.client import (
-    _ANTHROPIC_FAMILY,
     _FLAVOR_TO_LITELLM,
     _VENDOR_TO_LITELLM,
     UiPathLiteLLM,
     _drop_nones,
 )
-from uipath.llm_client.settings.constants import ApiFlavor, RoutingMode, VendorType
+from uipath.llm_client.settings.constants import ApiFlavor, ModelFamily, RoutingMode, VendorType
 
 MODULE = "uipath.llm_client.clients.litellm.client"
 
@@ -59,9 +58,19 @@ _EMBEDDING_MODEL = {
 }
 
 
+def _find_model(models: list[dict], model_name: str, **kwargs: object) -> dict:
+    matching = [m for m in models if m["modelName"].lower() == model_name.lower()]
+    if not matching:
+        raise ValueError(f"Model {model_name} not found.")
+    return matching[0]
+
+
 def _mock_settings(models: list[dict]) -> MagicMock:
     settings = MagicMock()
     settings.get_available_models.return_value = models
+    settings.get_model_info.side_effect = lambda model_name, **kwargs: _find_model(
+        models, model_name, **kwargs
+    )
     settings.build_base_url.return_value = "https://example.com/api"
     settings.build_auth_headers.return_value = {}
     settings.build_auth_pipeline.return_value = None
@@ -238,15 +247,15 @@ class TestModelFamily:
 
     def test_claude_family_detected(self):
         client = self._make_client(_BEDROCK_CLAUDE_MODEL)
-        assert client._model_family == _ANTHROPIC_FAMILY
+        assert client._model_family == ModelFamily.ANTHROPIC_CLAUDE
 
     def test_openai_family_not_anthropic(self):
         client = self._make_client(_OPENAI_MODEL)
-        assert client._model_family != _ANTHROPIC_FAMILY
+        assert client._model_family != ModelFamily.ANTHROPIC_CLAUDE
 
     def test_gemini_family_not_anthropic(self):
         client = self._make_client(_GEMINI_MODEL)
-        assert client._model_family != _ANTHROPIC_FAMILY
+        assert client._model_family != ModelFamily.ANTHROPIC_CLAUDE
 
 
 # ============================================================================

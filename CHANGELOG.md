@@ -2,6 +2,18 @@
 
 All notable changes to `uipath_llm_client` (core package) will be documented in this file.
 
+## [1.9.0] - 2026-04-17
+
+### Added
+- `ModelFamily` StrEnum constants (`OPENAI`, `GOOGLE_GEMINI`, `ANTHROPIC_CLAUDE`) for model family matching
+- `get_model_info()` on `UiPathBaseSettings` — centralized model lookup with filtering by name, vendor, and BYO connection ID
+- Discovery cache on `get_available_models()` keyed by settings properties, with `refresh` parameter to bypass
+
+### Changed
+- `get_available_models()` is now a concrete cached method on the base class; subclasses implement `_fetch_available_models()` instead
+- `validate_byo_model()` is now a default no-op on the base class (only LLMGateway overrides it) and is called automatically inside `get_model_info()`
+- LiteLLM client uses `get_model_info()` instead of duplicating model discovery logic
+
 ## [1.8.3] - 2026-04-16
 
 ### Added

@@ -30,54 +30,12 @@ from uipath_langchain_client.settings import (
     API_FLAVOR_TO_VENDOR_TYPE,
     BYOM_TO_ROUTING_FLAVOR,
     ApiFlavor,
+    ModelFamily,
     RoutingMode,
     UiPathBaseSettings,
     VendorType,
     get_default_client_settings,
 )
-
-
-def _get_model_info(
-    model_name: str,
-    *,
-    client_settings: UiPathBaseSettings,
-    byo_connection_id: str | None = None,
-    vendor_type: VendorType | str | None = None,
-) -> dict[str, Any]:
-    available_models = client_settings.get_available_models()
-
-    matching_models = [m for m in available_models if m["modelName"].lower() == model_name.lower()]
-
-    if vendor_type is not None:
-        matching_models = [
-            m for m in matching_models if m.get("vendor", "").lower() == str(vendor_type).lower()
-        ]
-
-    if byo_connection_id:
-        matching_models = [
-            m
-            for m in matching_models
-            if (byom_details := m.get("byomDetails"))
-            and byom_details.get("integrationServiceConnectionId", "").lower()
-            == byo_connection_id.lower()
-        ]
-
-    if not byo_connection_id and len(matching_models) > 1:
-        matching_models = [
-            m
-            for m in matching_models
-            if (
-                (m.get("modelSubscriptionType", "") == "UiPathOwned")
-                or (m.get("byomDetails") is None)
-            )
-        ]
-
-    if not matching_models:
-        raise ValueError(
-            f"Model {model_name} not found. Available models are: {[m['modelName'] for m in available_models]}"
-        )
-
-    return matching_models[0]
 
 
 def get_chat_model(
@@ -120,18 +78,12 @@ def get_chat_model(
         ValueError: If the model is not found in available models or vendor is not supported.
     """
     client_settings = client_settings or get_default_client_settings()
-    model_info = _get_model_info(
+    model_info = client_settings.get_model_info(
         model_name,
-        client_settings=client_settings,
         byo_connection_id=byo_connection_id,
         vendor_type=vendor_type,
     )
     model_family = model_info.get("modelFamily", None)
-    if model_family is not None:
-        model_family = model_family.lower()
-    is_uipath_owned = model_info.get("modelSubscriptionType") == "UiPathOwned"
-    if not is_uipath_owned:
-        client_settings.validate_byo_model(model_info)
 
     if custom_class is not None:
         return custom_class(
@@ -171,7 +123,7 @@ def get_chat_model(
 
     match discovered_vendor_type:
         case VendorType.OPENAI:
-            if is_uipath_owned:
+            if model_family == ModelFamily.OPENAI:
                 from uipath_langchain_client.clients.openai.chat_models import (
                     UiPathAzureChatOpenAI,
                 )
@@ -196,7 +148,7 @@ def get_chat_model(
                     **model_kwargs,
                 )
         case VendorType.VERTEXAI:
-            if model_family == "anthropicclaude":
+            if model_family == ModelFamily.ANTHROPIC_CLAUDE:
                 from uipath_langchain_client.clients.anthropic.chat_models import (
                     UiPathChatAnthropic,
                 )
@@ -220,7 +172,7 @@ def get_chat_model(
                 **model_kwargs,
             )
         case VendorType.AWSBEDROCK:
-            if model_family == "anthropicclaude" and api_flavor is None:
+            if model_family == ModelFamily.ANTHROPIC_CLAUDE and api_flavor is None:
                 from uipath_langchain_client.clients.bedrock.chat_models import (
                     UiPathChatAnthropicBedrock,
                 )
@@ -300,15 +252,12 @@ def get_embedding_model(
         >>> vectors = embeddings.embed_documents(["Hello world"])
     """
     client_settings = client_settings or get_default_client_settings()
-    model_info = _get_model_info(
+    model_info = client_settings.get_model_info(
         model_name,
-        client_settings=client_settings,
         byo_connection_id=byo_connection_id,
         vendor_type=vendor_type,
     )
-    is_uipath_owned = model_info.get("modelSubscriptionType") == "UiPathOwned"
-    if not is_uipath_owned:
-        client_settings.validate_byo_model(model_info)
+    model_family = model_info.get("modelFamily", None)
 
     if custom_class is not None:
         return custom_class(
@@ -342,7 +291,7 @@ def get_embedding_model(
     discovered_vendor_type = discovered_vendor_type.lower()
     match discovered_vendor_type:
         case VendorType.OPENAI:
-            if is_uipath_owned:
+            if model_family == ModelFamily.OPENAI:
                 from uipath_langchain_client.clients.openai.embeddings import (
                     UiPathAzureOpenAIEmbeddings,
                 )

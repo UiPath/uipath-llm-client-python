@@ -5,6 +5,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from httpx import Request, Response
+from pydantic import ValidationError
 
 from uipath.llm_client.settings import PlatformSettings, UiPathAPIConfig
 from uipath.llm_client.settings.constants import ApiType, RoutingMode
@@ -186,19 +187,21 @@ class TestPlatformSettings:
             with pytest.raises(ValueError, match="api_config is required"):
                 settings.build_base_url(model_name="gpt-4o", api_config=None)
 
-    def test_build_auth_headers_empty_when_no_optional(self, platform_env_vars, mock_platform_auth):
+    def test_build_auth_headers_only_required_when_no_optional(
+        self, platform_env_vars, mock_platform_auth
+    ):
         """Test build_auth_headers with no optional tracing fields set."""
         env = {**platform_env_vars, "UIPATH_AGENTHUB_CONFIG": ""}
         with patch.dict(os.environ, env, clear=True):
             settings = PlatformSettings()
-            # Override to empty to test the falsy path
             settings.agenthub_config = ""
             settings.process_key = None
             settings.job_key = None
-            settings.organization_id = None
-            settings.tenant_id = None
             headers = settings.build_auth_headers()
-            assert headers == {}
+            assert headers == {
+                "X-UiPath-Internal-AccountId": "test-org-id",
+                "X-UiPath-Internal-TenantId": "test-tenant-id",
+            }
 
     def test_validation_requires_all_fields(self, mock_platform_auth):
         """Test validation fails without required fields."""
@@ -207,7 +210,7 @@ class TestPlatformSettings:
             # Missing base_url, tenant_id, organization_id
         }
         with patch.dict(os.environ, env, clear=True):
-            with pytest.raises(ValueError, match="Base URL, access token, tenant ID"):
+            with pytest.raises(ValidationError):
                 PlatformSettings()
 
     def test_validation_fails_on_expired_token(self):

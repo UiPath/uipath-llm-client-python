@@ -34,10 +34,10 @@ class PlatformBaseSettings(UiPathBaseSettings):
     """
 
     # Authentication fields - retrieved from uipath auth as well
-    access_token: SecretStr | None = Field(default=None, validation_alias="UIPATH_ACCESS_TOKEN")
-    base_url: str | None = Field(default=None, validation_alias="UIPATH_URL")
-    tenant_id: str | None = Field(default=None, validation_alias="UIPATH_TENANT_ID")
-    organization_id: str | None = Field(default=None, validation_alias="UIPATH_ORGANIZATION_ID")
+    access_token: SecretStr = Field(default=..., validation_alias="UIPATH_ACCESS_TOKEN")
+    base_url: str = Field(default=..., validation_alias="UIPATH_URL")
+    tenant_id: str = Field(default=..., validation_alias="UIPATH_TENANT_ID")
+    organization_id: str = Field(default=..., validation_alias="UIPATH_ORGANIZATION_ID")
 
     # Credentials used for refreshing the access token
     client_id: str | None = Field(default=None)
@@ -56,17 +56,7 @@ class PlatformBaseSettings(UiPathBaseSettings):
 
     @model_validator(mode="after")
     def validate_environment(self) -> Self:
-        """Validate environment and trigger authentication."""
-        if (
-            self.access_token is None
-            or self.base_url is None
-            or self.tenant_id is None
-            or self.organization_id is None
-        ):
-            raise ValueError(
-                "Base URL, access token, tenant ID, and organization ID are required. Try running `uipath auth` to authenticate."
-            )
-
+        """Validate access token expiry and extract client_id."""
         access_token = self.access_token.get_secret_value()
         if is_token_expired(access_token):
             raise ValueError(
@@ -145,11 +135,10 @@ class PlatformBaseSettings(UiPathBaseSettings):
         api_config: UiPathAPIConfig | None = None,
     ) -> Mapping[str, str]:
         """Build authentication and routing headers for API requests."""
-        headers: dict[str, str] = {}
-        if self.organization_id:
-            headers["X-UiPath-Internal-AccountId"] = self.organization_id
-        if self.tenant_id:
-            headers["X-UiPath-Internal-TenantId"] = self.tenant_id
+        headers: dict[str, str] = {
+            "X-UiPath-Internal-AccountId": self.organization_id,
+            "X-UiPath-Internal-TenantId": self.tenant_id,
+        }
         if self.agenthub_config:
             headers["X-UiPath-AgentHub-Config"] = self.agenthub_config
         if self.process_key:
@@ -164,7 +153,7 @@ class PlatformBaseSettings(UiPathBaseSettings):
 
     @override
     def _discovery_cache_key(self) -> tuple[str, ...]:
-        return (self.base_url or "", self.organization_id or "", self.tenant_id or "")
+        return (self.base_url, self.organization_id, self.tenant_id)
 
     @override
     def _fetch_available_models(self) -> list[dict[str, Any]]:

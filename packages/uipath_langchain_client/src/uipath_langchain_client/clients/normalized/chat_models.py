@@ -66,6 +66,7 @@ from pydantic import AliasChoices, BaseModel, Field
 
 from uipath_langchain_client.base_client import UiPathBaseChatModel
 from uipath_langchain_client.settings import ApiType, RoutingMode, UiPathAPIConfig
+from uipath_langchain_client.utils import is_anthropic_model_name
 
 _DictOrPydanticClass = Union[dict[str, Any], type[BaseModel], type]
 _DictOrPydantic = Union[dict[str, Any], BaseModel]
@@ -412,7 +413,7 @@ class UiPathChat(UiPathBaseChatModel):
                         converted_message["content"] = ""
                 if (
                     self.model_name
-                    and "claude" in self.model_name.lower()
+                    and is_anthropic_model_name(self.model_name)
                     and not converted_message["content"]
                 ):
                     converted_message["content"] = "tool_call"

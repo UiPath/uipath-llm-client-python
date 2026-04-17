@@ -36,6 +36,7 @@ from uipath_langchain_client.settings import (
     VendorType,
     get_default_client_settings,
 )
+from uipath_langchain_client.utils import is_anthropic_model_name
 
 
 def get_chat_model(
@@ -172,7 +173,9 @@ def get_chat_model(
                 **model_kwargs,
             )
         case VendorType.AWSBEDROCK:
-            if model_family == ModelFamily.ANTHROPIC_CLAUDE and api_flavor is None:
+            if (
+                model_family == ModelFamily.ANTHROPIC_CLAUDE and api_flavor != ApiFlavor.CONVERSE
+            ) or (api_flavor == ApiFlavor.INVOKE and is_anthropic_model_name(model_name)):
                 from uipath_langchain_client.clients.bedrock.chat_models import (
                     UiPathChatAnthropicBedrock,
                 )

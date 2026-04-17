@@ -412,7 +412,10 @@ class UiPathChat(UiPathBaseChatModel):
                         converted_message["content"] = ""
                 if (
                     self.model_name
-                    and "claude" in self.model_name.lower()
+                    and any(
+                        kw in self.model_name.lower()
+                        for kw in ("anthropic", "claude", "opus", "sonnet", "haiku", "mythos")
+                    )
                     and not converted_message["content"]
                 ):
                     converted_message["content"] = "tool_call"

@@ -172,7 +172,15 @@ def get_chat_model(
                 **model_kwargs,
             )
         case VendorType.AWSBEDROCK:
-            if model_family == ModelFamily.ANTHROPIC_CLAUDE and api_flavor is None:
+            if (
+                model_family == ModelFamily.ANTHROPIC_CLAUDE and api_flavor != ApiFlavor.CONVERSE
+            ) or (
+                api_flavor == ApiFlavor.INVOKE
+                and any(
+                    kw in model_name.lower()
+                    for kw in ("anthropic", "claude", "opus", "sonnet", "haiku", "mythos")
+                )
+            ):
                 from uipath_langchain_client.clients.bedrock.chat_models import (
                     UiPathChatAnthropicBedrock,
                 )

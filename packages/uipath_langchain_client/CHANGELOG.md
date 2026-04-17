@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_langchain_client` will be documented in this file.
 
+## [1.9.1] - 2026-04-17
+
+### Fixed
+- Detect Anthropic-family models by additional name keywords (`anthropic`, `opus`, `sonnet`, `haiku`, `mythos`) alongside `claude` — applies to Bedrock INVOKE factory routing and the normalized client's empty tool-call content workaround
+
 ## [1.9.0] - 2026-04-17
 
 ### Changed

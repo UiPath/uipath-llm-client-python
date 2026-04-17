@@ -10,6 +10,14 @@ from uipath.platform import UiPath
 from uipath.platform.common import EndpointManager
 from uipath.platform.common._config import UiPathConfig
 from uipath.platform.common.constants import (
+    ENV_BASE_URL,
+    ENV_FOLDER_KEY,
+    ENV_JOB_KEY,
+    ENV_ORGANIZATION_ID,
+    ENV_PROCESS_KEY,
+    ENV_TENANT_ID,
+    ENV_UIPATH_ACCESS_TOKEN,
+    ENV_UIPATH_TRACE_ID,
     HEADER_AGENTHUB_CONFIG,
     HEADER_FOLDER_KEY,
     HEADER_INTERNAL_ACCOUNT_ID,
@@ -46,10 +54,10 @@ class PlatformBaseSettings(UiPathBaseSettings):
     """
 
     # Authentication fields - retrieved from uipath auth as well
-    access_token: SecretStr = Field(default=..., validation_alias="UIPATH_ACCESS_TOKEN")
-    base_url: str = Field(default=..., validation_alias="UIPATH_URL")
-    tenant_id: str = Field(default=..., validation_alias="UIPATH_TENANT_ID")
-    organization_id: str = Field(default=..., validation_alias="UIPATH_ORGANIZATION_ID")
+    access_token: SecretStr = Field(default=..., validation_alias=ENV_UIPATH_ACCESS_TOKEN)
+    base_url: str = Field(default=..., validation_alias=ENV_BASE_URL)
+    tenant_id: str = Field(default=..., validation_alias=ENV_TENANT_ID)
+    organization_id: str = Field(default=..., validation_alias=ENV_ORGANIZATION_ID)
 
     # Credentials used for refreshing the access token
     client_id: str | None = Field(default=None)
@@ -61,10 +69,10 @@ class PlatformBaseSettings(UiPathBaseSettings):
     )
 
     # Tracing configuration
-    process_key: str | None = Field(default=None, validation_alias="UIPATH_PROCESS_KEY")
-    folder_key: str | None = Field(default=None, validation_alias="UIPATH_FOLDER_KEY")
-    job_key: str | None = Field(default=None, validation_alias="UIPATH_JOB_KEY")
-    trace_id: str | None = Field(default=None, validation_alias="UIPATH_TRACE_ID")
+    process_key: str | None = Field(default=None, validation_alias=ENV_PROCESS_KEY)
+    folder_key: str | None = Field(default=None, validation_alias=ENV_FOLDER_KEY)
+    job_key: str | None = Field(default=None, validation_alias=ENV_JOB_KEY)
+    trace_id: str | None = Field(default=None, validation_alias=ENV_UIPATH_TRACE_ID)
 
     @model_validator(mode="after")
     def validate_environment(self) -> Self:

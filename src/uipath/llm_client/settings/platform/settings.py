@@ -2,11 +2,31 @@
 
 from collections.abc import Mapping
 from typing import Any, Self
+from urllib.parse import quote
 
 from pydantic import Field, SecretStr, model_validator
 from typing_extensions import override
 from uipath.platform import UiPath
 from uipath.platform.common import EndpointManager
+from uipath.platform.common._config import UiPathConfig
+from uipath.platform.common.constants import (
+    ENV_BASE_URL,
+    ENV_FOLDER_KEY,
+    ENV_JOB_KEY,
+    ENV_ORGANIZATION_ID,
+    ENV_PROCESS_KEY,
+    ENV_TENANT_ID,
+    ENV_UIPATH_ACCESS_TOKEN,
+    ENV_UIPATH_TRACE_ID,
+    HEADER_AGENTHUB_CONFIG,
+    HEADER_FOLDER_KEY,
+    HEADER_INTERNAL_ACCOUNT_ID,
+    HEADER_INTERNAL_TENANT_ID,
+    HEADER_JOB_KEY,
+    HEADER_LICENSING_CONTEXT,
+    HEADER_PROCESS_KEY,
+    HEADER_TRACE_ID,
+)
 
 from uipath.llm_client.settings.base import UiPathAPIConfig, UiPathBaseSettings
 from uipath.llm_client.settings.constants import ApiType, RoutingMode
@@ -34,10 +54,10 @@ class PlatformBaseSettings(UiPathBaseSettings):
     """
 
     # Authentication fields - retrieved from uipath auth as well
-    access_token: SecretStr = Field(default=..., validation_alias="UIPATH_ACCESS_TOKEN")
-    base_url: str = Field(default=..., validation_alias="UIPATH_URL")
-    tenant_id: str = Field(default=..., validation_alias="UIPATH_TENANT_ID")
-    organization_id: str = Field(default=..., validation_alias="UIPATH_ORGANIZATION_ID")
+    access_token: SecretStr = Field(default=..., validation_alias=ENV_UIPATH_ACCESS_TOKEN)
+    base_url: str = Field(default=..., validation_alias=ENV_BASE_URL)
+    tenant_id: str = Field(default=..., validation_alias=ENV_TENANT_ID)
+    organization_id: str = Field(default=..., validation_alias=ENV_ORGANIZATION_ID)
 
     # Credentials used for refreshing the access token
     client_id: str | None = Field(default=None)
@@ -49,10 +69,10 @@ class PlatformBaseSettings(UiPathBaseSettings):
     )
 
     # Tracing configuration
-    process_key: str | None = Field(default=None, validation_alias="UIPATH_PROCESS_KEY")
-    folder_key: str | None = Field(default=None, validation_alias="UIPATH_FOLDER_KEY")
-    job_key: str | None = Field(default=None, validation_alias="UIPATH_JOB_KEY")
-    trace_id: str | None = Field(default=None, validation_alias="UIPATH_TRACE_ID")
+    process_key: str | None = Field(default=None, validation_alias=ENV_PROCESS_KEY)
+    folder_key: str | None = Field(default=None, validation_alias=ENV_FOLDER_KEY)
+    job_key: str | None = Field(default=None, validation_alias=ENV_JOB_KEY)
+    trace_id: str | None = Field(default=None, validation_alias=ENV_UIPATH_TRACE_ID)
 
     @model_validator(mode="after")
     def validate_environment(self) -> Self:
@@ -134,21 +154,31 @@ class PlatformBaseSettings(UiPathBaseSettings):
         model_name: str | None = None,
         api_config: UiPathAPIConfig | None = None,
     ) -> Mapping[str, str]:
-        """Build authentication and routing headers for API requests."""
+        """Build authentication and routing headers for API requests.
+
+        Mirrors the platform-wide header convention (see
+        ``uipath.platform.common.constants``): routing headers come from the
+        configured org/tenant, tracing headers come from pydantic fields
+        (which pull from env vars), and licensing context is read dynamically
+        from ``UiPathConfig`` at call time so updates are picked up without
+        rebuilding settings.
+        """
         headers: dict[str, str] = {
-            "X-UiPath-Internal-AccountId": self.organization_id,
-            "X-UiPath-Internal-TenantId": self.tenant_id,
+            HEADER_INTERNAL_ACCOUNT_ID: self.organization_id,
+            HEADER_INTERNAL_TENANT_ID: self.tenant_id,
         }
         if self.agenthub_config:
-            headers["X-UiPath-AgentHub-Config"] = self.agenthub_config
+            headers[HEADER_AGENTHUB_CONFIG] = self.agenthub_config
         if self.process_key:
-            headers["X-UiPath-ProcessKey"] = self.process_key
+            headers[HEADER_PROCESS_KEY] = quote(self.process_key, safe="")
         if self.folder_key:
-            headers["X-UiPath-FolderKey"] = self.folder_key
+            headers[HEADER_FOLDER_KEY] = self.folder_key
         if self.job_key:
-            headers["X-UiPath-JobKey"] = self.job_key
+            headers[HEADER_JOB_KEY] = self.job_key
         if self.trace_id:
-            headers["X-UiPath-TraceId"] = self.trace_id
+            headers[HEADER_TRACE_ID] = self.trace_id
+        if licensing_context := UiPathConfig.licensing_context:
+            headers[HEADER_LICENSING_CONTEXT] = licensing_context
         return headers
 
     @override

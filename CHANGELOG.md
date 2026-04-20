@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_llm_client` (core package) will be documented in this file.
 
+## [1.9.3] - 2026-04-20
+
+### Changed
+- `UiPathBaseSettings.get_model_info()` now prefers the Responses API when discovery returns multiple OpenAI entries for the same model (both `chat-completions` and `responses` flavors present). The LiteLLM client keeps its `chat-completions` fallback for the single-entry / `apiFlavor=null` case because the same client serves embedding requests.
+
 ## [1.9.2] - 2026-04-17
 
 ### Changed

@@ -13,7 +13,13 @@ from httpx import Auth
 from pydantic import BaseModel, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from uipath.llm_client.settings.constants import ApiFlavor, ApiType, RoutingMode, VendorType
+from uipath.llm_client.settings.constants import (
+    ApiFlavor,
+    ApiType,
+    ByomApiFlavor,
+    RoutingMode,
+    VendorType,
+)
 
 
 class UiPathAPIConfig(BaseModel):
@@ -237,6 +243,19 @@ class UiPathBaseSettings(BaseSettings, ABC):
                     or (m.get("byomDetails") is None)
                 )
             ]
+
+        # When multiple OpenAI entries remain (both chat-completions and responses
+        # flavors discovered), prefer the Responses API.
+        if len(matching_models) > 1:
+            vendor = str(matching_models[0].get("vendor", "")).lower()
+            if vendor == VendorType.OPENAI:
+                responses_matches = [
+                    m
+                    for m in matching_models
+                    if m.get("apiFlavor") in (ApiFlavor.RESPONSES, ByomApiFlavor.OPENAI_RESPONSES)
+                ]
+                if responses_matches:
+                    matching_models = responses_matches
 
         if not matching_models:
             raise ValueError(

@@ -213,7 +213,11 @@ class UiPathLiteLLM:
         else:
             resolved_flavor = discovered_flavor
 
-        # OpenAI defaults to chat-completions when no flavor is discovered
+        # OpenAI defaults to chat-completions when no flavor is discovered.
+        # RESPONSES is not a safe default here: this client serves both
+        # completions and embeddings, and the ``responses/`` model prefix in
+        # ``_resolve_litellm_model`` would break embedding calls on OpenAI
+        # embedding models that discover with ``apiFlavor=null``.
         if resolved_flavor is None and resolved_vendor in ("openai", "azure"):
             resolved_flavor = ApiFlavor.CHAT_COMPLETIONS
 

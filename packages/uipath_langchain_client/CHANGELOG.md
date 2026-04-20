@@ -6,7 +6,7 @@ All notable changes to `uipath_langchain_client` will be documented in this file
 
 ### Changed
 - `get_chat_model()` now defaults to the OpenAI Responses API (`ApiFlavor.RESPONSES`) when discovery does not specify a flavor for an OpenAI chat model. Explicit `api_flavor=` on the call and BYOM-discovered flavors still take precedence.
-- Minimum `uipath-llm-client` bumped to 1.9.3 for the `get_model_info()` Responses-preference tie-break.
+- Minimum `uipath-llm-client` bumped to 1.9.3 to align with the matching LiteLLM default.
 
 ## [1.9.2] - 2026-04-17
 

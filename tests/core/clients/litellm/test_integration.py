@@ -21,17 +21,29 @@ from uipath.llm_client.settings.constants import ApiFlavor
 
 @pytest.fixture
 def openai_gpt4o_client(client_settings: UiPathBaseSettings) -> UiPathLiteLLM:
-    return UiPathLiteLLM(model_name="gpt-4o-2024-11-20", client_settings=client_settings)
+    return UiPathLiteLLM(
+        model_name="gpt-4o-2024-11-20",
+        client_settings=client_settings,
+        api_flavor=ApiFlavor.CHAT_COMPLETIONS,
+    )
 
 
 @pytest.fixture
 def openai_client(client_settings: UiPathBaseSettings) -> UiPathLiteLLM:
-    return UiPathLiteLLM(model_name="gpt-5.2-2025-12-11", client_settings=client_settings)
+    return UiPathLiteLLM(
+        model_name="gpt-5.2-2025-12-11",
+        client_settings=client_settings,
+        api_flavor=ApiFlavor.CHAT_COMPLETIONS,
+    )
 
 
 @pytest.fixture
 def openai_gpt54_client(client_settings: UiPathBaseSettings) -> UiPathLiteLLM:
-    return UiPathLiteLLM(model_name="gpt-5.4-2026-03-05", client_settings=client_settings)
+    return UiPathLiteLLM(
+        model_name="gpt-5.4-2026-03-05",
+        client_settings=client_settings,
+        api_flavor=ApiFlavor.CHAT_COMPLETIONS,
+    )
 
 
 @pytest.fixture

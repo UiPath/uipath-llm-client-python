@@ -213,13 +213,9 @@ class UiPathLiteLLM:
         else:
             resolved_flavor = discovered_flavor
 
-        # OpenAI defaults to chat-completions when no flavor is discovered.
-        # RESPONSES is not a safe default here: this client serves both
-        # completions and embeddings, and the ``responses/`` model prefix in
-        # ``_resolve_litellm_model`` would break embedding calls on OpenAI
-        # embedding models that discover with ``apiFlavor=null``.
+        # OpenAI defaults to responses when no flavor is discovered
         if resolved_flavor is None and resolved_vendor in ("openai", "azure"):
-            resolved_flavor = ApiFlavor.CHAT_COMPLETIONS
+            resolved_flavor = ApiFlavor.RESPONSES
 
         # Claude detection: modelFamily from discovery, or name heuristic for BYOM
         # (BYOM discovery does not expose modelFamily).
@@ -270,7 +266,12 @@ class UiPathLiteLLM:
         return _VENDOR_TO_LITELLM.get(vendor, vendor)
 
     def _resolve_litellm_model(self) -> str:
-        """Build the model name litellm expects, with route prefixes where needed."""
+        """Build the completions model name litellm expects, with route prefixes where needed.
+
+        Only applied on the completions path — ``embedding()`` uses the raw model
+        name because the ``responses/`` / ``invoke/`` / ``converse/`` prefixes are
+        completion-only route hints.
+        """
         model = self._model_name
         flavor = str(self._api_config.api_flavor) if self._api_config.api_flavor else None
 
@@ -534,7 +535,7 @@ class UiPathLiteLLM:
         **kwargs: Any,
     ) -> EmbeddingResponse:
         return litellm.embedding(  # type: ignore[return-value]
-            model=self._litellm_model,
+            model=self._model_name,
             input=input,
             custom_llm_provider=self._embedding_llm_provider,
             api_key="PLACEHOLDER",
@@ -560,7 +561,7 @@ class UiPathLiteLLM:
         **kwargs: Any,
     ) -> EmbeddingResponse:
         return await litellm.aembedding(
-            model=self._litellm_model,
+            model=self._model_name,
             input=input,
             custom_llm_provider=self._embedding_llm_provider,
             api_key="PLACEHOLDER",

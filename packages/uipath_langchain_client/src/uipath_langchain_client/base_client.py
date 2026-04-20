@@ -27,7 +27,7 @@ import logging
 from abc import ABC
 from collections.abc import AsyncGenerator, Generator, Mapping, Sequence
 from functools import cached_property
-from typing import Any, Literal
+from typing import Any, ClassVar, Literal
 
 from httpx import URL, Response
 from langchain_core.callbacks import (
@@ -86,6 +86,11 @@ class UiPathBaseLLMClient(BaseModel, ABC):
         validate_default=True,
     )
 
+    class_default_headers: ClassVar[dict[str, str]] = {
+        "X-UiPath-LLMGateway-TimeoutSeconds": "295",  # server side timeout, default is 10, maximum is 300
+        "X-UiPath-LLMGateway-AllowFull4xxResponse": "false",  # allow full 4xx responses (default is false) — removed from default to avoid PII leakage in logs
+    }
+
     model_name: str = Field(
         alias="model", description="the LLM model name (completions or embeddings)"
     )
@@ -106,11 +111,9 @@ class UiPathBaseLLMClient(BaseModel, ABC):
     )
 
     default_headers: Mapping[str, str] | None = Field(
-        default_factory=lambda: {
-            "X-UiPath-LLMGateway-TimeoutSeconds": "295",  # server side timeout, default is 10, maximum is 300
-            # "X-UiPath-LLMGateway-AllowFull4xxResponse": "true",  # allow full 4xx responses (default is false) — removed from default to avoid PII leakage in logs
-        },
-        description="Default request headers to include in requests",
+        default=None,
+        description="Caller-supplied request headers. Merged on top of `class_default_headers`; "
+        "user values win on key collisions. Does not remove built-in defaults.",
     )
     captured_headers: tuple[str, ...] = Field(
         default=("x-uipath-",),
@@ -151,6 +154,7 @@ class UiPathBaseLLMClient(BaseModel, ABC):
                 model_name=self.model_name, api_config=self.api_config
             ),
             headers={
+                **self.class_default_headers,
                 **(self.default_headers or {}),
                 **self.client_settings.build_auth_headers(
                     model_name=self.model_name, api_config=self.api_config
@@ -175,6 +179,7 @@ class UiPathBaseLLMClient(BaseModel, ABC):
                 model_name=self.model_name, api_config=self.api_config
             ),
             headers={
+                **self.class_default_headers,
                 **(self.default_headers or {}),
                 **self.client_settings.build_auth_headers(
                     model_name=self.model_name, api_config=self.api_config

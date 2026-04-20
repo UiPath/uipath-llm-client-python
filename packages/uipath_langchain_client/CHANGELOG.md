@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_langchain_client` will be documented in this file.
 
+## [1.9.5] - 2026-04-21
+
+### Changed
+- `UiPathBaseLLMClient.default_headers` is now additive: caller-supplied headers are merged on top of a class-level `class_default_headers` (timeout and `AllowFull4xxResponse` policy) instead of replacing them. User values still win on key collisions. Previously, passing any `default_headers={...}` caused the built-in defaults to be dropped from `self.default_headers` (though the core httpx client's class defaults kept them on the wire).
+
 ## [1.9.4] - 2026-04-21
 
 ### Changed

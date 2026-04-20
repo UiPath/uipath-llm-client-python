@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_llm_client` (core package) will be documented in this file.
 
+## [1.9.4] - 2026-04-21
+
+### Changed
+- Bumped dependency floors to the latest released versions: `pydantic-settings>=2.14.0`, `uipath-platform>=0.1.32`, `google-genai>=1.73.1`, `anthropic>=0.96.0`, `litellm>=1.83.7`.
+
 ## [1.9.2] - 2026-04-17
 
 ### Changed

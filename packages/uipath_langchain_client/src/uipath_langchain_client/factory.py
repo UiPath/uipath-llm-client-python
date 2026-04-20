@@ -124,6 +124,10 @@ def get_chat_model(
 
     match discovered_vendor_type:
         case VendorType.OPENAI:
+            # OpenAI chat defaults to the Responses API when no flavor is specified.
+            if api_flavor is None:
+                api_flavor = ApiFlavor.RESPONSES
+
             if model_family == ModelFamily.OPENAI:
                 from uipath_langchain_client.clients.openai.chat_models import (
                     UiPathAzureChatOpenAI,

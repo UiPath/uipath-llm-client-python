@@ -51,6 +51,7 @@ from httpx._types import (
 from uipath.llm_client.settings.base import UiPathAPIConfig, UiPathBaseSettings
 from uipath.llm_client.utils.exceptions import patch_raise_for_status
 from uipath.llm_client.utils.headers import (
+    UIPATH_DEFAULT_REQUEST_HEADERS,
     build_routing_headers,
     extract_matching_headers,
     get_dynamic_request_headers,
@@ -84,10 +85,7 @@ class UiPathHttpxClient(Client):
     """
 
     _streaming_header: str = "X-UiPath-Streaming-Enabled"
-    _default_headers: dict[str, str] = {
-        "X-UiPath-LLMGateway-TimeoutSeconds": "295",  # server side timeout, default is 10, maximum is 300
-        "X-UiPath-LLMGateway-AllowFull4xxResponse": "false",  # allow full 4xx responses (default is false) — removed from default to avoid PII leakage in logs
-    }
+    _default_headers: dict[str, str] = UIPATH_DEFAULT_REQUEST_HEADERS
 
     def __init__(
         self,
@@ -286,10 +284,7 @@ class UiPathHttpxAsyncClient(AsyncClient):
     """
 
     _streaming_header: str = "X-UiPath-Streaming-Enabled"
-    _default_headers: dict[str, str] = {
-        "X-UiPath-LLMGateway-TimeoutSeconds": "295",  # server side timeout, default is 10, maximum is 300
-        "X-UiPath-LLMGateway-AllowFull4xxResponse": "false",  # allow full 4xx responses (default is false) — removed from default to avoid PII leakage in logs
-    }
+    _default_headers: dict[str, str] = UIPATH_DEFAULT_REQUEST_HEADERS
 
     def __init__(
         self,

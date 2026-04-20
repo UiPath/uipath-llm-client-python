@@ -45,6 +45,7 @@ from uipath.llm_client.httpx_client import (
     UiPathHttpxClient,
 )
 from uipath.llm_client.utils.headers import (
+    UIPATH_DEFAULT_REQUEST_HEADERS,
     get_captured_response_headers,
     set_captured_response_headers,
 )
@@ -86,10 +87,7 @@ class UiPathBaseLLMClient(BaseModel, ABC):
         validate_default=True,
     )
 
-    class_default_headers: ClassVar[dict[str, str]] = {
-        "X-UiPath-LLMGateway-TimeoutSeconds": "295",  # server side timeout, default is 10, maximum is 300
-        "X-UiPath-LLMGateway-AllowFull4xxResponse": "false",  # allow full 4xx responses (default is false) — removed from default to avoid PII leakage in logs
-    }
+    class_default_headers: ClassVar[dict[str, str]] = UIPATH_DEFAULT_REQUEST_HEADERS
 
     model_name: str = Field(
         alias="model", description="the LLM model name (completions or embeddings)"

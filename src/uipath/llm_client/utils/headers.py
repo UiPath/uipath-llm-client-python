@@ -6,6 +6,11 @@ from httpx import Headers
 from uipath.llm_client.settings.base import UiPathAPIConfig
 from uipath.llm_client.settings.constants import ApiType, RoutingMode
 
+UIPATH_DEFAULT_REQUEST_HEADERS: dict[str, str] = {
+    "X-UiPath-LLMGateway-TimeoutSeconds": "295",  # server side timeout, default is 10, maximum is 300
+    "X-UiPath-LLMGateway-AllowFull4xxResponse": "false",  # allow full 4xx responses (default is false) — kept false to avoid PII leakage in logs
+}
+
 _CAPTURED_RESPONSE_HEADERS: contextvars.ContextVar[dict[str, str] | None] = contextvars.ContextVar(
     "_captured_response_headers", default=None
 )

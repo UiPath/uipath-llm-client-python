@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_llm_client` (core package) will be documented in this file.
 
+## [1.9.5] - 2026-04-21
+
+### Added
+- `utils.headers.UIPATH_DEFAULT_REQUEST_HEADERS` public constant — the single source of truth for built-in gateway request headers (`X-UiPath-LLMGateway-TimeoutSeconds=295`, `X-UiPath-LLMGateway-AllowFull4xxResponse=false`). `UiPathHttpxClient._default_headers` now references this constant; the langchain base client reuses the same constant for its `class_default_headers`.
+
 ## [1.9.4] - 2026-04-21
 
 ### Changed

@@ -2,12 +2,6 @@
 
 All notable changes to `uipath_llm_client` (core package) will be documented in this file.
 
-## [1.9.3] - 2026-04-20
-
-### Changed
-- `UiPathLiteLLM` now defaults to the OpenAI Responses API (`ApiFlavor.RESPONSES`) when discovery does not specify a flavor. Explicit `api_flavor=` and BYOM-discovered flavors still take precedence.
-- `UiPathLiteLLM.embedding()` / `aembedding()` use the raw model name instead of `_litellm_model`. The `responses/` / `invoke/` / `converse/` route prefixes are completion-only, so this keeps OpenAI embeddings working when the client defaults to Responses on the completions side.
-
 ## [1.9.2] - 2026-04-17
 
 ### Changed

@@ -17,7 +17,7 @@ from uipath.llm_client.settings import UiPathBaseSettings
 from uipath.llm_client.settings.constants import ApiFlavor
 
 OPENAI_CONFIGS = [
-    {"model_class": UiPathChatLiteLLM, "model_kwargs": {"api_flavor": ApiFlavor.CHAT_COMPLETIONS}},
+    {"model_class": UiPathChatLiteLLM},
 ]
 
 OPENAI_RESPONSES_CONFIGS = [

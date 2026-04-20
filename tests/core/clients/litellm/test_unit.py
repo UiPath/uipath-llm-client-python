@@ -148,10 +148,9 @@ class TestResolveLiteLLMModel:
             **kwargs,
         )
 
-    def test_openai_model_name_has_responses_prefix(self):
-        """OpenAI defaults to responses, so the litellm model carries the responses/ prefix."""
+    def test_openai_model_name_unchanged(self):
         client = self._make_client(_OPENAI_MODEL)
-        assert client._litellm_model == "responses/gpt-5.2-2025-12-11"
+        assert client._litellm_model == "gpt-5.2-2025-12-11"
 
     def test_gemini_model_name_unchanged(self):
         client = self._make_client(_GEMINI_MODEL)
@@ -188,9 +187,9 @@ class TestDiscoverApiConfig:
             **kwargs,
         )
 
-    def test_openai_defaults_to_responses(self):
+    def test_openai_defaults_to_chat_completions(self):
         client = self._make_client(_OPENAI_MODEL)
-        assert client._api_config.api_flavor == ApiFlavor.RESPONSES
+        assert client._api_config.api_flavor == ApiFlavor.CHAT_COMPLETIONS
         assert client._api_config.vendor_type == "openai"
         assert client._api_config.routing_mode == RoutingMode.PASSTHROUGH
 

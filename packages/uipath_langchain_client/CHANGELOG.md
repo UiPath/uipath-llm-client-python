@@ -2,6 +2,12 @@
 
 All notable changes to `uipath_langchain_client` will be documented in this file.
 
+## [1.9.4] - 2026-04-21
+
+### Changed
+- Bumped dependency floors to the latest released versions: `langchain-openai>=1.1.15`, `langchain-google-genai>=4.2.2`, `langchain-anthropic>=1.4.1`, `anthropic[bedrock,vertex]>=0.96.0`, `langchain-aws[anthropic]>=1.4.4`, `langchain-azure-ai>=1.2.2`.
+- Minimum `uipath-llm-client` bumped to 1.9.4 to match the core dependency-floor release.
+
 ## [1.9.3] - 2026-04-20
 
 ### Changed

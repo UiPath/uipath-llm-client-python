@@ -214,12 +214,12 @@ class UiPathChat(UiPathBaseChatModel):
     @property
     def _default_params(self) -> dict[str, Any]:
         """Get the default parameters for the normalized API request."""
-        exclude_if_none = {
+        candidates: dict[str, Any] = {
             "max_tokens": self.max_tokens,
             "temperature": self.temperature,
             "top_p": self.top_p,
             "top_k": self.top_k,
-            "stop": self.stop or None,
+            "stop": self.stop,
             "n": self.n,
             "frequency_penalty": self.frequency_penalty,
             "presence_penalty": self.presence_penalty,
@@ -242,8 +242,9 @@ class UiPathChat(UiPathBaseChatModel):
             "verbosity": self.verbosity,
         }
 
+        set_fields = self.model_fields_set
         return {
-            **{k: v for k, v in exclude_if_none.items() if v is not None},
+            **{k: v for k, v in candidates.items() if k in set_fields},
             **self.model_kwargs,
         }
 

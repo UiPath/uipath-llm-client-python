@@ -62,7 +62,7 @@ from langchain_core.utils.function_calling import (
     convert_to_openai_tool,
 )
 from langchain_core.utils.pydantic import is_basemodel_subclass
-from pydantic import AliasChoices, BaseModel, ConfigDict, Field
+from pydantic import AliasChoices, BaseModel, Field
 
 from uipath_langchain_client.base_client import UiPathBaseChatModel
 from uipath_langchain_client.settings import ApiType, RoutingMode, UiPathAPIConfig
@@ -70,10 +70,6 @@ from uipath_langchain_client.utils import is_anthropic_model_name
 
 _DictOrPydanticClass = Union[dict[str, Any], type[BaseModel], type]
 _DictOrPydantic = Union[dict[str, Any], BaseModel]
-
-
-# Sentinel — params whose value is still _UNSET are omitted from the request payload.
-_UNSET: Any = object()
 
 
 def _oai_structured_outputs_parser(ai_msg: AIMessage, schema: type[BaseModel]) -> BaseModel:
@@ -162,50 +158,48 @@ class UiPathChat(UiPathBaseChatModel):
         freeze_base_url=True,
     )
 
-    model_config = ConfigDict(validate_default=False)
-
     # Common
     max_tokens: int | None = Field(
-        default=_UNSET,
+        default=None,
         validation_alias=AliasChoices("max_tokens", "max_output_tokens", "max_completion_tokens"),
     )
-    temperature: float | None = _UNSET  # type: ignore[assignment]
-    top_p: float | None = _UNSET  # type: ignore[assignment]
-    top_k: int | None = _UNSET  # type: ignore[assignment]
+    temperature: float | None = None
+    top_p: float | None = None
+    top_k: int | None = None
     stop: list[str] | str | None = Field(
-        default=_UNSET,
+        default=None,
         validation_alias=AliasChoices("stop", "stop_sequences"),
     )
     n: int | None = Field(
-        default=_UNSET,
+        default=None,
         validation_alias=AliasChoices("n", "candidate_count"),
     )
-    frequency_penalty: float | None = _UNSET  # type: ignore[assignment]
-    presence_penalty: float | None = _UNSET  # type: ignore[assignment]
-    seed: int | None = _UNSET  # type: ignore[assignment]
+    frequency_penalty: float | None = None
+    presence_penalty: float | None = None
+    seed: int | None = None
 
     model_kwargs: dict[str, Any] = Field(default_factory=dict)
     disabled_params: dict[str, Any] | None = None
 
     # OpenAI
-    logit_bias: dict[str, int] | None = _UNSET  # type: ignore[assignment]
-    logprobs: bool | None = _UNSET  # type: ignore[assignment]
-    top_logprobs: int | None = _UNSET  # type: ignore[assignment]
-    parallel_tool_calls: bool | None = _UNSET  # type: ignore[assignment]
-    reasoning_effort: str | None = _UNSET  # type: ignore[assignment]
-    reasoning: dict[str, Any] | None = _UNSET  # type: ignore[assignment]
+    logit_bias: dict[str, int] | None = None
+    logprobs: bool | None = None
+    top_logprobs: int | None = None
+    parallel_tool_calls: bool | None = None
+    reasoning_effort: str | None = None
+    reasoning: dict[str, Any] | None = None
 
     # Anthropic
-    thinking: dict[str, Any] | None = _UNSET  # type: ignore[assignment]
+    thinking: dict[str, Any] | None = None
 
     # Google
-    thinking_level: str | None = _UNSET  # type: ignore[assignment]
-    thinking_budget: int | None = _UNSET  # type: ignore[assignment]
-    include_thoughts: bool | None = _UNSET  # type: ignore[assignment]
-    safety_settings: list[dict[str, Any]] | None = _UNSET  # type: ignore[assignment]
+    thinking_level: str | None = None
+    thinking_budget: int | None = None
+    include_thoughts: bool | None = None
+    safety_settings: list[dict[str, Any]] | None = None
 
     # Shared
-    verbosity: str | None = _UNSET  # type: ignore[assignment]
+    verbosity: str | None = None
 
     @property
     def _llm_type(self) -> str:
@@ -248,8 +242,9 @@ class UiPathChat(UiPathBaseChatModel):
             "verbosity": self.verbosity,
         }
 
+        set_fields = self.model_fields_set
         return {
-            **{k: v for k, v in candidates.items() if v is not _UNSET},
+            **{k: v for k, v in candidates.items() if k in set_fields},
             **self.model_kwargs,
         }
 

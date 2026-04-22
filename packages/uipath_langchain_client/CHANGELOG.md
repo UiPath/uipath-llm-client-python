@@ -5,7 +5,7 @@ All notable changes to `uipath_langchain_client` will be documented in this file
 ## [1.9.7] - 2026-04-22
 
 ### Changed
-- **Behavior change:** `UiPathChat` parameter fields now default to an internal `_UNSET` sentinel instead of `None`, and `_default_params` filters on the sentinel rather than on `None`. Unset fields are still omitted from the request payload, but passing an explicit `None` (e.g. `UiPathChat(temperature=None)`) now forwards `null` to the normalized API instead of being silently dropped. Previously, both "not passed" and "explicitly `None`" produced the same omission. Callers relying on `None` as shorthand for "omit" should switch to simply not passing the argument.
+- **Behavior change:** `UiPathChat._default_params` now uses pydantic's `model_fields_set` to decide which params to include in the request payload instead of filtering on `v is not None`. Fields that were not explicitly passed are omitted; fields explicitly set to `None` (e.g. `UiPathChat(temperature=None)`) now forward `null` to the API. Previously both "not passed" and "explicitly `None`" were silently dropped.
 
 ## [1.9.6] - 2026-04-22
 

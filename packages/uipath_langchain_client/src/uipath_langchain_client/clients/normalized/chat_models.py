@@ -72,6 +72,32 @@ _DictOrPydanticClass = Union[dict[str, Any], type[BaseModel], type]
 _DictOrPydantic = Union[dict[str, Any], BaseModel]
 
 
+class _UnsetType:
+    """Singleton sentinel for request params that should be omitted from the payload.
+
+    `UiPathChat` param fields default to `_UNSET` so we can tell "caller did not
+    pass anything" apart from "caller explicitly passed `None`". `_default_params`
+    filters out `_UNSET` values only — explicit `None` (and other falsy values)
+    flow through to the normalized API as `null`.
+    """
+
+    _instance: "_UnsetType | None" = None
+
+    def __new__(cls) -> "_UnsetType":
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
+
+    def __bool__(self) -> Literal[False]:
+        return False
+
+    def __repr__(self) -> str:
+        return "_UNSET"
+
+
+_UNSET = _UnsetType()
+
+
 def _oai_structured_outputs_parser(ai_msg: AIMessage, schema: type[BaseModel]) -> BaseModel:
     if not ai_msg.content:
         raise ValueError("Expected non-empty content from model.")
@@ -159,47 +185,47 @@ class UiPathChat(UiPathBaseChatModel):
     )
 
     # Common
-    max_tokens: int | None = Field(
-        default=None,
+    max_tokens: int | None | _UnsetType = Field(
+        default=_UNSET,
         validation_alias=AliasChoices("max_tokens", "max_output_tokens", "max_completion_tokens"),
     )
-    temperature: float | None = None
-    top_p: float | None = None
-    top_k: int | None = None
-    stop: list[str] | str | None = Field(
-        default=None,
+    temperature: float | None | _UnsetType = _UNSET
+    top_p: float | None | _UnsetType = _UNSET
+    top_k: int | None | _UnsetType = _UNSET
+    stop: list[str] | str | None | _UnsetType = Field(
+        default=_UNSET,
         validation_alias=AliasChoices("stop", "stop_sequences"),
     )
-    n: int | None = Field(
-        default=None,
+    n: int | None | _UnsetType = Field(
+        default=_UNSET,
         validation_alias=AliasChoices("n", "candidate_count"),
     )
-    frequency_penalty: float | None = None
-    presence_penalty: float | None = None
-    seed: int | None = None
+    frequency_penalty: float | None | _UnsetType = _UNSET
+    presence_penalty: float | None | _UnsetType = _UNSET
+    seed: int | None | _UnsetType = _UNSET
 
     model_kwargs: dict[str, Any] = Field(default_factory=dict)
     disabled_params: dict[str, Any] | None = None
 
     # OpenAI
-    logit_bias: dict[str, int] | None = None
-    logprobs: bool | None = None
-    top_logprobs: int | None = None
-    parallel_tool_calls: bool | None = None
-    reasoning_effort: str | None = None
-    reasoning: dict[str, Any] | None = None
+    logit_bias: dict[str, int] | None | _UnsetType = _UNSET
+    logprobs: bool | None | _UnsetType = _UNSET
+    top_logprobs: int | None | _UnsetType = _UNSET
+    parallel_tool_calls: bool | None | _UnsetType = _UNSET
+    reasoning_effort: str | None | _UnsetType = _UNSET
+    reasoning: dict[str, Any] | None | _UnsetType = _UNSET
 
     # Anthropic
-    thinking: dict[str, Any] | None = None
+    thinking: dict[str, Any] | None | _UnsetType = _UNSET
 
     # Google
-    thinking_level: str | None = None
-    thinking_budget: int | None = None
-    include_thoughts: bool | None = None
-    safety_settings: list[dict[str, Any]] | None = None
+    thinking_level: str | None | _UnsetType = _UNSET
+    thinking_budget: int | None | _UnsetType = _UNSET
+    include_thoughts: bool | None | _UnsetType = _UNSET
+    safety_settings: list[dict[str, Any]] | None | _UnsetType = _UNSET
 
     # Shared
-    verbosity: str | None = None
+    verbosity: str | None | _UnsetType = _UNSET
 
     @property
     def _llm_type(self) -> str:
@@ -213,13 +239,17 @@ class UiPathChat(UiPathBaseChatModel):
 
     @property
     def _default_params(self) -> dict[str, Any]:
-        """Get the default parameters for the normalized API request."""
-        exclude_if_none = {
+        """Get the default parameters for the normalized API request.
+
+        Fields default to `_UNSET` and are excluded from the payload only when
+        still `_UNSET`. Explicit `None` passes through as JSON `null`.
+        """
+        candidates: dict[str, Any] = {
             "max_tokens": self.max_tokens,
             "temperature": self.temperature,
             "top_p": self.top_p,
             "top_k": self.top_k,
-            "stop": self.stop or None,
+            "stop": self.stop,
             "n": self.n,
             "frequency_penalty": self.frequency_penalty,
             "presence_penalty": self.presence_penalty,
@@ -243,7 +273,7 @@ class UiPathChat(UiPathBaseChatModel):
         }
 
         return {
-            **{k: v for k, v in exclude_if_none.items() if v is not None},
+            **{k: v for k, v in candidates.items() if not isinstance(v, _UnsetType)},
             **self.model_kwargs,
         }
 

@@ -5,7 +5,7 @@ All notable changes to `uipath_langchain_client` will be documented in this file
 ## [1.9.6] - 2026-04-22
 
 ### Added
-- `UiPathChat` (normalized) now implements `_identifying_params`, `_get_invocation_params`, `_get_ls_params`, and `_combine_llm_outputs` to match the BaseChatModel / ChatOpenAI conventions for tracing, caching, and LangSmith integration. `_identifying_params` surfaces `model_name`, `_default_params`, `byo_connection_id`, and the `UiPathAPIConfig` routing fields; `_get_ls_params` sets `ls_provider="uipath"`.
+- `UiPathChat` (normalized) now implements `_identifying_params` (returning `model_name` + `_default_params`) to match the `BaseChatOpenAI` convention, giving traced/cached runs a proper identity key instead of the empty default from `BaseChatModel`.
 
 ### Changed
 - Bumped dependency floors to the latest installed versions: `langchain-openai>=1.1.16`.

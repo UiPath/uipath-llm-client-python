@@ -32,7 +32,6 @@ from langchain_core.callbacks import (
     AsyncCallbackManagerForLLMRun,
     CallbackManagerForLLMRun,
 )
-from langchain_core.language_models import LangSmithParams
 from langchain_core.language_models.base import (
     LanguageModelInput,
 )
@@ -209,65 +208,8 @@ class UiPathChat(UiPathBaseChatModel):
 
     @property
     def _identifying_params(self) -> dict[str, Any]:
-        """Parameters that uniquely identify this model for tracing and caching."""
-        params: dict[str, Any] = {"model_name": self.model_name, **self._default_params}
-        if self.byo_connection_id is not None:
-            params["byo_connection_id"] = self.byo_connection_id
-        if self.api_config.api_type is not None:
-            params["uipath_api_type"] = str(self.api_config.api_type)
-        if self.api_config.routing_mode is not None:
-            params["uipath_routing_mode"] = str(self.api_config.routing_mode)
-        if self.api_config.vendor_type is not None:
-            params["uipath_vendor_type"] = str(self.api_config.vendor_type)
-        if self.api_config.api_flavor is not None:
-            params["uipath_api_flavor"] = str(self.api_config.api_flavor)
-        return params
-
-    def _get_invocation_params(
-        self, stop: list[str] | None = None, **kwargs: Any
-    ) -> dict[str, Any]:
-        """Return the parameters used to invoke the model."""
-        return {
-            "model": self.model_name,
-            **self._default_params,
-            **({"stop": stop} if stop is not None else {}),
-            **kwargs,
-        }
-
-    def _get_ls_params(self, stop: list[str] | None = None, **kwargs: Any) -> LangSmithParams:
-        """Standard params sent to LangSmith for tracing."""
-        params = self._get_invocation_params(stop=stop, **kwargs)
-        ls_params = LangSmithParams(
-            ls_provider="uipath",
-            ls_model_name=params.get("model", self.model_name),
-            ls_model_type="chat",
-        )
-        if (ls_temperature := params.get("temperature", self.temperature)) is not None:
-            ls_params["ls_temperature"] = ls_temperature
-        if (ls_max_tokens := params.get("max_tokens", self.max_tokens)) is not None:
-            ls_params["ls_max_tokens"] = ls_max_tokens
-        if ls_stop := stop or params.get("stop", None):
-            ls_params["ls_stop"] = ls_stop if isinstance(ls_stop, list) else [ls_stop]
-        return ls_params
-
-    def _combine_llm_outputs(self, llm_outputs: list[dict[str, Any] | None]) -> dict[str, Any]:
-        """Merge per-generation llm_output dicts across a batch."""
-        combined: dict[str, Any] = {"model_name": self.model_name}
-        overall_usage: dict[str, int] = {}
-        for output in llm_outputs:
-            if output is None:
-                continue
-            if "id" in output and "id" not in combined:
-                combined["id"] = output["id"]
-            if "created" in output and "created" not in combined:
-                combined["created"] = output["created"]
-            usage = output.get("token_usage") or {}
-            for k, v in usage.items():
-                if isinstance(v, int):
-                    overall_usage[k] = overall_usage.get(k, 0) + v
-        if overall_usage:
-            combined["token_usage"] = overall_usage
-        return combined
+        """Get the identifying parameters."""
+        return {"model_name": self.model_name, **self._default_params}
 
     @property
     def _default_params(self) -> dict[str, Any]:

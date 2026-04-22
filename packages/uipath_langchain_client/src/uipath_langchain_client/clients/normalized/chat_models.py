@@ -62,7 +62,7 @@ from langchain_core.utils.function_calling import (
     convert_to_openai_tool,
 )
 from langchain_core.utils.pydantic import is_basemodel_subclass
-from pydantic import AliasChoices, BaseModel, Field
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field
 
 from uipath_langchain_client.base_client import UiPathBaseChatModel
 from uipath_langchain_client.settings import ApiType, RoutingMode, UiPathAPIConfig
@@ -72,30 +72,8 @@ _DictOrPydanticClass = Union[dict[str, Any], type[BaseModel], type]
 _DictOrPydantic = Union[dict[str, Any], BaseModel]
 
 
-class _UnsetType:
-    """Singleton sentinel for request params that should be omitted from the payload.
-
-    `UiPathChat` param fields default to `_UNSET` so we can tell "caller did not
-    pass anything" apart from "caller explicitly passed `None`". `_default_params`
-    filters out `_UNSET` values only — explicit `None` (and other falsy values)
-    flow through to the normalized API as `null`.
-    """
-
-    _instance: "_UnsetType | None" = None
-
-    def __new__(cls) -> "_UnsetType":
-        if cls._instance is None:
-            cls._instance = super().__new__(cls)
-        return cls._instance
-
-    def __bool__(self) -> Literal[False]:
-        return False
-
-    def __repr__(self) -> str:
-        return "_UNSET"
-
-
-_UNSET = _UnsetType()
+# Sentinel — params whose value is still _UNSET are omitted from the request payload.
+_UNSET: Any = object()
 
 
 def _oai_structured_outputs_parser(ai_msg: AIMessage, schema: type[BaseModel]) -> BaseModel:
@@ -184,48 +162,50 @@ class UiPathChat(UiPathBaseChatModel):
         freeze_base_url=True,
     )
 
+    model_config = ConfigDict(validate_default=False)
+
     # Common
-    max_tokens: int | None | _UnsetType = Field(
+    max_tokens: int | None = Field(
         default=_UNSET,
         validation_alias=AliasChoices("max_tokens", "max_output_tokens", "max_completion_tokens"),
     )
-    temperature: float | None | _UnsetType = _UNSET
-    top_p: float | None | _UnsetType = _UNSET
-    top_k: int | None | _UnsetType = _UNSET
-    stop: list[str] | str | None | _UnsetType = Field(
+    temperature: float | None = _UNSET  # type: ignore[assignment]
+    top_p: float | None = _UNSET  # type: ignore[assignment]
+    top_k: int | None = _UNSET  # type: ignore[assignment]
+    stop: list[str] | str | None = Field(
         default=_UNSET,
         validation_alias=AliasChoices("stop", "stop_sequences"),
     )
-    n: int | None | _UnsetType = Field(
+    n: int | None = Field(
         default=_UNSET,
         validation_alias=AliasChoices("n", "candidate_count"),
     )
-    frequency_penalty: float | None | _UnsetType = _UNSET
-    presence_penalty: float | None | _UnsetType = _UNSET
-    seed: int | None | _UnsetType = _UNSET
+    frequency_penalty: float | None = _UNSET  # type: ignore[assignment]
+    presence_penalty: float | None = _UNSET  # type: ignore[assignment]
+    seed: int | None = _UNSET  # type: ignore[assignment]
 
     model_kwargs: dict[str, Any] = Field(default_factory=dict)
     disabled_params: dict[str, Any] | None = None
 
     # OpenAI
-    logit_bias: dict[str, int] | None | _UnsetType = _UNSET
-    logprobs: bool | None | _UnsetType = _UNSET
-    top_logprobs: int | None | _UnsetType = _UNSET
-    parallel_tool_calls: bool | None | _UnsetType = _UNSET
-    reasoning_effort: str | None | _UnsetType = _UNSET
-    reasoning: dict[str, Any] | None | _UnsetType = _UNSET
+    logit_bias: dict[str, int] | None = _UNSET  # type: ignore[assignment]
+    logprobs: bool | None = _UNSET  # type: ignore[assignment]
+    top_logprobs: int | None = _UNSET  # type: ignore[assignment]
+    parallel_tool_calls: bool | None = _UNSET  # type: ignore[assignment]
+    reasoning_effort: str | None = _UNSET  # type: ignore[assignment]
+    reasoning: dict[str, Any] | None = _UNSET  # type: ignore[assignment]
 
     # Anthropic
-    thinking: dict[str, Any] | None | _UnsetType = _UNSET
+    thinking: dict[str, Any] | None = _UNSET  # type: ignore[assignment]
 
     # Google
-    thinking_level: str | None | _UnsetType = _UNSET
-    thinking_budget: int | None | _UnsetType = _UNSET
-    include_thoughts: bool | None | _UnsetType = _UNSET
-    safety_settings: list[dict[str, Any]] | None | _UnsetType = _UNSET
+    thinking_level: str | None = _UNSET  # type: ignore[assignment]
+    thinking_budget: int | None = _UNSET  # type: ignore[assignment]
+    include_thoughts: bool | None = _UNSET  # type: ignore[assignment]
+    safety_settings: list[dict[str, Any]] | None = _UNSET  # type: ignore[assignment]
 
     # Shared
-    verbosity: str | None | _UnsetType = _UNSET
+    verbosity: str | None = _UNSET  # type: ignore[assignment]
 
     @property
     def _llm_type(self) -> str:
@@ -239,11 +219,7 @@ class UiPathChat(UiPathBaseChatModel):
 
     @property
     def _default_params(self) -> dict[str, Any]:
-        """Get the default parameters for the normalized API request.
-
-        Fields default to `_UNSET` and are excluded from the payload only when
-        still `_UNSET`. Explicit `None` passes through as JSON `null`.
-        """
+        """Get the default parameters for the normalized API request."""
         candidates: dict[str, Any] = {
             "max_tokens": self.max_tokens,
             "temperature": self.temperature,
@@ -273,7 +249,7 @@ class UiPathChat(UiPathBaseChatModel):
         }
 
         return {
-            **{k: v for k, v in candidates.items() if not isinstance(v, _UnsetType)},
+            **{k: v for k, v in candidates.items() if v is not _UNSET},
             **self.model_kwargs,
         }
 

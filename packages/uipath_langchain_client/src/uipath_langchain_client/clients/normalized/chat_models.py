@@ -204,7 +204,7 @@ class UiPathChat(UiPathBaseChatModel):
     @property
     def _llm_type(self) -> str:
         """Return type of chat model."""
-        return "UiPath-Normalized"
+        return "uipath-chat"
 
     @property
     def _identifying_params(self) -> dict[str, Any]:

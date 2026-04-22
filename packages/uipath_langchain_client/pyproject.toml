@@ -33,7 +33,7 @@ fireworks = [
     "langchain-fireworks>=1.1.0,<2.0.0",
 ]
 litellm = [
-    "langchain-litellm>=0.6.4,<1.0.0",
+    "langchain-litellm==0.6.4",
 ]
 all = [
     "uipath-langchain-client[openai,bedrock,google,anthropic,azure,vertexai,fireworks,litellm]"

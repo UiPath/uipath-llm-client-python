@@ -2,6 +2,13 @@
 
 All notable changes to `uipath_langchain_client` will be documented in this file.
 
+## [1.9.8] - 2026-04-22
+
+### Changed
+- Added upper-bound version constraints (`<next_major`) to all dependencies to prevent unexpected breaking changes from major-version upgrades.
+- `langchain-litellm` upper-bounded at `<1.0.0`.
+- Minimum `uipath-llm-client` bumped to 1.9.8 to match the core dependency-constraints release.
+
 ## [1.9.7] - 2026-04-22
 
 ### Changed

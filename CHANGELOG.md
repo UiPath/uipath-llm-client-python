@@ -2,6 +2,12 @@
 
 All notable changes to `uipath_llm_client` (core package) will be documented in this file.
 
+## [1.9.8] - 2026-04-22
+
+### Changed
+- Added upper-bound version constraints (`<next_major`) to all production and dev dependencies to prevent unexpected breaking changes from major-version upgrades.
+- `litellm` is now pinned to an exact version (`==1.83.7`) due to its frequent breaking changes between minor releases.
+
 ## [1.9.6] - 2026-04-22
 
 ### Changed

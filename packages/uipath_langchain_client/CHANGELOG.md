@@ -2,6 +2,18 @@
 
 All notable changes to `uipath_langchain_client` will be documented in this file.
 
+## [1.9.6] - 2026-04-22
+
+### Added
+- `UiPathChat` (normalized) now implements `_identifying_params` (returning `model_name` + `_default_params`) to match the `BaseChatOpenAI` convention, giving traced/cached runs a proper identity key instead of the empty default from `BaseChatModel`.
+
+### Changed
+- `UiPathChat._llm_type` now returns `"uipath-chat"` (was `"UiPath-Normalized"`) to align with the lowercase-hyphenated convention used by `openai-chat`, `azure-openai-chat`, etc.
+
+### Changed
+- Bumped dependency floors to the latest installed versions: `langchain-openai>=1.1.16`.
+- Minimum `uipath-llm-client` bumped to 1.9.6 to match the core dependency-floor release.
+
 ## [1.9.5] - 2026-04-21
 
 ### Changed

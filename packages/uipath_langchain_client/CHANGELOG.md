@@ -2,6 +2,12 @@
 
 All notable changes to `uipath_langchain_client` will be documented in this file.
 
+## [1.10.0] - 2026-04-23
+
+### Added
+- `UiPathBaseChatModel` now strips sampling kwargs (`temperature`, `top_p`, `top_k`, `frequency_penalty`, `presence_penalty`, `seed`, `logit_bias`, `logprobs`, `top_logprobs`) at invocation time when the model's `modelDetails.shouldSkipTemperature` is true. Fixes `anthropic.claude-opus-4-7` rejecting any sampling parameter passed to `.invoke()` / `.ainvoke()` / streams.
+- `model_details` field on `UiPathBaseLLMClient` (forwarded eagerly by `get_chat_model`; lazy-resolved from `client_settings.get_model_info` on direct instantiation). Each strip logs a warning via `self.logger` when one is configured.
+
 ## [1.9.9] - 2026-04-23
 
 ### Changed

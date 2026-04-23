@@ -1,9 +1,19 @@
-"""Unit tests for invocation-time stripping of sampling params based on
-``modelDetails.shouldSkipTemperature``.
+"""Unit tests for the ``disabled_params`` + ``model_details`` wiring.
 
-These tests monkeypatch ``client_settings.get_model_info`` and the instance's
-``_uipath_generate`` / ``_uipath_agenerate`` to capture kwargs, so no HTTP is
-made by this file.
+Covers two layers:
+
+1. **Init-time clearing** via the ``@model_validator(mode="before")`` on
+   ``UiPathBaseLLMClient``: fields that match ``disabled_params`` (either
+   provided or derived from ``model_details.shouldSkipTemperature``) are
+   popped before pydantic field validation runs, so they never enter
+   ``model_fields_set``.
+
+2. **Invocation-time stripping** via ``strip_disabled_kwargs`` wired into
+   ``_generate``/``_agenerate``/``_stream``/``_astream`` on
+   ``UiPathBaseChatModel``.
+
+Tests monkeypatch ``client_settings.get_model_info`` and stub the
+``_uipath_generate``/``_uipath_agenerate`` methods so no HTTP is ever made.
 """
 
 import logging
@@ -31,9 +41,7 @@ def _stub_model_info(
     extra: dict[str, Any] | None = None,
     raises: BaseException | None = None,
 ) -> None:
-    """Replace ``client_settings.get_model_info`` with a stub that returns
-    (or raises) a controlled value. ``monkeypatch`` reverts this at teardown.
-    """
+    """Replace ``client_settings.get_model_info`` with a stub."""
 
     def _stub(model_name: str, **kwargs: Any) -> dict[str, Any]:
         if raises is not None:
@@ -54,10 +62,6 @@ def _stub_model_info(
 def _stub_generate(
     monkeypatch: pytest.MonkeyPatch, instance: UiPathChat, captured: dict[str, Any]
 ) -> None:
-    """Replace ``_uipath_generate`` on the instance with a stub that records the
-    kwargs it receives and returns a minimal ChatResult.
-    """
-
     def _stub(
         messages: Any, stop: Any = None, run_manager: Any = None, **kwargs: Any
     ) -> ChatResult:
@@ -82,7 +86,74 @@ def _stub_agenerate(
 
 
 # --------------------------------------------------------------------------- #
-# invocation-time stripping — sync
+# init-time clearing (the new layer)
+# --------------------------------------------------------------------------- #
+
+
+def test_init_clears_sampling_fields_when_model_details_flag_set(
+    client_settings: UiPathBaseSettings,
+) -> None:
+    llm = UiPathChat(
+        model="anthropic.claude-opus-4-7",
+        settings=client_settings,
+        model_details={"shouldSkipTemperature": True},
+        temperature=0.5,
+        top_p=0.9,
+        frequency_penalty=0.1,
+    )
+    # The popped fields must not be in model_fields_set, and _default_params
+    # (which filters by that set) must not emit them.
+    for param in ("temperature", "top_p", "frequency_penalty"):
+        assert param not in llm.model_fields_set
+    assert "temperature" not in llm._default_params
+    assert "top_p" not in llm._default_params
+    # disabled_params is derived from modelDetails when not explicitly passed.
+    assert llm.disabled_params is not None
+    assert set(llm.disabled_params) >= set(DISABLED_SAMPLING_PARAMS)
+
+
+def test_user_provided_disabled_params_wins_over_model_details(
+    client_settings: UiPathBaseSettings,
+) -> None:
+    llm = UiPathChat(
+        model="anthropic.claude-opus-4-7",
+        settings=client_settings,
+        model_details={"shouldSkipTemperature": True},
+        disabled_params={"logit_bias": None},  # overrides the derivation
+        temperature=0.5,  # should survive because logit_bias is the only disabled key
+    )
+    assert llm.disabled_params == {"logit_bias": None}
+    # temperature is NOT disabled here, so the user's value survives.
+    assert llm.temperature == 0.5
+
+
+def test_init_clears_from_model_kwargs_too(
+    client_settings: UiPathBaseSettings,
+) -> None:
+    llm = UiPathChat(
+        model="anthropic.claude-opus-4-7",
+        settings=client_settings,
+        model_details={"shouldSkipTemperature": True},
+        model_kwargs={"temperature": 0.5, "max_tokens": 100},
+    )
+    # temperature popped from model_kwargs; max_tokens preserved.
+    assert "temperature" not in llm.model_kwargs
+    assert llm.model_kwargs == {"max_tokens": 100}
+
+
+def test_init_no_op_when_flag_absent(client_settings: UiPathBaseSettings) -> None:
+    llm = UiPathChat(
+        model="some-chatty-model",
+        settings=client_settings,
+        model_details={},
+        temperature=0.5,
+    )
+    assert llm.temperature == 0.5
+    assert "temperature" in llm.model_fields_set
+
+
+# --------------------------------------------------------------------------- #
+# invocation-time stripping
 # --------------------------------------------------------------------------- #
 
 
@@ -99,13 +170,12 @@ def test_invoke_strips_sampling_kwargs_when_flag_set(
 
     llm.invoke("hi", temperature=0.3, top_p=0.9, top_k=5, seed=42, max_tokens=100)
 
-    # All sampling kwargs stripped; non-sampling kwargs preserved.
     for p in ("temperature", "top_p", "top_k", "seed"):
         assert p not in captured, f"{p} should have been stripped"
     assert captured.get("max_tokens") == 100
 
 
-def test_invoke_strips_all_listed_sampling_params(
+def test_invoke_strips_every_listed_sampling_param(
     monkeypatch: pytest.MonkeyPatch, client_settings: UiPathBaseSettings
 ) -> None:
     llm = UiPathChat(
@@ -116,8 +186,6 @@ def test_invoke_strips_all_listed_sampling_params(
     captured: dict[str, Any] = {}
     _stub_generate(monkeypatch, llm, captured)
 
-    # Pass every sampling param plus an unrelated kwarg; assert every
-    # sampling param is stripped and only max_tokens survives.
     kwargs: dict[str, Any] = {p: 0.1 for p in DISABLED_SAMPLING_PARAMS}
     kwargs["max_tokens"] = 50
     llm.invoke("x", **kwargs)  # type: ignore[arg-type]
@@ -130,7 +198,7 @@ def test_invoke_strips_all_listed_sampling_params(
 def test_n_is_not_stripped(
     monkeypatch: pytest.MonkeyPatch, client_settings: UiPathBaseSettings
 ) -> None:
-    # `n` (candidate count) is intentionally NOT part of _SAMPLING_PARAMS.
+    # `n` (candidate count) is intentionally NOT part of DISABLED_SAMPLING_PARAMS.
     llm = UiPathChat(
         model="anthropic.claude-opus-4-7",
         settings=client_settings,
@@ -141,11 +209,6 @@ def test_n_is_not_stripped(
 
     llm.invoke("x", n=3)
     assert captured.get("n") == 3
-
-
-# --------------------------------------------------------------------------- #
-# invocation-time stripping — async
-# --------------------------------------------------------------------------- #
 
 
 @pytest.mark.asyncio
@@ -166,18 +229,13 @@ async def test_ainvoke_strips_sampling_kwargs_when_flag_set(
     assert "top_p" not in captured
 
 
-# --------------------------------------------------------------------------- #
-# no-flag -> pass-through
-# --------------------------------------------------------------------------- #
-
-
 def test_invoke_preserves_kwargs_when_flag_absent(
     monkeypatch: pytest.MonkeyPatch, client_settings: UiPathBaseSettings
 ) -> None:
     llm = UiPathChat(
         model="some-chatty-model",
         settings=client_settings,
-        model_details={},  # empty — no flag
+        model_details={},
     )
     captured: dict[str, Any] = {}
     _stub_generate(monkeypatch, llm, captured)
@@ -188,20 +246,43 @@ def test_invoke_preserves_kwargs_when_flag_absent(
     assert captured["top_p"] == 0.9
 
 
-def test_invoke_preserves_kwargs_when_flag_false(
+def test_invoke_honors_user_supplied_disabled_params(
     monkeypatch: pytest.MonkeyPatch, client_settings: UiPathBaseSettings
 ) -> None:
     llm = UiPathChat(
         model="some-chatty-model",
         settings=client_settings,
-        model_details={"shouldSkipTemperature": False},
+        model_details={},
+        disabled_params={"frequency_penalty": None},
     )
     captured: dict[str, Any] = {}
     _stub_generate(monkeypatch, llm, captured)
 
-    llm.invoke("hi", temperature=0.3)
+    llm.invoke("x", temperature=0.3, frequency_penalty=1.0)
 
-    assert captured["temperature"] == 0.3
+    assert captured.get("temperature") == 0.3
+    assert "frequency_penalty" not in captured
+
+
+def test_invoke_honors_disabled_params_value_list(
+    monkeypatch: pytest.MonkeyPatch, client_settings: UiPathBaseSettings
+) -> None:
+    # langchain-openai semantics: list spec means "disabled when value is in list".
+    llm = UiPathChat(
+        model="some-chatty-model",
+        settings=client_settings,
+        model_details={},
+        disabled_params={"temperature": [0.0, 1.5]},
+    )
+    captured: dict[str, Any] = {}
+    _stub_generate(monkeypatch, llm, captured)
+
+    llm.invoke("x", temperature=1.5)  # matches -> stripped
+    assert "temperature" not in captured
+
+    captured.clear()
+    llm.invoke("x", temperature=0.7)  # does not match -> preserved
+    assert captured.get("temperature") == 0.7
 
 
 # --------------------------------------------------------------------------- #
@@ -228,9 +309,9 @@ def test_warning_logged_when_logger_set(
         llm.invoke("x", temperature=0.3)
 
     assert any(
-        "temperature" in rec.getMessage() and "shouldSkipTemperature" in rec.getMessage()
+        "temperature" in rec.getMessage() and "disabled" in rec.getMessage()
         for rec in caplog.records
-    ), "expected a warning mentioning 'temperature' and 'shouldSkipTemperature'"
+    ), "expected a warning mentioning 'temperature' and 'disabled'"
 
 
 def test_no_warning_when_logger_is_none(
@@ -250,9 +331,8 @@ def test_no_warning_when_logger_is_none(
     with caplog.at_level(logging.DEBUG):
         llm.invoke("x", temperature=0.3)
 
-    # temperature was still stripped — we just don't log when logger is None.
     assert "temperature" not in captured
-    assert not any("shouldSkipTemperature" in rec.getMessage() for rec in caplog.records)
+    assert not any("disabled invocation param" in rec.getMessage() for rec in caplog.records)
 
 
 def test_no_warning_when_nothing_to_strip(
@@ -271,65 +351,45 @@ def test_no_warning_when_nothing_to_strip(
     _stub_generate(monkeypatch, llm, captured)
 
     with caplog.at_level(logging.WARNING, logger=logger.name):
-        llm.invoke("x", max_tokens=50)  # no sampling kwargs at all
+        llm.invoke("x", max_tokens=50)
 
-    assert not any("shouldSkipTemperature" in rec.getMessage() for rec in caplog.records)
+    assert not any("disabled invocation param" in rec.getMessage() for rec in caplog.records)
 
 
 # --------------------------------------------------------------------------- #
-# eager model_details resolution via the UiPathBaseLLMClient validator
+# discovery fallback
 # --------------------------------------------------------------------------- #
 
 
-def test_validator_populates_model_details_on_direct_instantiation(
+def test_validator_fetches_model_details_when_not_provided(
     monkeypatch: pytest.MonkeyPatch, client_settings: UiPathBaseSettings
 ) -> None:
     _stub_model_info(monkeypatch, client_settings, model_details={"shouldSkipTemperature": True})
-    # No model_details passed — the validator should fetch and populate it.
-    llm = UiPathChat(model="anthropic.claude-opus-4-7", settings=client_settings)
+    llm = UiPathChat(
+        model="anthropic.claude-opus-4-7",
+        settings=client_settings,
+        temperature=0.5,
+    )
+    # model_details resolved from discovery; disabled_params derived; temperature stripped.
     assert llm.model_details == {"shouldSkipTemperature": True}
-
-    captured: dict[str, Any] = {}
-    _stub_generate(monkeypatch, llm, captured)
-    llm.invoke("x", temperature=0.5)
-    assert "temperature" not in captured
+    assert llm.disabled_params is not None
+    assert "temperature" in llm.disabled_params
+    assert "temperature" not in llm.model_fields_set
 
 
 def test_validator_swallows_discovery_errors(
     monkeypatch: pytest.MonkeyPatch, client_settings: UiPathBaseSettings
 ) -> None:
     _stub_model_info(monkeypatch, client_settings, raises=RuntimeError("boom"))
-    llm = UiPathChat(model="anthropic.claude-opus-4-7", settings=client_settings)
-
-    # Discovery failure => we fall back to empty model_details and don't strip.
-    assert llm.model_details == {}
-
-    captured: dict[str, Any] = {}
-    _stub_generate(monkeypatch, llm, captured)
-    llm.invoke("x", temperature=0.5)
-    assert captured["temperature"] == 0.5
-
-
-def test_validator_does_not_overwrite_explicitly_provided_model_details(
-    monkeypatch: pytest.MonkeyPatch, client_settings: UiPathBaseSettings
-) -> None:
-    # If a caller (or the factory) already passed model_details, post_init
-    # must not call get_model_info and must not overwrite the forwarded value.
-    called: dict[str, bool] = {"called": False}
-
-    def _stub(*args: Any, **kwargs: Any) -> dict[str, Any]:
-        called["called"] = True
-        return {"modelDetails": {"shouldSkipTemperature": False}}
-
-    monkeypatch.setattr(client_settings, "get_model_info", _stub)
-
     llm = UiPathChat(
         model="anthropic.claude-opus-4-7",
         settings=client_settings,
-        model_details={"shouldSkipTemperature": True},
+        temperature=0.5,
     )
-    assert llm.model_details == {"shouldSkipTemperature": True}
-    assert called["called"] is False
+    # Discovery failure => model_details is {} and nothing is stripped.
+    assert llm.model_details == {}
+    assert llm.disabled_params is None
+    assert llm.temperature == 0.5
 
 
 # --------------------------------------------------------------------------- #
@@ -337,7 +397,7 @@ def test_validator_does_not_overwrite_explicitly_provided_model_details(
 # --------------------------------------------------------------------------- #
 
 
-def test_factory_forwards_model_details_to_normalized_chat(
+def test_factory_forwards_model_details(
     monkeypatch: pytest.MonkeyPatch, client_settings: UiPathBaseSettings
 ) -> None:
     from uipath_langchain_client.settings import RoutingMode
@@ -352,6 +412,8 @@ def test_factory_forwards_model_details_to_normalized_chat(
 
     assert isinstance(llm, UiPathChat)
     assert llm.model_details == {"shouldSkipTemperature": True}
+    assert llm.disabled_params is not None
+    assert "temperature" in llm.disabled_params
 
 
 def test_factory_forwards_empty_dict_when_no_model_details(
@@ -368,5 +430,5 @@ def test_factory_forwards_empty_dict_when_no_model_details(
     )
 
     assert isinstance(llm, UiPathChat)
-    # None -> {} via `or {}` in the factory
     assert llm.model_details == {}
+    assert llm.disabled_params is None

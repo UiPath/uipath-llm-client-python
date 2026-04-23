@@ -5,7 +5,7 @@ All notable changes to `uipath_llm_client` (core package) will be documented in 
 ## [1.10.0] - 2026-04-23
 
 ### Added
-- `uipath.llm_client.utils.sampling` module exposing `DISABLED_SAMPLING_PARAMS`, `should_skip_sampling(model_details)`, and `strip_disabled_sampling_kwargs(...)`. Centralizes the gateway's rule that `modelDetails.shouldSkipTemperature=True` implies the full sampling set is rejected (temperature, top_p, top_k, frequency/presence penalty, seed, logit_bias, logprobs, top_logprobs). Framework-agnostic helpers intended for reuse by any wrapper layer.
+- `uipath.llm_client.utils.sampling` module exposing `DISABLED_SAMPLING_PARAMS`, `disabled_params_from_model_details`, `is_disabled_value`, and `strip_disabled_kwargs`. The helpers use the langchain-openai-style `disabled_params` format (`{name: None | [values]}`) so they compose with the existing `langchain_openai._filter_disabled_params` path. `disabled_params_from_model_details` derives the disabled-param map from a discovery-endpoint `modelDetails` dict (today: `shouldSkipTemperature=True` disables the full sampling set — temperature, top_p, top_k, frequency/presence penalty, seed, logit_bias, logprobs, top_logprobs).
 
 ## [1.9.9] - 2026-04-23
 

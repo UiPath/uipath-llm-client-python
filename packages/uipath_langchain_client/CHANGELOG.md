@@ -5,8 +5,12 @@ All notable changes to `uipath_langchain_client` will be documented in this file
 ## [1.10.0] - 2026-04-23
 
 ### Added
-- `UiPathBaseChatModel` now strips sampling kwargs (`temperature`, `top_p`, `top_k`, `frequency_penalty`, `presence_penalty`, `seed`, `logit_bias`, `logprobs`, `top_logprobs`) at invocation time when the model's `modelDetails.shouldSkipTemperature` is true. Fixes `anthropic.claude-opus-4-7` rejecting any sampling parameter passed to `.invoke()` / `.ainvoke()` / streams. The shared helpers live in the core package at `uipath.llm_client.utils.sampling` and are re-exported from `uipath_langchain_client.utils`.
-- `model_details` field on `UiPathBaseLLMClient`, populated eagerly via a `@field_validator("model_details", mode="after")`: `get_chat_model` forwards it from the discovery response it already fetches; direct instantiation resolves it via `client_settings.get_model_info` (backed by the class-cached discovery response, so at most one network call per process). Each strip logs a warning via `self.logger` when one is configured.
+- `model_details` and `disabled_params` fields on `UiPathBaseLLMClient`, plus a single `@model_validator(mode="before")` that (1) forwards the factory-supplied `model_details` or fetches it from `client_settings.get_model_info`, (2) derives `disabled_params` from it when the caller didn't provide one, and (3) pops matching keys from the input `values` dict *before* pydantic field validation — the langchain-openai pattern used for o1/GPT-5 temperature. Result: `UiPathChat(model="anthropic.claude-opus-4-7", temperature=0.5)` no longer sets `temperature` on the instance (it never enters `model_fields_set`), and `llm.invoke("...", temperature=0.2)` strips it from kwargs.
+- `disabled_params` uses the langchain-openai shape (`{name: None | [values]}`), so subclasses inheriting from `ChatOpenAI` / `AzureChatOpenAI` also benefit from the native `_filter_disabled_params` path inside `bind_tools`. Users can override `disabled_params` explicitly — the validator respects any value the caller passes in and only falls back to deriving from `model_details` when `None`.
+- Runtime stripping in the four `_generate`/`_agenerate`/`_stream`/`_astream` wrappers on `UiPathBaseChatModel` now delegates to `uipath.llm_client.utils.sampling.strip_disabled_kwargs`, which is generic over `disabled_params`. A warning is logged via `self.logger` for each stripped key when a logger is configured.
+
+### Removed
+- The unused `disabled_params` field declaration on `UiPathChat` (now inherited from `UiPathBaseLLMClient`).
 
 ### Changed
 - Bumped `uipath-llm-client` floor to `>=1.10.0` to match the release that adds `uipath.llm_client.utils.sampling`.

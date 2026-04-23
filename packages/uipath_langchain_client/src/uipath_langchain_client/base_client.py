@@ -27,7 +27,7 @@ import logging
 from abc import ABC
 from collections.abc import AsyncGenerator, Generator, Mapping, Sequence
 from functools import cached_property
-from typing import Any, ClassVar, Literal, Self
+from typing import Any, ClassVar, Literal
 
 from httpx import URL, Response
 from langchain_core.callbacks import (
@@ -49,7 +49,11 @@ from uipath.llm_client.utils.headers import (
     get_captured_response_headers,
     set_captured_response_headers,
 )
-from uipath.llm_client.utils.sampling import strip_disabled_sampling_kwargs
+from uipath.llm_client.utils.sampling import (
+    disabled_params_from_model_details,
+    is_disabled_value,
+    strip_disabled_kwargs,
+)
 from uipath_langchain_client.settings import (
     UiPathAPIConfig,
     UiPathBaseSettings,
@@ -112,8 +116,14 @@ class UiPathBaseLLMClient(BaseModel, ABC):
     model_details: dict[str, Any] | None = Field(
         default=None,
         description="Per-model capability flags sourced from the discovery endpoint "
-        "(e.g. {'shouldSkipTemperature': True}). The factory forwards it; when absent, "
-        "``_resolve_model_details`` below fetches it from client_settings.",
+        "(e.g. {'shouldSkipTemperature': True}). Passed through by the factory; "
+        "resolved from client_settings.get_model_info otherwise.",
+    )
+    disabled_params: dict[str, Any] | None = Field(
+        default=None,
+        description="langchain-openai-style map of parameters that must not be sent to "
+        "this model. Keys are param names; values are None (always disabled) or a list "
+        "of disallowed values. Derived from ``model_details`` when not provided.",
     )
 
     default_headers: Mapping[str, str] | None = Field(
@@ -148,22 +158,62 @@ class UiPathBaseLLMClient(BaseModel, ABC):
         description="Logger for request/response logging",
     )
 
-    @model_validator(mode="after")
-    def _resolve_model_details(self) -> Self:
-        # Fetch modelDetails from the discovery endpoint when the factory
-        # didn't forward it. get_available_models is class-cached inside the
-        # settings layer, so at most one discovery HTTP call fires per process
-        # regardless of how many chat/embedding models are built.
-        if self.model_details is None:
-            try:
-                info = self.client_settings.get_model_info(
-                    self.model_name,
-                    byo_connection_id=self.byo_connection_id,
-                )
-                self.model_details = info.get("modelDetails") or {}
-            except Exception:
-                self.model_details = {}
-        return self
+    @model_validator(mode="before")
+    @classmethod
+    def _resolve_model_details_and_strip(cls, values: Any) -> Any:
+        """Resolve ``model_details`` and apply ``disabled_params`` before validation.
+
+        Mirrors the ``mode="before"`` + ``values.pop(...)`` pattern
+        ``langchain-openai`` uses for o1/GPT-5 temperature. Popping at this
+        stage means the field never enters ``model_fields_set``, so downstream
+        consumers of ``model_fields_set`` (e.g. ``UiPathChat._default_params``)
+        naturally skip it — no private-attribute hackery.
+        """
+        if not isinstance(values, dict):
+            return values
+
+        # 1. Resolve model_details — caller-provided wins, else fetch from settings.
+        if values.get("model_details") is None:
+            settings = values.get("client_settings") or values.get("settings")
+            if settings is None:
+                try:
+                    settings = get_default_client_settings()
+                    values["client_settings"] = settings
+                except Exception:
+                    settings = None
+            model_name = values.get("model_name") or values.get("model")
+            if settings is not None and model_name:
+                try:
+                    info = settings.get_model_info(
+                        model_name,
+                        byo_connection_id=values.get("byo_connection_id"),
+                    )
+                    values["model_details"] = info.get("modelDetails") or {}
+                except Exception:
+                    values["model_details"] = {}
+            else:
+                values["model_details"] = {}
+
+        # 2. Derive disabled_params when caller didn't provide one.
+        if values.get("disabled_params") is None:
+            derived = disabled_params_from_model_details(values.get("model_details"))
+            if derived:
+                values["disabled_params"] = derived
+
+        # 3. Pop any top-level field and any model_kwargs entry that matches
+        #    the disabled_params spec, so those values never become set fields.
+        disabled = values.get("disabled_params") or {}
+        if disabled:
+            for key in list(values.keys()):
+                if key in disabled and is_disabled_value(values[key], disabled[key]):
+                    values.pop(key, None)
+            model_kwargs = values.get("model_kwargs")
+            if isinstance(model_kwargs, dict):
+                for key in list(model_kwargs.keys()):
+                    if key in disabled and is_disabled_value(model_kwargs[key], disabled[key]):
+                        model_kwargs.pop(key, None)
+
+        return values
 
     @cached_property
     def uipath_sync_client(self) -> UiPathHttpxClient:
@@ -389,9 +439,9 @@ class UiPathBaseChatModel(UiPathBaseLLMClient, BaseChatModel):
         run_manager: CallbackManagerForLLMRun | None = None,
         **kwargs: Any,
     ) -> ChatResult:
-        kwargs = strip_disabled_sampling_kwargs(
+        kwargs = strip_disabled_kwargs(
             kwargs,
-            model_details=self.model_details,
+            disabled_params=self.disabled_params,
             model_name=self.model_name,
             logger=self.logger,
         )
@@ -420,9 +470,9 @@ class UiPathBaseChatModel(UiPathBaseLLMClient, BaseChatModel):
         run_manager: AsyncCallbackManagerForLLMRun | None = None,
         **kwargs: Any,
     ) -> ChatResult:
-        kwargs = strip_disabled_sampling_kwargs(
+        kwargs = strip_disabled_kwargs(
             kwargs,
-            model_details=self.model_details,
+            disabled_params=self.disabled_params,
             model_name=self.model_name,
             logger=self.logger,
         )
@@ -453,9 +503,9 @@ class UiPathBaseChatModel(UiPathBaseLLMClient, BaseChatModel):
         run_manager: CallbackManagerForLLMRun | None = None,
         **kwargs: Any,
     ) -> Generator[ChatGenerationChunk, None, None]:
-        kwargs = strip_disabled_sampling_kwargs(
+        kwargs = strip_disabled_kwargs(
             kwargs,
-            model_details=self.model_details,
+            disabled_params=self.disabled_params,
             model_name=self.model_name,
             logger=self.logger,
         )
@@ -489,9 +539,9 @@ class UiPathBaseChatModel(UiPathBaseLLMClient, BaseChatModel):
         run_manager: AsyncCallbackManagerForLLMRun | None = None,
         **kwargs: Any,
     ) -> AsyncGenerator[ChatGenerationChunk, None]:
-        kwargs = strip_disabled_sampling_kwargs(
+        kwargs = strip_disabled_kwargs(
             kwargs,
-            model_details=self.model_details,
+            disabled_params=self.disabled_params,
             model_name=self.model_name,
             logger=self.logger,
         )

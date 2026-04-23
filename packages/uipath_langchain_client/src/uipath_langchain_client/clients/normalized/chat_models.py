@@ -179,7 +179,6 @@ class UiPathChat(UiPathBaseChatModel):
     seed: int | None = None
 
     model_kwargs: dict[str, Any] = Field(default_factory=dict)
-    disabled_params: dict[str, Any] | None = None
 
     # OpenAI
     logit_bias: dict[str, int] | None = None

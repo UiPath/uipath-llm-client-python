@@ -2,11 +2,11 @@
 
 Covers two layers:
 
-1. **Init-time clearing** via the ``@model_validator(mode="before")`` on
-   ``UiPathBaseLLMClient``: fields that match ``disabled_params`` (either
-   provided or derived from ``model_details.shouldSkipTemperature``) are
-   popped before pydantic field validation runs, so they never enter
-   ``model_fields_set``.
+1. **Metadata resolution** via ``@model_validator(mode="after")`` on
+   ``UiPathBaseLLMClient``: ``model_details`` is forwarded by the factory or
+   fetched from ``client_settings.get_model_info``; ``disabled_params`` is the
+   merge of anything the caller passed and what we can derive from
+   ``model_details``.
 
 2. **Invocation-time stripping** via ``strip_disabled_kwargs`` wired into
    ``_generate``/``_agenerate``/``_stream``/``_astream`` on
@@ -86,70 +86,64 @@ def _stub_agenerate(
 
 
 # --------------------------------------------------------------------------- #
-# init-time clearing (the new layer)
+# metadata resolution (model_details + disabled_params)
 # --------------------------------------------------------------------------- #
 
 
-def test_init_clears_sampling_fields_when_model_details_flag_set(
+def test_disabled_params_derived_from_model_details_flag(
     client_settings: UiPathBaseSettings,
 ) -> None:
     llm = UiPathChat(
         model="anthropic.claude-opus-4-7",
         settings=client_settings,
         model_details={"shouldSkipTemperature": True},
-        temperature=0.5,
-        top_p=0.9,
-        frequency_penalty=0.1,
     )
-    # The popped fields must not be in model_fields_set, and _default_params
-    # (which filters by that set) must not emit them.
-    for param in ("temperature", "top_p", "frequency_penalty"):
-        assert param not in llm.model_fields_set
-    assert "temperature" not in llm._default_params
-    assert "top_p" not in llm._default_params
-    # disabled_params is derived from modelDetails when not explicitly passed.
     assert llm.disabled_params is not None
-    assert set(llm.disabled_params) >= set(DISABLED_SAMPLING_PARAMS)
+    assert set(llm.disabled_params) == set(DISABLED_SAMPLING_PARAMS)
 
 
-def test_user_provided_disabled_params_wins_over_model_details(
+def test_user_provided_disabled_params_merges_with_derived(
     client_settings: UiPathBaseSettings,
 ) -> None:
+    # modelDetails derives the sampling set; caller adds an extra key
+    # (logit_bias is already in the sampling set, so we use stream_usage
+    # to demonstrate a truly additive merge).
     llm = UiPathChat(
         model="anthropic.claude-opus-4-7",
         settings=client_settings,
         model_details={"shouldSkipTemperature": True},
-        disabled_params={"logit_bias": None},  # overrides the derivation
-        temperature=0.5,  # should survive because logit_bias is the only disabled key
+        disabled_params={"stream_usage": None},
     )
-    assert llm.disabled_params == {"logit_bias": None}
-    # temperature is NOT disabled here, so the user's value survives.
-    assert llm.temperature == 0.5
+    assert llm.disabled_params is not None
+    assert set(llm.disabled_params) == set(DISABLED_SAMPLING_PARAMS) | {"stream_usage"}
 
 
-def test_init_clears_from_model_kwargs_too(
+def test_user_provided_disabled_params_overrides_derived_entry(
     client_settings: UiPathBaseSettings,
 ) -> None:
+    # If the caller supplies a narrower spec for an already-derived key
+    # (e.g. only disable temperature when value is 0.0), their spec wins.
     llm = UiPathChat(
         model="anthropic.claude-opus-4-7",
         settings=client_settings,
         model_details={"shouldSkipTemperature": True},
-        model_kwargs={"temperature": 0.5, "max_tokens": 100},
+        disabled_params={"temperature": [0.0]},
     )
-    # temperature popped from model_kwargs; max_tokens preserved.
-    assert "temperature" not in llm.model_kwargs
-    assert llm.model_kwargs == {"max_tokens": 100}
+    assert llm.disabled_params is not None
+    assert llm.disabled_params["temperature"] == [0.0]
+    # Other derived keys remain disabled unconditionally.
+    assert llm.disabled_params["top_p"] is None
 
 
-def test_init_no_op_when_flag_absent(client_settings: UiPathBaseSettings) -> None:
+def test_no_disabled_params_when_flag_absent(
+    client_settings: UiPathBaseSettings,
+) -> None:
     llm = UiPathChat(
         model="some-chatty-model",
         settings=client_settings,
         model_details={},
-        temperature=0.5,
     )
-    assert llm.temperature == 0.5
-    assert "temperature" in llm.model_fields_set
+    assert llm.disabled_params is None
 
 
 # --------------------------------------------------------------------------- #
@@ -368,13 +362,11 @@ def test_validator_fetches_model_details_when_not_provided(
     llm = UiPathChat(
         model="anthropic.claude-opus-4-7",
         settings=client_settings,
-        temperature=0.5,
     )
-    # model_details resolved from discovery; disabled_params derived; temperature stripped.
+    # model_details resolved from discovery; disabled_params derived.
     assert llm.model_details == {"shouldSkipTemperature": True}
     assert llm.disabled_params is not None
     assert "temperature" in llm.disabled_params
-    assert "temperature" not in llm.model_fields_set
 
 
 def test_validator_swallows_discovery_errors(

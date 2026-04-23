@@ -51,7 +51,6 @@ from uipath.llm_client.utils.headers import (
 )
 from uipath.llm_client.utils.sampling import (
     disabled_params_from_model_details,
-    is_disabled_value,
     strip_disabled_kwargs,
 )
 from uipath_langchain_client.settings import (
@@ -159,17 +158,21 @@ class UiPathBaseLLMClient(BaseModel, ABC):
     )
 
     @model_validator(mode="after")
-    def _resolve_disabled_params(self) -> Self:
-        """Resolve ``model_details`` / ``disabled_params`` and clear any matching fields.
+    def _finalize_model_metadata(self) -> Self:
+        """Resolve ``model_details`` from discovery and merge ``disabled_params``.
 
-        Runs after pydantic has assigned fields, so everything is accessed
-        via typed attributes (``self.client_settings``, ``self.model_name``)
-        instead of juggling raw-dict aliases. Fields that end up disabled are
-        both reset to ``None`` *and* removed from ``__pydantic_fields_set__``
-        so downstream consumers (e.g. ``UiPathChat._default_params``, which
-        filters by ``model_fields_set``) naturally exclude them.
+        Runs after pydantic has validated the fields, so ``self.client_settings``
+        (with its ``default_factory``) and ``self.model_name`` are already live.
+
+        ``model_details`` is resolved once: caller-forwarded value wins, then a
+        lookup against ``client_settings.get_model_info`` (backed by the
+        class-cached discovery response), else an empty mapping on failure.
+
+        ``disabled_params`` is the merge of what the caller passed and what we
+        can derive from ``model_details`` (via
+        ``disabled_params_from_model_details``). User-provided keys win on
+        conflicts, so callers can override a derived entry by name.
         """
-        # 1. Resolve model_details — caller-provided wins, else fetch from settings.
         if self.model_details is None:
             try:
                 info = self.client_settings.get_model_info(
@@ -180,29 +183,10 @@ class UiPathBaseLLMClient(BaseModel, ABC):
             except Exception:
                 self.model_details = {}
 
-        # 2. Derive disabled_params when caller didn't provide one.
-        if self.disabled_params is None:
-            self.disabled_params = disabled_params_from_model_details(self.model_details)
-
-        if not self.disabled_params:
-            return self
-
-        # 3. Clear any set field whose value matches the disabled spec.
-        for name in list(self.model_fields_set):
-            if name in self.disabled_params and is_disabled_value(
-                getattr(self, name, None), self.disabled_params[name]
-            ):
-                object.__setattr__(self, name, None)
-                self.__pydantic_fields_set__.discard(name)
-
-        # 4. Also strip matching entries from model_kwargs if the subclass has one.
-        model_kwargs = getattr(self, "model_kwargs", None)
-        if isinstance(model_kwargs, dict):
-            for name in list(model_kwargs.keys()):
-                if name in self.disabled_params and is_disabled_value(
-                    model_kwargs[name], self.disabled_params[name]
-                ):
-                    model_kwargs.pop(name, None)
+        derived = disabled_params_from_model_details(self.model_details) or {}
+        user_provided = self.disabled_params or {}
+        merged = {**derived, **user_provided}
+        self.disabled_params = merged or None
 
         return self
 

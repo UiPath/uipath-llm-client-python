@@ -2,16 +2,12 @@
 
 All notable changes to `uipath_langchain_client` will be documented in this file.
 
-## [1.9.10] - 2026-04-23
-
-### Fixed
-- `UiPathChatAnthropicBedrock` now strips `temperature`, `top_k`, and `top_p` from the request payload when the model name matches `claude-opus-4` (e.g. `anthropic.claude-opus-4-7`). These sampling parameters are not supported by Claude Opus 4+ reasoning models and previously caused a `400 Bad Request` from the gateway. Requests for other models (e.g. claude-haiku) are unaffected.
-
 ## [1.9.9] - 2026-04-23
 
-### Changed
-- Bumped dependency floors to the latest installed versions: `langchain-openai>=1.2.0`, `langchain-aws>=1.4.5`.
-- Minimum `uipath-llm-client` bumped to 1.9.9 to match the core dependency-floor release.
+### Fixed
+- Claude Opus 4+ reasoning models (e.g. `anthropic.claude-opus-4-7`) reject `temperature`, `top_k`, and `top_p` with `400 Bad Request`. All five UiPath Anthropic clients now strip those params automatically: `UiPathChatAnthropic` and `UiPathChatAnthropicBedrock` via `_get_request_payload`; `UiPathChatBedrockConverse` via `_converse_params` (strips `temperature`/`topP` from `inferenceConfig`); `UiPathChatBedrock` (INVOKE) via model validator; `UiPathChat` (normalized) via `_default_params`. Requests for other models are unaffected.
+- `UiPathChat._default_params` drops `temperature` when `thinking` is also set. Anthropic's extended thinking API requires `temperature=1` (its default) and rejects any other explicit value.
+- Detection logic (`is_claude_opus_4_or_above`) and the unsupported-param constant (`CLAUDE_OPUS_4_UNSUPPORTED_SAMPLING_PARAMS`) are defined in core `uipath.llm_client.utils.model_family` and re-exported from `uipath_langchain_client.utils`.
 
 ## [1.9.8] - 2026-04-22
 
@@ -442,3 +438,4 @@ All notable changes to `uipath_langchain_client` will be documented in this file
 - Tool/function calling support
 - Full compatibility with LangChain's `BaseChatModel` interface
 - httpx-based HTTP handling for consistent behavior
+

@@ -1,4 +1,3 @@
-import re
 from functools import cached_property
 from typing import Any, Self
 
@@ -13,6 +12,10 @@ from uipath_langchain_client.settings import (
     RoutingMode,
     UiPathAPIConfig,
     VendorType,
+)
+from uipath_langchain_client.utils import (
+    CLAUDE_OPUS_4_UNSUPPORTED_SAMPLING_PARAMS,
+    is_claude_opus_4_or_above,
 )
 
 try:
@@ -51,16 +54,6 @@ except ImportError as e:
     ) from e
 
 
-# Sampling parameters that Claude Opus 4+ (reasoning models) do not support.
-# The API returns 400 if any of these are present in the request payload.
-_CLAUDE_OPUS_4_UNSUPPORTED_PARAMS: frozenset[str] = frozenset({"temperature", "top_k", "top_p"})
-
-
-def _is_claude_opus_4_or_above(model_name: str) -> bool:
-    """Return True for Claude Opus 4+ models that reject sampling parameters."""
-    return bool(re.search(r"claude-opus-4", model_name, re.IGNORECASE))
-
-
 class UiPathChatBedrockConverse(UiPathBaseChatModel, ChatBedrockConverse):  # type: ignore[override]
     api_config: UiPathAPIConfig = UiPathAPIConfig(
         api_type=ApiType.COMPLETIONS,
@@ -89,6 +82,16 @@ class UiPathChatBedrockConverse(UiPathBaseChatModel, ChatBedrockConverse):  # ty
         self.client = WrappedBotoClient(self.uipath_sync_client)
         return self
 
+    @override
+    def _converse_params(self, **kwargs: Any) -> dict:
+        params = super()._converse_params(**kwargs)
+        if is_claude_opus_4_or_above(self.model_id):
+            inference = params.get("inferenceConfig")
+            if isinstance(inference, dict):
+                inference.pop("temperature", None)
+                inference.pop("topP", None)
+        return params
+
 
 class UiPathChatBedrock(UiPathBaseChatModel, ChatBedrock):  # type: ignore[override]
     api_config: UiPathAPIConfig = UiPathAPIConfig(
@@ -116,6 +119,14 @@ class UiPathChatBedrock(UiPathBaseChatModel, ChatBedrock):  # type: ignore[overr
     @model_validator(mode="after")
     def setup_uipath_client(self) -> Self:
         self.client = WrappedBotoClient(self.uipath_sync_client)
+        if is_claude_opus_4_or_above(self.model_id):
+            self.temperature = None
+            if self.model_kwargs:
+                self.model_kwargs = {
+                    k: v
+                    for k, v in self.model_kwargs.items()
+                    if k not in CLAUDE_OPUS_4_UNSUPPORTED_SAMPLING_PARAMS
+                }
         return self
 
     @property
@@ -170,7 +181,7 @@ class UiPathChatAnthropicBedrock(UiPathBaseChatModel, ChatAnthropicBedrock):
         **kwargs: Any,
     ) -> dict:
         payload = super()._get_request_payload(input_, stop=stop, **kwargs)
-        if _is_claude_opus_4_or_above(self.model):
-            for param in _CLAUDE_OPUS_4_UNSUPPORTED_PARAMS:
+        if is_claude_opus_4_or_above(self.model):
+            for param in CLAUDE_OPUS_4_UNSUPPORTED_SAMPLING_PARAMS:
                 payload.pop(param, None)
         return payload

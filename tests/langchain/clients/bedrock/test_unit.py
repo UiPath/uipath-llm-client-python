@@ -9,15 +9,17 @@ from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import HumanMessage
 from langchain_tests.unit_tests import ChatModelUnitTests, EmbeddingsUnitTests
 from uipath_langchain_client.clients.bedrock.chat_models import (
-    _CLAUDE_OPUS_4_UNSUPPORTED_PARAMS,
     UiPathChatAnthropicBedrock,
     UiPathChatBedrock,
     UiPathChatBedrockConverse,
-    _is_claude_opus_4_or_above,
 )
 from uipath_langchain_client.clients.bedrock.embeddings import UiPathBedrockEmbeddings
 
 from uipath.llm_client.settings import UiPathBaseSettings
+from uipath.llm_client.utils.model_family import (
+    CLAUDE_OPUS_4_UNSUPPORTED_SAMPLING_PARAMS,
+    is_claude_opus_4_or_above,
+)
 
 BEDROCK_CHAT_CLASSES = [UiPathChatAnthropicBedrock, UiPathChatBedrock, UiPathChatBedrockConverse]
 BEDROCK_EMBEDDINGS_CLASSES = [UiPathBedrockEmbeddings]
@@ -58,10 +60,10 @@ class TestClaudeOpus4SamplingParamFiltering:
         )
 
     def test_is_claude_opus_4_or_above(self) -> None:
-        assert _is_claude_opus_4_or_above("anthropic.claude-opus-4-7")
-        assert _is_claude_opus_4_or_above("claude-opus-4-5-20250514")
-        assert not _is_claude_opus_4_or_above("anthropic.claude-3-5-sonnet-20240620-v1:0")
-        assert not _is_claude_opus_4_or_above("anthropic.claude-haiku-4-5-20251001-v1:0")
+        assert is_claude_opus_4_or_above("anthropic.claude-opus-4-7")
+        assert is_claude_opus_4_or_above("claude-opus-4-5-20250514")
+        assert not is_claude_opus_4_or_above("anthropic.claude-3-5-sonnet-20240620-v1:0")
+        assert not is_claude_opus_4_or_above("anthropic.claude-haiku-4-5-20251001-v1:0")
 
     def test_unsupported_params_stripped_from_payload(
         self, opus4_client: UiPathChatAnthropicBedrock
@@ -76,7 +78,7 @@ class TestClaudeOpus4SamplingParamFiltering:
             )
             opus4_client.invoke([HumanMessage(content="hi")])
         call_kwargs = mock_client.messages.create.call_args.kwargs
-        for param in _CLAUDE_OPUS_4_UNSUPPORTED_PARAMS:
+        for param in CLAUDE_OPUS_4_UNSUPPORTED_SAMPLING_PARAMS:
             assert param not in call_kwargs, f"{param} must be stripped for claude-opus-4"
 
     def test_sampling_params_kept_for_other_models(

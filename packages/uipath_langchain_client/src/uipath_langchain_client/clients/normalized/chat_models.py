@@ -66,7 +66,11 @@ from pydantic import AliasChoices, BaseModel, Field
 
 from uipath_langchain_client.base_client import UiPathBaseChatModel
 from uipath_langchain_client.settings import ApiType, RoutingMode, UiPathAPIConfig
-from uipath_langchain_client.utils import is_anthropic_model_name
+from uipath_langchain_client.utils import (
+    CLAUDE_OPUS_4_UNSUPPORTED_SAMPLING_PARAMS,
+    is_anthropic_model_name,
+    is_claude_opus_4_or_above,
+)
 
 _DictOrPydanticClass = Union[dict[str, Any], type[BaseModel], type]
 _DictOrPydantic = Union[dict[str, Any], BaseModel]
@@ -250,6 +254,11 @@ class UiPathChat(UiPathBaseChatModel):
         # so we drop it here and let the gateway apply the correct default.
         if "thinking" in params:
             params.pop("temperature", None)
+
+        # Claude Opus 4+ reasoning models reject temperature, top_k and top_p entirely.
+        if is_claude_opus_4_or_above(self.model_name):
+            for param in CLAUDE_OPUS_4_UNSUPPORTED_SAMPLING_PARAMS:
+                params.pop(param, None)
 
         return {**params, **self.model_kwargs}
 

@@ -1,6 +1,7 @@
 from functools import cached_property
 from typing import Any, Self
 
+from langchain_core.language_models import LanguageModelInput
 from pydantic import Field, model_validator
 from typing_extensions import override
 
@@ -11,6 +12,10 @@ from uipath_langchain_client.settings import (
     RoutingMode,
     UiPathAPIConfig,
     VendorType,
+)
+from uipath_langchain_client.utils import (
+    CLAUDE_OPUS_4_UNSUPPORTED_SAMPLING_PARAMS,
+    is_claude_opus_4_or_above,
 )
 
 try:
@@ -150,6 +155,20 @@ class UiPathChatAnthropic(UiPathBaseChatModel, ChatAnthropic):
                 )
             case _:
                 raise ValueError("Anthropic models are currently not hosted on any other provider")
+
+    @override
+    def _get_request_payload(
+        self,
+        input_: LanguageModelInput,
+        *,
+        stop: list[str] | None = None,
+        **kwargs: Any,
+    ) -> dict:
+        payload = super()._get_request_payload(input_, stop=stop, **kwargs)
+        if is_claude_opus_4_or_above(self.model):
+            for param in CLAUDE_OPUS_4_UNSUPPORTED_SAMPLING_PARAMS:
+                payload.pop(param, None)
+        return payload
 
     @override
     def _create(self, payload: dict[str, Any]) -> Any:

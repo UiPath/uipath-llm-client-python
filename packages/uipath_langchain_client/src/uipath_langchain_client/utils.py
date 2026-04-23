@@ -15,7 +15,9 @@ from uipath.llm_client.utils.exceptions import (
 )
 from uipath.llm_client.utils.model_family import (
     ANTHROPIC_MODEL_NAME_KEYWORDS,
+    CLAUDE_OPUS_4_UNSUPPORTED_SAMPLING_PARAMS,
     is_anthropic_model_name,
+    is_claude_opus_4_or_above,
 )
 from uipath.llm_client.utils.retry import RetryConfig
 
@@ -36,4 +38,6 @@ __all__ = [
     "UiPathTooManyRequestsError",
     "ANTHROPIC_MODEL_NAME_KEYWORDS",
     "is_anthropic_model_name",
+    "CLAUDE_OPUS_4_UNSUPPORTED_SAMPLING_PARAMS",
+    "is_claude_opus_4_or_above",
 ]

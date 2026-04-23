@@ -4,8 +4,8 @@ All notable changes to `uipath_llm_client` (core package) will be documented in 
 
 ## [1.9.9] - 2026-04-23
 
-### Changed
-- Bumped dependency floors to the latest installed versions: `uipath-platform>=0.1.35`.
+### Added
+- `is_claude_opus_4_or_above(model_name)` and `CLAUDE_OPUS_4_UNSUPPORTED_SAMPLING_PARAMS` added to `uipath.llm_client.utils.model_family` — identifies Claude Opus 4+ reasoning models and the sampling parameters (`temperature`, `top_k`, `top_p`) that the Anthropic API rejects for them.
 
 ## [1.9.8] - 2026-04-22
 

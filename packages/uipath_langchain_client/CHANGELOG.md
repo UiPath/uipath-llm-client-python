@@ -2,6 +2,12 @@
 
 All notable changes to `uipath_langchain_client` will be documented in this file.
 
+## [1.9.9] - 2026-04-23
+
+### Changed
+- Bumped dependency floors to the latest installed versions: `langchain-openai>=1.2.0`, `langchain-aws>=1.4.5`.
+- Minimum `uipath-llm-client` bumped to 1.9.9 to match the core dependency-floor release.
+
 ## [1.9.8] - 2026-04-22
 
 ### Changed

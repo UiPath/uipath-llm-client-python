@@ -6,12 +6,12 @@ readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
     "langchain>=1.2.15,<2.0.0",
-    "uipath-llm-client>=1.9.8,<2.0.0",
+    "uipath-llm-client>=1.9.9,<2.0.0",
 ]
 
 [project.optional-dependencies]
 openai = [
-    "langchain-openai>=1.1.16,<2.0.0",
+    "langchain-openai>=1.2.0,<2.0.0",
 ]
 google = [
     "langchain-google-genai>=4.2.2,<5.0.0",
@@ -21,7 +21,7 @@ anthropic = [
     "anthropic[bedrock,vertex]>=0.96.0,<1.0.0",
 ]
 bedrock = [
-    "langchain-aws[anthropic]>=1.4.4,<2.0.0",
+    "langchain-aws[anthropic]>=1.4.5,<2.0.0",
 ]
 vertexai = [
     "langchain-google-vertexai>=3.2.2,<4.0.0",

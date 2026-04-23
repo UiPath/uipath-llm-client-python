@@ -243,10 +243,15 @@ class UiPathChat(UiPathBaseChatModel):
         }
 
         set_fields = self.model_fields_set
-        return {
-            **{k: v for k, v in candidates.items() if k in set_fields},
-            **self.model_kwargs,
-        }
+        params = {k: v for k, v in candidates.items() if k in set_fields}
+
+        # Anthropic extended thinking requires temperature=1 (the API default).
+        # Sending any explicit temperature alongside thinking causes a validation error,
+        # so we drop it here and let the gateway apply the correct default.
+        if "thinking" in params:
+            params.pop("temperature", None)
+
+        return {**params, **self.model_kwargs}
 
     def _get_usage_metadata(self, json_data: dict[str, Any]) -> UsageMetadata:
         return UsageMetadata(

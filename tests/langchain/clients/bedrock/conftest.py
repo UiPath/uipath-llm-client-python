@@ -46,8 +46,18 @@ CLAUDE_BEDROCK_CONFIGS = [
     },
 ]
 
+CLAUDE_ANTHROPIC_BEDROCK_CONFIGS_NO_THINKING = [
+    c
+    for c in CLAUDE_BEDROCK_CONFIGS
+    if c["model_class"] is UiPathChatAnthropicBedrock
+    and "thinking" not in c.get("model_kwargs", {})
+]
+
 COMPLETIONS_MODELS_WITH_CONFIGS = {
     "anthropic.claude-haiku-4-5-20251001-v1:0": CLAUDE_BEDROCK_CONFIGS,
+    # claude-opus-4-7 via Bedrock: tested with UiPathChatAnthropicBedrock only (no thinking;
+    # thinking cassettes not yet recorded for this model).
+    "anthropic.claude-opus-4-7": CLAUDE_ANTHROPIC_BEDROCK_CONFIGS_NO_THINKING,
 }
 
 

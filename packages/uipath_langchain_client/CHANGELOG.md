@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_langchain_client` will be documented in this file.
 
+## [1.9.10] - 2026-04-23
+
+### Fixed
+- `UiPathChatAnthropicBedrock` now strips `temperature`, `top_k`, and `top_p` from the request payload when the model name matches `claude-opus-4` (e.g. `anthropic.claude-opus-4-7`). These sampling parameters are not supported by Claude Opus 4+ reasoning models and previously caused a `400 Bad Request` from the gateway. Requests for other models (e.g. claude-haiku) are unaffected.
+
 ## [1.9.9] - 2026-04-23
 
 ### Changed

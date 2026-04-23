@@ -1,7 +1,10 @@
+import re
 from functools import cached_property
 from typing import Any, Self
 
+from langchain_core.language_models import LanguageModelInput
 from pydantic import Field, model_validator
+from typing_extensions import override
 
 from uipath_langchain_client.base_client import UiPathBaseChatModel
 from uipath_langchain_client.settings import (
@@ -46,6 +49,16 @@ except ImportError as e:
         "The 'bedrock' extra is required to use UiPathBedrockChatModel and UiPathBedrockChatModelConverse. "
         "Install it with: uv add uipath-langchain-client[bedrock]"
     ) from e
+
+
+# Sampling parameters that Claude Opus 4+ (reasoning models) do not support.
+# The API returns 400 if any of these are present in the request payload.
+_CLAUDE_OPUS_4_UNSUPPORTED_PARAMS: frozenset[str] = frozenset({"temperature", "top_k", "top_p"})
+
+
+def _is_claude_opus_4_or_above(model_name: str) -> bool:
+    """Return True for Claude Opus 4+ models that reject sampling parameters."""
+    return bool(re.search(r"claude-opus-4", model_name, re.IGNORECASE))
 
 
 class UiPathChatBedrockConverse(UiPathBaseChatModel, ChatBedrockConverse):  # type: ignore[override]
@@ -147,3 +160,17 @@ class UiPathChatAnthropicBedrock(UiPathBaseChatModel, ChatAnthropicBedrock):
             max_retries=0,  # handled by the UiPathBaseChatModel
             http_client=self.uipath_async_client,
         )
+
+    @override
+    def _get_request_payload(
+        self,
+        input_: LanguageModelInput,
+        *,
+        stop: list[str] | None = None,
+        **kwargs: Any,
+    ) -> dict:
+        payload = super()._get_request_payload(input_, stop=stop, **kwargs)
+        if _is_claude_opus_4_or_above(self.model):
+            for param in _CLAUDE_OPUS_4_UNSUPPORTED_PARAMS:
+                payload.pop(param, None)
+        return payload

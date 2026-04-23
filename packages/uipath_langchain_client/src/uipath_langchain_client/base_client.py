@@ -119,32 +119,27 @@ class UiPathBaseLLMClient(BaseModel, ABC):
         default=None,
         description="Per-model capability flags sourced from the discovery endpoint "
         "(e.g. {'shouldSkipTemperature': True}). The factory forwards it; when absent, "
-        "the field validator below eagerly resolves it from client_settings.",
+        "the field validator below resolves it eagerly from client_settings.",
     )
 
     @field_validator("model_details", mode="after")
     @classmethod
-    def _resolve_model_details(
-        cls, value: dict[str, Any] | None, info: ValidationInfo
-    ) -> dict[str, Any]:
-        # Fields validate in declaration order, so by the time this runs both
-        # ``client_settings`` and ``model_name`` are already in ``info.data``.
-        # Eager resolution here keeps direct instantiation and the factory
-        # path consistent. ``get_available_models`` is class-cached inside
-        # the settings layer, so at most one discovery HTTP call fires per
-        # process regardless of how many chat/embedding models are built.
-        if value is not None:
-            return value
-        settings = info.data.get("client_settings")
-        model_name = info.data.get("model_name")
-        if settings is None or not model_name:
-            return {}
+    def _resolve(cls, v: dict[str, Any] | None, info: ValidationInfo) -> dict[str, Any]:
+        # Fields validate in declaration order: client_settings and model_name
+        # are already in info.data. get_available_models is class-cached inside
+        # the settings layer, so at most one discovery HTTP call per process.
+        if v is not None:
+            return v
         try:
-            model_info = settings.get_model_info(
-                model_name,
-                byo_connection_id=info.data.get("byo_connection_id"),
+            return (
+                info.data["client_settings"]
+                .get_model_info(
+                    info.data["model_name"],
+                    byo_connection_id=info.data.get("byo_connection_id"),
+                )
+                .get("modelDetails")
+                or {}
             )
-            return model_info.get("modelDetails") or {}
         except Exception:
             return {}
 

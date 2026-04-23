@@ -22,6 +22,7 @@ Example:
 
 from typing import Any
 
+from uipath.llm_client.utils.model_family import is_anthropic_model_name
 from uipath_langchain_client.base_client import (
     UiPathBaseChatModel,
     UiPathBaseEmbeddings,
@@ -36,7 +37,6 @@ from uipath_langchain_client.settings import (
     VendorType,
     get_default_client_settings,
 )
-from uipath_langchain_client.utils import is_anthropic_model_name
 
 
 def get_chat_model(
@@ -85,12 +85,14 @@ def get_chat_model(
         vendor_type=vendor_type,
     )
     model_family = model_info.get("modelFamily", None)
+    model_details = model_info.get("modelDetails") or {}
 
     if custom_class is not None:
         return custom_class(
             model=model_name,
             settings=client_settings,
             byo_connection_id=byo_connection_id,
+            model_details=model_details,
             **model_kwargs,
         )
 
@@ -103,6 +105,7 @@ def get_chat_model(
             model=model_name,
             settings=client_settings,
             byo_connection_id=byo_connection_id,
+            model_details=model_details,
             **model_kwargs,
         )
 
@@ -138,6 +141,7 @@ def get_chat_model(
                     settings=client_settings,
                     api_flavor=api_flavor,
                     byo_connection_id=byo_connection_id,
+                    model_details=model_details,
                     **model_kwargs,
                 )
             else:
@@ -150,6 +154,7 @@ def get_chat_model(
                     settings=client_settings,
                     api_flavor=api_flavor,
                     byo_connection_id=byo_connection_id,
+                    model_details=model_details,
                     **model_kwargs,
                 )
         case VendorType.VERTEXAI:
@@ -163,6 +168,7 @@ def get_chat_model(
                     settings=client_settings,
                     vendor_type=discovered_vendor_type,
                     byo_connection_id=byo_connection_id,
+                    model_details=model_details,
                     **model_kwargs,
                 )
 
@@ -174,6 +180,7 @@ def get_chat_model(
                 model=model_name,
                 settings=client_settings,
                 byo_connection_id=byo_connection_id,
+                model_details=model_details,
                 **model_kwargs,
             )
         case VendorType.AWSBEDROCK:
@@ -188,6 +195,7 @@ def get_chat_model(
                     model=model_name,
                     settings=client_settings,
                     byo_connection_id=byo_connection_id,
+                    model_details=model_details,
                     **model_kwargs,
                 )
 
@@ -200,6 +208,7 @@ def get_chat_model(
                     model=model_name,
                     settings=client_settings,
                     byo_connection_id=byo_connection_id,
+                    model_details=model_details,
                     **model_kwargs,
                 )
 
@@ -211,6 +220,7 @@ def get_chat_model(
                 model=model_name,
                 settings=client_settings,
                 byo_connection_id=byo_connection_id,
+                model_details=model_details,
                 **model_kwargs,
             )
 

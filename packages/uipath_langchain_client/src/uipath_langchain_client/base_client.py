@@ -27,7 +27,7 @@ import logging
 from abc import ABC
 from collections.abc import AsyncGenerator, Generator, Mapping, Sequence
 from functools import cached_property
-from typing import Any, ClassVar, Literal
+from typing import Any, ClassVar, Literal, Self
 
 from httpx import URL, Response
 from langchain_core.callbacks import (
@@ -38,7 +38,7 @@ from langchain_core.embeddings import Embeddings
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import BaseMessage
 from langchain_core.outputs import ChatGeneration, ChatGenerationChunk, ChatResult
-from pydantic import AliasChoices, BaseModel, ConfigDict, Field
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field, model_validator
 
 from uipath.llm_client.httpx_client import (
     UiPathHttpxAsyncClient,
@@ -48,6 +48,10 @@ from uipath.llm_client.utils.headers import (
     UIPATH_DEFAULT_REQUEST_HEADERS,
     get_captured_response_headers,
     set_captured_response_headers,
+)
+from uipath.llm_client.utils.sampling import (
+    disabled_params_from_model_details,
+    strip_disabled_kwargs,
 )
 from uipath_langchain_client.settings import (
     UiPathAPIConfig,
@@ -108,6 +112,19 @@ class UiPathBaseLLMClient(BaseModel, ABC):
         description="Settings for the UiPath client (defaults based on UIPATH_LLM_SERVICE env var)",
     )
 
+    model_details: dict[str, Any] | None = Field(
+        default=None,
+        description="Per-model capability flags sourced from the discovery endpoint "
+        "(e.g. {'shouldSkipTemperature': True}). Passed through by the factory; "
+        "resolved from client_settings.get_model_info otherwise.",
+    )
+    disabled_params: dict[str, Any] | None = Field(
+        default=None,
+        description="langchain-openai-style map of parameters that must not be sent to "
+        "this model. Keys are param names; values are None (always disabled) or a list "
+        "of disallowed values. Derived from ``model_details`` when not provided.",
+    )
+
     default_headers: Mapping[str, str] | None = Field(
         default=None,
         description="Caller-supplied request headers. Merged on top of `class_default_headers`; "
@@ -139,6 +156,39 @@ class UiPathBaseLLMClient(BaseModel, ABC):
         default=None,
         description="Logger for request/response logging",
     )
+
+    @model_validator(mode="after")
+    def setup_model_info(self) -> Self:
+        """Resolve ``model_details`` from discovery and merge ``disabled_params``.
+
+        Runs after pydantic has validated the fields, so ``self.client_settings``
+        (with its ``default_factory``) and ``self.model_name`` are already live.
+
+        ``model_details`` is resolved once: caller-forwarded value wins, then a
+        lookup against ``client_settings.get_model_info`` (backed by the
+        class-cached discovery response), else an empty mapping on failure.
+
+        ``disabled_params`` is the merge of what the caller passed and what we
+        can derive from ``model_details`` (via
+        ``disabled_params_from_model_details``). User-provided keys win on
+        conflicts, so callers can override a derived entry by name.
+        """
+        if self.model_details is None:
+            try:
+                info = self.client_settings.get_model_info(
+                    self.model_name,
+                    byo_connection_id=self.byo_connection_id,
+                )
+                self.model_details = info.get("modelDetails") or {}
+            except Exception:
+                self.model_details = {}
+
+        derived = disabled_params_from_model_details(self.model_details) or {}
+        user_provided = self.disabled_params or {}
+        merged = {**derived, **user_provided}
+        self.disabled_params = merged or None
+
+        return self
 
     @cached_property
     def uipath_sync_client(self) -> UiPathHttpxClient:
@@ -364,6 +414,12 @@ class UiPathBaseChatModel(UiPathBaseLLMClient, BaseChatModel):
         run_manager: CallbackManagerForLLMRun | None = None,
         **kwargs: Any,
     ) -> ChatResult:
+        kwargs = strip_disabled_kwargs(
+            kwargs,
+            disabled_params=self.disabled_params,
+            model_name=self.model_name,
+            logger=self.logger,
+        )
         set_captured_response_headers({})
         try:
             result = self._uipath_generate(messages, stop=stop, run_manager=run_manager, **kwargs)
@@ -389,6 +445,12 @@ class UiPathBaseChatModel(UiPathBaseLLMClient, BaseChatModel):
         run_manager: AsyncCallbackManagerForLLMRun | None = None,
         **kwargs: Any,
     ) -> ChatResult:
+        kwargs = strip_disabled_kwargs(
+            kwargs,
+            disabled_params=self.disabled_params,
+            model_name=self.model_name,
+            logger=self.logger,
+        )
         set_captured_response_headers({})
         try:
             result = await self._uipath_agenerate(
@@ -416,6 +478,12 @@ class UiPathBaseChatModel(UiPathBaseLLMClient, BaseChatModel):
         run_manager: CallbackManagerForLLMRun | None = None,
         **kwargs: Any,
     ) -> Generator[ChatGenerationChunk, None, None]:
+        kwargs = strip_disabled_kwargs(
+            kwargs,
+            disabled_params=self.disabled_params,
+            model_name=self.model_name,
+            logger=self.logger,
+        )
         set_captured_response_headers({})
         try:
             first = True
@@ -446,6 +514,12 @@ class UiPathBaseChatModel(UiPathBaseLLMClient, BaseChatModel):
         run_manager: AsyncCallbackManagerForLLMRun | None = None,
         **kwargs: Any,
     ) -> AsyncGenerator[ChatGenerationChunk, None]:
+        kwargs = strip_disabled_kwargs(
+            kwargs,
+            disabled_params=self.disabled_params,
+            model_name=self.model_name,
+            logger=self.logger,
+        )
         set_captured_response_headers({})
         try:
             first = True

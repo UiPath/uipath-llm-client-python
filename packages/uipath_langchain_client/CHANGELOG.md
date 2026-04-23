@@ -2,6 +2,22 @@
 
 All notable changes to `uipath_langchain_client` will be documented in this file.
 
+## [1.10.0] - 2026-04-23
+
+### Added
+- `model_details` and `disabled_params` fields on `UiPathBaseLLMClient`, plus a single `@model_validator(mode="after") setup_model_info` that (1) forwards the factory-supplied `model_details` or fetches it from `client_settings.get_model_info`, and (2) sets `disabled_params` to the merge of what the caller passed and what `disabled_params_from_model_details` derives — user keys win on conflicts, so callers can override any derived entry by name.
+- `disabled_params` uses the langchain-openai shape (`{name: None | [values]}`), so subclasses inheriting from `ChatOpenAI` / `AzureChatOpenAI` also benefit from the native `_filter_disabled_params` path inside `bind_tools`.
+- Runtime stripping in the four `_generate`/`_agenerate`/`_stream`/`_astream` wrappers on `UiPathBaseChatModel` delegates to `uipath.llm_client.utils.sampling.strip_disabled_kwargs`, generic over `disabled_params`. A warning is logged via `self.logger` for each stripped key when a logger is configured. Fixes `anthropic.claude-opus-4-7` rejecting any sampling parameter passed via `.invoke()` / `.ainvoke()` / streams.
+
+### Removed
+- The unused `disabled_params` field declaration on `UiPathChat` (now inherited from `UiPathBaseLLMClient`).
+
+### Changed
+- Bumped `uipath-llm-client` floor to `>=1.10.0` to match the release that adds `uipath.llm_client.utils.sampling`.
+
+### Known follow-up
+- Init-time values set on the instance (`UiPathChat(model="anthropic.claude-opus-4-7", temperature=0.5)`) still flow into the outgoing request body via `_default_params` / the vendor SDK. The runtime invoke-time strip handles `.invoke(..., temperature=...)`; a follow-up will plug the init-time leak using the already-populated `disabled_params`.
+
 ## [1.9.9] - 2026-04-23
 
 ### Changed

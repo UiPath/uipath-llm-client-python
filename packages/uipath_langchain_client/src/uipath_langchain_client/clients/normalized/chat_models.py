@@ -64,9 +64,9 @@ from langchain_core.utils.function_calling import (
 from langchain_core.utils.pydantic import is_basemodel_subclass
 from pydantic import AliasChoices, BaseModel, Field
 
+from uipath.llm_client.utils.model_family import is_anthropic_model_name
 from uipath_langchain_client.base_client import UiPathBaseChatModel
 from uipath_langchain_client.settings import ApiType, RoutingMode, UiPathAPIConfig
-from uipath_langchain_client.utils import is_anthropic_model_name
 
 _DictOrPydanticClass = Union[dict[str, Any], type[BaseModel], type]
 _DictOrPydantic = Union[dict[str, Any], BaseModel]
@@ -179,7 +179,6 @@ class UiPathChat(UiPathBaseChatModel):
     seed: int | None = None
 
     model_kwargs: dict[str, Any] = Field(default_factory=dict)
-    disabled_params: dict[str, Any] | None = None
 
     # OpenAI
     logit_bias: dict[str, int] | None = None

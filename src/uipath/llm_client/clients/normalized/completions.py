@@ -1,7 +1,5 @@
 """Completions endpoint for the UiPath Normalized API."""
 
-from __future__ import annotations
-
 import json
 from collections.abc import AsyncGenerator, Callable, Generator, Sequence
 from typing import Any, Union, get_args, get_origin, get_type_hints

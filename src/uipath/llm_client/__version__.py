@@ -1,3 +1,3 @@
 __title__ = "UiPath LLM Client"
 __description__ = "A Python client for interacting with UiPath's LLM services."
-__version__ = "1.9.9"
+__version__ = "1.10.0"

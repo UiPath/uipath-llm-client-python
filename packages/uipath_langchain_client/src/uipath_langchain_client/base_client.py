@@ -38,7 +38,8 @@ from langchain_core.embeddings import Embeddings
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import BaseMessage
 from langchain_core.outputs import ChatGeneration, ChatGenerationChunk, ChatResult
-from pydantic import AliasChoices, BaseModel, ConfigDict, Field
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field, model_validator
+from typing_extensions import Self
 
 from uipath.llm_client.httpx_client import (
     UiPathHttpxAsyncClient,
@@ -49,7 +50,10 @@ from uipath.llm_client.utils.headers import (
     get_captured_response_headers,
     set_captured_response_headers,
 )
-from uipath.llm_client.utils.model_family import is_claude_opus_4_or_above
+from uipath.llm_client.utils.model_family import (
+    CLAUDE_OPUS_4_UNSUPPORTED_SAMPLING_PARAMS,
+    is_claude_opus_4_or_above,
+)
 from uipath_langchain_client.settings import (
     UiPathAPIConfig,
     UiPathBaseSettings,
@@ -97,6 +101,13 @@ class UiPathBaseLLMClient(BaseModel, ABC):
         default=None,
         description="Bring Your Own (BYO) connection ID for custom models enrolled in LLMGateway. "
         "Use this when you have enrolled your own model deployment and received a connection ID.",
+    )
+
+    model_details: dict[str, Any] | None = Field(
+        default=None,
+        description="Optional modelDetails from discovery (e.g. `shouldSkipTemperature`, "
+        "`maxOutputTokens`). If omitted, resolved lazily via `client_settings.get_model_info()`. "
+        "Pass explicitly to avoid a discovery call at first use.",
     )
 
     api_config: UiPathAPIConfig = Field(
@@ -192,17 +203,28 @@ class UiPathBaseLLMClient(BaseModel, ABC):
         )
 
     @cached_property
+    def resolved_model_details(self) -> dict[str, Any]:
+        """Resolved modelDetails: the ``model_details`` field if provided, otherwise
+        fetched via ``client_settings.get_model_info()``; empty dict on failure."""
+        if self.model_details is not None:
+            return self.model_details
+        try:
+            info = self.client_settings.get_model_info(model_name=self.model_name)
+            return info.get("modelDetails", {}) or {}
+        except Exception:
+            return {}
+
+    @cached_property
     def _should_skip_sampling_params(self) -> bool:
         """True if the model's discovery metadata marks temperature/top_k/top_p as unsupported.
 
         Reads ``modelDetails.shouldSkipTemperature`` from the model discovery API.
         Falls back to a name-based heuristic when the model is not found in discovery.
         """
-        try:
-            info = self.client_settings.get_model_info(model_name=self.model_name)
-            return bool(info.get("modelDetails", {}).get("shouldSkipTemperature", False))
-        except Exception:
-            return is_claude_opus_4_or_above(self.model_name)
+        flag = self.resolved_model_details.get("shouldSkipTemperature")
+        if flag is not None:
+            return bool(flag)
+        return is_claude_opus_4_or_above(self.model_name)
 
     def uipath_request(
         self,
@@ -371,6 +393,31 @@ class UiPathBaseChatModel(UiPathBaseLLMClient, BaseChatModel):
     so that headers are captured transparently.
     """
 
+    @model_validator(mode="after")
+    def _strip_unsupported_sampling_params_at_init(self) -> Self:
+        """If the model rejects sampling params, null those instance fields and
+        remove them from ``__pydantic_fields_set__`` so downstream payload builders
+        (including ``_default_params`` filters on ``model_fields_set``) treat them
+        as unset."""
+        if not self._should_skip_sampling_params:
+            return self
+        for param in CLAUDE_OPUS_4_UNSUPPORTED_SAMPLING_PARAMS:
+            if param not in type(self).model_fields:
+                continue
+            try:
+                setattr(self, param, None)
+            except Exception:
+                continue
+            self.__pydantic_fields_set__.discard(param)
+        return self
+
+    def _strip_sampling_from_kwargs(self, kwargs: dict[str, Any]) -> None:
+        """Pop temperature/top_k/top_p from invocation-time kwargs for unsupported models."""
+        if not self._should_skip_sampling_params:
+            return
+        for param in CLAUDE_OPUS_4_UNSUPPORTED_SAMPLING_PARAMS:
+            kwargs.pop(param, None)
+
     def _generate(
         self,
         messages: list[BaseMessage],
@@ -378,6 +425,7 @@ class UiPathBaseChatModel(UiPathBaseLLMClient, BaseChatModel):
         run_manager: CallbackManagerForLLMRun | None = None,
         **kwargs: Any,
     ) -> ChatResult:
+        self._strip_sampling_from_kwargs(kwargs)
         set_captured_response_headers({})
         try:
             result = self._uipath_generate(messages, stop=stop, run_manager=run_manager, **kwargs)
@@ -403,6 +451,7 @@ class UiPathBaseChatModel(UiPathBaseLLMClient, BaseChatModel):
         run_manager: AsyncCallbackManagerForLLMRun | None = None,
         **kwargs: Any,
     ) -> ChatResult:
+        self._strip_sampling_from_kwargs(kwargs)
         set_captured_response_headers({})
         try:
             result = await self._uipath_agenerate(
@@ -430,6 +479,7 @@ class UiPathBaseChatModel(UiPathBaseLLMClient, BaseChatModel):
         run_manager: CallbackManagerForLLMRun | None = None,
         **kwargs: Any,
     ) -> Generator[ChatGenerationChunk, None, None]:
+        self._strip_sampling_from_kwargs(kwargs)
         set_captured_response_headers({})
         try:
             first = True
@@ -460,6 +510,7 @@ class UiPathBaseChatModel(UiPathBaseLLMClient, BaseChatModel):
         run_manager: AsyncCallbackManagerForLLMRun | None = None,
         **kwargs: Any,
     ) -> AsyncGenerator[ChatGenerationChunk, None]:
+        self._strip_sampling_from_kwargs(kwargs)
         set_captured_response_headers({})
         try:
             first = True

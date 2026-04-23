@@ -46,35 +46,43 @@ class TestBedrockChatModel(ChatModelUnitTests):
     def test_serdes(self, *args: Any, **kwargs: Any) -> None: ...
 
 
-class TestClaudeOpus4SamplingParamFiltering:
-    """UiPathChatAnthropicBedrock must strip temperature/top_k/top_p for claude-opus-4+ models."""
+class TestSamplingParamStripping:
+    """UiPathBaseChatModel must strip sampling params for models whose modelDetails
+    declare ``shouldSkipTemperature: True`` — both at instantiation (ctor kwargs) and
+    at invocation time (``invoke(..., temperature=...)``)."""
 
     @pytest.fixture()
     def opus4_client(self, client_settings: UiPathBaseSettings) -> UiPathChatAnthropicBedrock:
+        # model_details bypasses the discovery network call at init.
         return UiPathChatAnthropicBedrock(
             model="anthropic.claude-opus-4-7",
             settings=client_settings,
+            model_details={"shouldSkipTemperature": True},
             temperature=0.7,
             top_k=40,
             top_p=0.9,
         )
 
     def test_is_claude_opus_4_or_above(self) -> None:
-        # Matched — sampling params stripped (confirmed to reject them via live testing)
+        # Name-based fallback for models not found in discovery.
         assert is_claude_opus_4_or_above("anthropic.claude-opus-4-7")
         assert is_claude_opus_4_or_above("claude-opus-4-7-20250514")
-        # Not matched — sampling params pass through unchanged
-        # (claude-opus-4-5 and claude-opus-4-6 accept temperature/top_k/top_p)
         assert not is_claude_opus_4_or_above("anthropic.claude-opus-4-5-20251101-v1:0")
         assert not is_claude_opus_4_or_above("anthropic.claude-opus-4-6-v1")
         assert not is_claude_opus_4_or_above("anthropic.claude-3-5-sonnet-20240620-v1:0")
         assert not is_claude_opus_4_or_above("anthropic.claude-haiku-4-5-20251001-v1:0")
 
-    def test_unsupported_params_stripped_from_payload(
-        self, opus4_client: UiPathChatAnthropicBedrock
-    ) -> None:
-        # Force _should_skip_sampling_params without a real discovery call.
-        opus4_client.__dict__["_should_skip_sampling_params"] = True
+    def test_instance_fields_nulled_at_init(self, opus4_client: UiPathChatAnthropicBedrock) -> None:
+        # Model validator on UiPathBaseChatModel nulled the sampling fields and
+        # discarded them from __pydantic_fields_set__ so downstream payload builders
+        # treat them as unset.
+        for param in CLAUDE_OPUS_4_UNSUPPORTED_SAMPLING_PARAMS:
+            if param in type(opus4_client).model_fields:
+                assert getattr(opus4_client, param) is None
+                assert param not in opus4_client.model_fields_set
+
+    def test_invocation_kwargs_stripped(self, opus4_client: UiPathChatAnthropicBedrock) -> None:
+        # llm.invoke("...", temperature=0.5) — the kwargs must not reach the SDK call.
         with patch.object(opus4_client, "_client") as mock_client:
             mock_client.messages.create.return_value = MagicMock(
                 content=[MagicMock(type="text", text="hi")],
@@ -83,32 +91,25 @@ class TestClaudeOpus4SamplingParamFiltering:
                 model="anthropic.claude-opus-4-7",
                 id="msg_123",
             )
-            opus4_client.invoke([HumanMessage(content="hi")])
+            opus4_client.invoke(
+                [HumanMessage(content="hi")],
+                temperature=0.5,
+                top_k=10,
+                top_p=0.5,
+            )
         call_kwargs = mock_client.messages.create.call_args.kwargs
         for param in CLAUDE_OPUS_4_UNSUPPORTED_SAMPLING_PARAMS:
-            assert param not in call_kwargs, f"{param} must be stripped for claude-opus-4"
+            assert param not in call_kwargs, f"{param} must be stripped"
 
-    def test_sampling_params_kept_for_other_models(
-        self, client_settings: UiPathBaseSettings
-    ) -> None:
+    def test_supported_model_keeps_params(self, client_settings: UiPathBaseSettings) -> None:
         haiku = UiPathChatAnthropicBedrock(
             model="anthropic.claude-haiku-4-5-20251001-v1:0",
             settings=client_settings,
+            model_details={"shouldSkipTemperature": False},
             temperature=0.5,
         )
-        # Discovery returns False for haiku; ensure params are not stripped.
-        haiku.__dict__["_should_skip_sampling_params"] = False
-        with patch.object(haiku, "_client") as mock_client:
-            mock_client.messages.create.return_value = MagicMock(
-                content=[MagicMock(type="text", text="hi")],
-                stop_reason="end_turn",
-                usage=MagicMock(input_tokens=10, output_tokens=5),
-                model="anthropic.claude-haiku-4-5-20251001-v1:0",
-                id="msg_123",
-            )
-            haiku.invoke([HumanMessage(content="hi")])
-        call_kwargs = mock_client.messages.create.call_args.kwargs
-        assert call_kwargs.get("temperature") == 0.5, "temperature must be kept for haiku"
+        assert haiku.temperature == 0.5
+        assert "temperature" in haiku.model_fields_set
 
 
 class TestBedrockEmbeddings(EmbeddingsUnitTests):

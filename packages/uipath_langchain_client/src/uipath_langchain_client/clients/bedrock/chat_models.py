@@ -1,7 +1,6 @@
 from functools import cached_property
 from typing import Any, Self
 
-from langchain_core.language_models import LanguageModelInput
 from pydantic import Field, model_validator
 from typing_extensions import override
 
@@ -12,9 +11,6 @@ from uipath_langchain_client.settings import (
     RoutingMode,
     UiPathAPIConfig,
     VendorType,
-)
-from uipath_langchain_client.utils import (
-    CLAUDE_OPUS_4_UNSUPPORTED_SAMPLING_PARAMS,
 )
 
 try:
@@ -83,12 +79,19 @@ class UiPathChatBedrockConverse(UiPathBaseChatModel, ChatBedrockConverse):  # ty
 
     @override
     def _converse_params(self, **kwargs: Any) -> dict:
+        """Defensively strip None sampling values from inferenceConfig.
+
+        The parent populates ``inferenceConfig["temperature"]`` / ``["topP"]`` from
+        ``self.temperature`` / ``self.top_p`` unconditionally; if those are None
+        (e.g. because ``UiPathBaseChatModel`` nulled them for a model that rejects
+        sampling params) boto3 would still serialize ``null`` to the wire.
+        """
         params = super()._converse_params(**kwargs)
-        if self._should_skip_sampling_params:
-            inference = params.get("inferenceConfig")
-            if isinstance(inference, dict):
-                inference.pop("temperature", None)
-                inference.pop("topP", None)
+        inference = params.get("inferenceConfig")
+        if isinstance(inference, dict):
+            for key in ("temperature", "topP"):
+                if inference.get(key) is None:
+                    inference.pop(key, None)
         return params
 
 
@@ -118,14 +121,6 @@ class UiPathChatBedrock(UiPathBaseChatModel, ChatBedrock):  # type: ignore[overr
     @model_validator(mode="after")
     def setup_uipath_client(self) -> Self:
         self.client = WrappedBotoClient(self.uipath_sync_client)
-        if self._should_skip_sampling_params:
-            self.temperature = None
-            if self.model_kwargs:
-                self.model_kwargs = {
-                    k: v
-                    for k, v in self.model_kwargs.items()
-                    if k not in CLAUDE_OPUS_4_UNSUPPORTED_SAMPLING_PARAMS
-                }
         return self
 
     @property
@@ -170,17 +165,3 @@ class UiPathChatAnthropicBedrock(UiPathBaseChatModel, ChatAnthropicBedrock):
             max_retries=0,  # handled by the UiPathBaseChatModel
             http_client=self.uipath_async_client,
         )
-
-    @override
-    def _get_request_payload(
-        self,
-        input_: LanguageModelInput,
-        *,
-        stop: list[str] | None = None,
-        **kwargs: Any,
-    ) -> dict:
-        payload = super()._get_request_payload(input_, stop=stop, **kwargs)
-        if self._should_skip_sampling_params:
-            for param in CLAUDE_OPUS_4_UNSUPPORTED_SAMPLING_PARAMS:
-                payload.pop(param, None)
-        return payload

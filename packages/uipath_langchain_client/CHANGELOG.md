@@ -4,10 +4,14 @@ All notable changes to `uipath_langchain_client` will be documented in this file
 
 ## [1.9.9] - 2026-04-23
 
+### Added
+- `UiPathBaseLLMClient.model_details` — optional constructor field carrying the discovery `modelDetails` dict (`shouldSkipTemperature`, `maxOutputTokens`, etc.). If omitted, resolved lazily via `get_model_info()`. Pass explicitly to skip the discovery call at first use.
+- `UiPathBaseLLMClient.resolved_model_details` / `_should_skip_sampling_params` cached properties — read `modelDetails.shouldSkipTemperature` with a name-based fallback (`is_claude_opus_4_or_above`) for models not found in discovery.
+
 ### Fixed
-- Claude Opus 4+ reasoning models (e.g. `anthropic.claude-opus-4-7`) reject `temperature`, `top_k`, and `top_p` with `400 Bad Request`. All five UiPath Anthropic clients now strip those params automatically: `UiPathChatAnthropic` and `UiPathChatAnthropicBedrock` via `_get_request_payload`; `UiPathChatBedrockConverse` via `_converse_params` (strips `temperature`/`topP` from `inferenceConfig`); `UiPathChatBedrock` (INVOKE) via model validator; `UiPathChat` (normalized) via `_default_params`. Requests for other models are unaffected.
-- `UiPathChat._default_params` drops `temperature` when `thinking` is also set. Anthropic's extended thinking API requires `temperature=1` (its default) and rejects any other explicit value.
-- Detection logic (`is_claude_opus_4_or_above`) and the unsupported-param constant (`CLAUDE_OPUS_4_UNSUPPORTED_SAMPLING_PARAMS`) are defined in core `uipath.llm_client.utils.model_family` and re-exported from `uipath_langchain_client.utils`.
+- Sampling params (`temperature`, `top_k`, `top_p`) are now stripped centrally in `UiPathBaseChatModel` for models whose discovery marks `shouldSkipTemperature: True` (e.g. `anthropic.claude-opus-4-7`). Stripping happens at both sites: (1) a `model_validator` nulls the instance fields and discards them from `__pydantic_fields_set__` at construction time — so `UiPathChat(model="...", temperature=0.6)` no longer forwards the value; and (2) the `_generate` / `_agenerate` / `_stream` / `_astream` wrappers pop the same keys from invocation kwargs — so `llm.invoke("msg", temperature=0.7)` and `.bind(temperature=0.7)` are also handled. Previously each client had its own ad-hoc stripping path.
+- `UiPathChatBedrockConverse._converse_params` defensively drops `None` `temperature` / `topP` from `inferenceConfig` so boto3 doesn't serialize them as explicit nulls to the wire.
+- `UiPathChat._default_params` still drops `temperature` when `thinking` is set (Anthropic's extended thinking API requires `temperature=1`).
 
 ## [1.9.8] - 2026-04-22
 

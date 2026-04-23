@@ -86,6 +86,10 @@ def get_chat_model(
     )
     model_family = model_info.get("modelFamily", None)
 
+    model_details = model_info.get("modelDetails")
+    if model_details is not None:
+        model_kwargs.setdefault("model_details", model_details)
+
     if custom_class is not None:
         return custom_class(
             model=model_name,
@@ -265,6 +269,10 @@ def get_embedding_model(
         vendor_type=vendor_type,
     )
     model_family = model_info.get("modelFamily", None)
+
+    model_details = model_info.get("modelDetails")
+    if model_details is not None:
+        model_kwargs.setdefault("model_details", model_details)
 
     if custom_class is not None:
         return custom_class(

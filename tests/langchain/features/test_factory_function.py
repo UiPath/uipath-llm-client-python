@@ -128,3 +128,37 @@ class TestFactoryDefaultApiFlavor:
             },
         )
         assert captured["api_flavor"] == ApiFlavor.CHAT_COMPLETIONS
+
+    def test_factory_forwards_model_details_from_discovery(self, monkeypatch: pytest.MonkeyPatch):
+        """modelDetails from discovery should be piped into the client ctor as model_details,
+        so resolved_model_details does not need to re-fetch."""
+        captured = self._captured_kwargs(
+            monkeypatch,
+            {
+                "modelName": "gpt-4o",
+                "vendor": "OpenAi",
+                "apiFlavor": None,
+                "modelFamily": "OpenAi",
+                "modelDetails": {"shouldSkipTemperature": True, "maxOutputTokens": 4096},
+            },
+        )
+        assert captured["model_details"] == {
+            "shouldSkipTemperature": True,
+            "maxOutputTokens": 4096,
+        }
+
+    def test_factory_user_model_details_wins_over_discovery(self, monkeypatch: pytest.MonkeyPatch):
+        """Explicit model_details from the caller should not be overwritten by discovery."""
+        user_details = {"shouldSkipTemperature": False}
+        captured = self._captured_kwargs(
+            monkeypatch,
+            {
+                "modelName": "gpt-4o",
+                "vendor": "OpenAi",
+                "apiFlavor": None,
+                "modelFamily": "OpenAi",
+                "modelDetails": {"shouldSkipTemperature": True},
+            },
+            model_details=user_details,
+        )
+        assert captured["model_details"] is user_details

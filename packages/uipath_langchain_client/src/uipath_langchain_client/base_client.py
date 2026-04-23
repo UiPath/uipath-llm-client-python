@@ -27,7 +27,7 @@ import logging
 from abc import ABC
 from collections.abc import AsyncGenerator, Generator, Mapping, Sequence
 from functools import cached_property
-from typing import Any, ClassVar, Literal
+from typing import Any, ClassVar, Literal, Self
 
 from httpx import URL, Response
 from langchain_core.callbacks import (
@@ -158,62 +158,53 @@ class UiPathBaseLLMClient(BaseModel, ABC):
         description="Logger for request/response logging",
     )
 
-    @model_validator(mode="before")
-    @classmethod
-    def _resolve_model_details_and_strip(cls, values: Any) -> Any:
-        """Resolve ``model_details`` and apply ``disabled_params`` before validation.
+    @model_validator(mode="after")
+    def _resolve_disabled_params(self) -> Self:
+        """Resolve ``model_details`` / ``disabled_params`` and clear any matching fields.
 
-        Mirrors the ``mode="before"`` + ``values.pop(...)`` pattern
-        ``langchain-openai`` uses for o1/GPT-5 temperature. Popping at this
-        stage means the field never enters ``model_fields_set``, so downstream
-        consumers of ``model_fields_set`` (e.g. ``UiPathChat._default_params``)
-        naturally skip it — no private-attribute hackery.
+        Runs after pydantic has assigned fields, so everything is accessed
+        via typed attributes (``self.client_settings``, ``self.model_name``)
+        instead of juggling raw-dict aliases. Fields that end up disabled are
+        both reset to ``None`` *and* removed from ``__pydantic_fields_set__``
+        so downstream consumers (e.g. ``UiPathChat._default_params``, which
+        filters by ``model_fields_set``) naturally exclude them.
         """
-        if not isinstance(values, dict):
-            return values
-
         # 1. Resolve model_details — caller-provided wins, else fetch from settings.
-        if values.get("model_details") is None:
-            settings = values.get("client_settings") or values.get("settings")
-            if settings is None:
-                try:
-                    settings = get_default_client_settings()
-                    values["client_settings"] = settings
-                except Exception:
-                    settings = None
-            model_name = values.get("model_name") or values.get("model")
-            if settings is not None and model_name:
-                try:
-                    info = settings.get_model_info(
-                        model_name,
-                        byo_connection_id=values.get("byo_connection_id"),
-                    )
-                    values["model_details"] = info.get("modelDetails") or {}
-                except Exception:
-                    values["model_details"] = {}
-            else:
-                values["model_details"] = {}
+        if self.model_details is None:
+            try:
+                info = self.client_settings.get_model_info(
+                    self.model_name,
+                    byo_connection_id=self.byo_connection_id,
+                )
+                self.model_details = info.get("modelDetails") or {}
+            except Exception:
+                self.model_details = {}
 
         # 2. Derive disabled_params when caller didn't provide one.
-        if values.get("disabled_params") is None:
-            derived = disabled_params_from_model_details(values.get("model_details"))
-            if derived:
-                values["disabled_params"] = derived
+        if self.disabled_params is None:
+            self.disabled_params = disabled_params_from_model_details(self.model_details)
 
-        # 3. Pop any top-level field and any model_kwargs entry that matches
-        #    the disabled_params spec, so those values never become set fields.
-        disabled = values.get("disabled_params") or {}
-        if disabled:
-            for key in list(values.keys()):
-                if key in disabled and is_disabled_value(values[key], disabled[key]):
-                    values.pop(key, None)
-            model_kwargs = values.get("model_kwargs")
-            if isinstance(model_kwargs, dict):
-                for key in list(model_kwargs.keys()):
-                    if key in disabled and is_disabled_value(model_kwargs[key], disabled[key]):
-                        model_kwargs.pop(key, None)
+        if not self.disabled_params:
+            return self
 
-        return values
+        # 3. Clear any set field whose value matches the disabled spec.
+        for name in list(self.model_fields_set):
+            if name in self.disabled_params and is_disabled_value(
+                getattr(self, name, None), self.disabled_params[name]
+            ):
+                object.__setattr__(self, name, None)
+                self.__pydantic_fields_set__.discard(name)
+
+        # 4. Also strip matching entries from model_kwargs if the subclass has one.
+        model_kwargs = getattr(self, "model_kwargs", None)
+        if isinstance(model_kwargs, dict):
+            for name in list(model_kwargs.keys()):
+                if name in self.disabled_params and is_disabled_value(
+                    model_kwargs[name], self.disabled_params[name]
+                ):
+                    model_kwargs.pop(name, None)
+
+        return self
 
     @cached_property
     def uipath_sync_client(self) -> UiPathHttpxClient:

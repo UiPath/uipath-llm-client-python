@@ -450,7 +450,7 @@ def test_openai_subclass_derives_disabled_params_from_model_details(
 ) -> None:
     llm = UiPathChatOpenAI(
         model="some-reasoning-openai-model",
-        client_settings=client_settings,
+        settings=client_settings,
         model_details={"shouldSkipTemperature": True},
     )
     assert llm.disabled_params is not None
@@ -464,7 +464,7 @@ def test_openai_subclass_merges_user_disabled_params_with_derived(
     # Our setup_model_info should merge it with the gateway-derived sampling set.
     llm = UiPathChatOpenAI(
         model="some-reasoning-openai-model",
-        client_settings=client_settings,
+        settings=client_settings,
         model_details={"shouldSkipTemperature": True},
         disabled_params={"parallel_tool_calls": None},
     )
@@ -480,7 +480,7 @@ def test_openai_subclass_user_override_wins_on_conflict(
     # derivation.
     llm = UiPathChatOpenAI(
         model="some-reasoning-openai-model",
-        client_settings=client_settings,
+        settings=client_settings,
         model_details={"shouldSkipTemperature": True},
         disabled_params={"temperature": [0.0]},
     )
@@ -499,7 +499,7 @@ def test_azure_autoinit_parallel_tool_calls_still_fires_without_flag(
     # None, so Azure's native logic must still fire.
     llm = UiPathAzureChatOpenAI(
         model="gpt-5.1",  # not gpt-4o -> Azure auto-init applies
-        client_settings=client_settings,
+        settings=client_settings,
         model_details={},
     )
     assert llm.disabled_params == {"parallel_tool_calls": None}
@@ -517,7 +517,7 @@ def test_azure_autoinit_parallel_tool_calls_merges_with_our_derivation(
     # neither convention is lost.
     llm = UiPathAzureChatOpenAI(
         model="gpt-5.1",  # not gpt-4o -> Azure auto-init applies
-        client_settings=client_settings,
+        settings=client_settings,
         model_details={"shouldSkipTemperature": True},
     )
     assert llm.disabled_params is not None
@@ -532,7 +532,7 @@ def test_openai_subclass_runtime_strip_honors_merged_disabled_params(
     # user-supplied parallel_tool_calls.
     llm = UiPathChatOpenAI(
         model="some-reasoning-openai-model",
-        client_settings=client_settings,
+        settings=client_settings,
         model_details={"shouldSkipTemperature": True},
         disabled_params={"parallel_tool_calls": None},
     )

@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_llm_client` (core package) will be documented in this file.
 
+## [1.9.9] - 2026-04-23
+
+### Changed
+- Bumped dependency floors to the latest installed versions: `uipath-platform>=0.1.35`.
+
 ## [1.9.8] - 2026-04-22
 
 ### Changed

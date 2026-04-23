@@ -3,8 +3,6 @@
 Provides synchronous and asynchronous methods for generating text embeddings.
 """
 
-from __future__ import annotations
-
 from typing import Any
 
 from uipath.llm_client.clients.normalized.types import (

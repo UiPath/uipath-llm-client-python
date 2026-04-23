@@ -10,8 +10,6 @@ Example:
     >>> vectors = embeddings.embed_documents(["Hello world"])
 """
 
-from __future__ import annotations
-
 from pydantic import Field, model_validator
 from typing_extensions import Self
 

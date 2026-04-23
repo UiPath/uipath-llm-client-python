@@ -55,9 +55,11 @@ CLAUDE_ANTHROPIC_BEDROCK_CONFIGS_NO_THINKING = [
 
 COMPLETIONS_MODELS_WITH_CONFIGS = {
     "anthropic.claude-haiku-4-5-20251001-v1:0": CLAUDE_BEDROCK_CONFIGS,
-    # claude-opus-4+ models via Bedrock: UiPathChatAnthropicBedrock only, no thinking
-    # (thinking cassettes not yet recorded; sampling params stripped by the fix).
+    # claude-opus-4-7: sampling params not supported — stripped by the fix.
+    # UiPathChatAnthropicBedrock only; thinking cassettes not yet recorded.
     "anthropic.claude-opus-4-7": CLAUDE_ANTHROPIC_BEDROCK_CONFIGS_NO_THINKING,
+    # claude-opus-4-5 and claude-opus-4-6: sampling params accepted by the API.
+    # UiPathChatAnthropicBedrock only; thinking cassettes not yet recorded.
     "anthropic.claude-opus-4-5-20251101-v1:0": CLAUDE_ANTHROPIC_BEDROCK_CONFIGS_NO_THINKING,
     "anthropic.claude-opus-4-6-v1": CLAUDE_ANTHROPIC_BEDROCK_CONFIGS_NO_THINKING,
 }

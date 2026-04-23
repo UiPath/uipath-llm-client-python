@@ -29,9 +29,12 @@ def is_anthropic_model_name(model_name: str) -> bool:
 
 
 def is_claude_opus_4_or_above(model_name: str) -> bool:
-    """Return True for Claude Opus 4+ reasoning models that reject sampling parameters.
+    """Return True for Claude models confirmed to reject sampling parameters.
 
-    These models do not accept ``temperature``, ``top_k``, or ``top_p``; sending
-    any of them causes a ``400 Bad Request`` from the Anthropic API.
+    Tested against the Anthropic API: only ``claude-opus-4-7`` rejects
+    ``temperature``, ``top_k``, and ``top_p`` with ``400 Bad Request``.
+    ``claude-opus-4-5`` and ``claude-opus-4-6`` accept sampling parameters.
+
+    Extend the pattern here as additional models are confirmed to restrict them.
     """
-    return bool(re.search(r"claude-opus-4", model_name, re.IGNORECASE))
+    return bool(re.search(r"claude-opus-4-7", model_name, re.IGNORECASE))

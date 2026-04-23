@@ -60,12 +60,13 @@ class TestClaudeOpus4SamplingParamFiltering:
         )
 
     def test_is_claude_opus_4_or_above(self) -> None:
-        # Matched — sampling params stripped
+        # Matched — sampling params stripped (confirmed to reject them via live testing)
         assert is_claude_opus_4_or_above("anthropic.claude-opus-4-7")
-        assert is_claude_opus_4_or_above("claude-opus-4-5-20250514")
-        assert is_claude_opus_4_or_above("anthropic.claude-opus-4-5-20251101-v1:0")
-        assert is_claude_opus_4_or_above("anthropic.claude-opus-4-6-v1")
+        assert is_claude_opus_4_or_above("claude-opus-4-7-20250514")
         # Not matched — sampling params pass through unchanged
+        # (claude-opus-4-5 and claude-opus-4-6 accept temperature/top_k/top_p)
+        assert not is_claude_opus_4_or_above("anthropic.claude-opus-4-5-20251101-v1:0")
+        assert not is_claude_opus_4_or_above("anthropic.claude-opus-4-6-v1")
         assert not is_claude_opus_4_or_above("anthropic.claude-3-5-sonnet-20240620-v1:0")
         assert not is_claude_opus_4_or_above("anthropic.claude-haiku-4-5-20251001-v1:0")
 

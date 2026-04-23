@@ -27,7 +27,7 @@ import logging
 from abc import ABC
 from collections.abc import AsyncGenerator, Generator, Mapping, Sequence
 from functools import cached_property
-from typing import Any, ClassVar, Literal
+from typing import Any, ClassVar, Literal, Self
 
 from httpx import URL, Response
 from langchain_core.callbacks import (
@@ -38,7 +38,7 @@ from langchain_core.embeddings import Embeddings
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import BaseMessage
 from langchain_core.outputs import ChatGeneration, ChatGenerationChunk, ChatResult
-from pydantic import AliasChoices, BaseModel, ConfigDict, Field
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field, model_validator
 
 from uipath.llm_client.httpx_client import (
     UiPathHttpxAsyncClient,
@@ -49,6 +49,7 @@ from uipath.llm_client.utils.headers import (
     get_captured_response_headers,
     set_captured_response_headers,
 )
+from uipath_langchain_client._sampling import strip_disabled_sampling_kwargs
 from uipath_langchain_client.settings import (
     UiPathAPIConfig,
     UiPathBaseSettings,
@@ -146,6 +147,25 @@ class UiPathBaseLLMClient(BaseModel, ABC):
         default=None,
         description="Logger for request/response logging",
     )
+
+    @model_validator(mode="after")
+    def _resolve_model_details(self) -> Self:
+        # Populate model_details eagerly so direct instantiation behaves the
+        # same as the factory path. get_available_models is class-cached inside
+        # the settings layer, so at most one discovery HTTP call fires per
+        # process regardless of how many chat/embedding models are built.
+        # Placed on UiPathBaseLLMClient (not just the chat subclass) because
+        # model_details is meaningful for embedding wrappers too.
+        if self.model_details is None:
+            try:
+                info = self.client_settings.get_model_info(
+                    self.model_name,
+                    byo_connection_id=self.byo_connection_id,
+                )
+                self.model_details = info.get("modelDetails") or {}
+            except Exception:
+                self.model_details = {}
+        return self
 
     @cached_property
     def uipath_sync_client(self) -> UiPathHttpxClient:
@@ -364,58 +384,14 @@ class UiPathBaseChatModel(UiPathBaseLLMClient, BaseChatModel):
     so that headers are captured transparently.
     """
 
-    # When modelDetails["shouldSkipTemperature"] is truthy, the gateway rejects
-    # the entire sampling set for that model (reasoning-style models like
-    # anthropic.claude-opus-4-7), so we drop all of these — not just temperature.
-    # Note: `n` (number of candidates) is intentionally excluded; it is not a
-    # sampling knob.
-    _SAMPLING_PARAMS: ClassVar[tuple[str, ...]] = (
-        "temperature",
-        "top_p",
-        "top_k",
-        "frequency_penalty",
-        "presence_penalty",
-        "seed",
-        "logit_bias",
-        "logprobs",
-        "top_logprobs",
-    )
-
-    def model_post_init(self, __context: Any) -> None:
-        # Populate model_details eagerly so that direct instantiation
-        # (e.g. ``UiPathChat(model="opus47")``) behaves the same as the factory
-        # path. ``get_available_models`` is class-cached inside the settings
-        # layer, so at most one discovery HTTP call fires per process even if
-        # many chat models get constructed.
-        super().model_post_init(__context)
-        if self.model_details is None:
-            try:
-                info = self.client_settings.get_model_info(
-                    self.model_name,
-                    byo_connection_id=self.byo_connection_id,
-                )
-                self.model_details = info.get("modelDetails") or {}
-            except Exception:
-                self.model_details = {}
-
-    def _skip_sampling(self) -> bool:
-        return bool(self.model_details and self.model_details.get("shouldSkipTemperature"))
-
-    def _strip_disabled_sampling_kwargs(self, kwargs: dict[str, Any]) -> dict[str, Any]:
-        if not self._skip_sampling():
-            return kwargs
-        out = dict(kwargs)
-        for param in self._SAMPLING_PARAMS:
-            if param in out:
-                if self.logger is not None:
-                    self.logger.warning(
-                        "Stripping unsupported invocation param %r for model %r "
-                        "(shouldSkipTemperature=True)",
-                        param,
-                        self.model_name,
-                    )
-                out.pop(param, None)
-        return out
+    def _strip_sampling(self, kwargs: dict[str, Any]) -> dict[str, Any]:
+        """Drop sampling kwargs the model's ``modelDetails`` flags as unsupported."""
+        return strip_disabled_sampling_kwargs(
+            kwargs,
+            model_details=self.model_details,
+            model_name=self.model_name,
+            logger=self.logger,
+        )
 
     def _generate(
         self,
@@ -424,7 +400,7 @@ class UiPathBaseChatModel(UiPathBaseLLMClient, BaseChatModel):
         run_manager: CallbackManagerForLLMRun | None = None,
         **kwargs: Any,
     ) -> ChatResult:
-        kwargs = self._strip_disabled_sampling_kwargs(kwargs)
+        kwargs = self._strip_sampling(kwargs)
         set_captured_response_headers({})
         try:
             result = self._uipath_generate(messages, stop=stop, run_manager=run_manager, **kwargs)
@@ -450,7 +426,7 @@ class UiPathBaseChatModel(UiPathBaseLLMClient, BaseChatModel):
         run_manager: AsyncCallbackManagerForLLMRun | None = None,
         **kwargs: Any,
     ) -> ChatResult:
-        kwargs = self._strip_disabled_sampling_kwargs(kwargs)
+        kwargs = self._strip_sampling(kwargs)
         set_captured_response_headers({})
         try:
             result = await self._uipath_agenerate(
@@ -478,7 +454,7 @@ class UiPathBaseChatModel(UiPathBaseLLMClient, BaseChatModel):
         run_manager: CallbackManagerForLLMRun | None = None,
         **kwargs: Any,
     ) -> Generator[ChatGenerationChunk, None, None]:
-        kwargs = self._strip_disabled_sampling_kwargs(kwargs)
+        kwargs = self._strip_sampling(kwargs)
         set_captured_response_headers({})
         try:
             first = True
@@ -509,7 +485,7 @@ class UiPathBaseChatModel(UiPathBaseLLMClient, BaseChatModel):
         run_manager: AsyncCallbackManagerForLLMRun | None = None,
         **kwargs: Any,
     ) -> AsyncGenerator[ChatGenerationChunk, None]:
-        kwargs = self._strip_disabled_sampling_kwargs(kwargs)
+        kwargs = self._strip_sampling(kwargs)
         set_captured_response_headers({})
         try:
             first = True

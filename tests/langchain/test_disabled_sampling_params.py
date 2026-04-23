@@ -14,6 +14,7 @@ from typing import Any
 import pytest
 from langchain_core.messages import AIMessage
 from langchain_core.outputs import ChatGeneration, ChatResult
+from uipath_langchain_client._sampling import DISABLED_SAMPLING_PARAMS
 from uipath_langchain_client.clients.normalized.chat_models import UiPathChat
 from uipath_langchain_client.factory import get_chat_model
 
@@ -119,11 +120,11 @@ def test_invoke_strips_all_listed_sampling_params(
 
     # Pass every sampling param plus an unrelated kwarg; assert every
     # sampling param is stripped and only max_tokens survives.
-    kwargs: dict[str, Any] = {p: 0.1 for p in llm._SAMPLING_PARAMS}
+    kwargs: dict[str, Any] = {p: 0.1 for p in DISABLED_SAMPLING_PARAMS}
     kwargs["max_tokens"] = 50
     llm.invoke("x", **kwargs)  # type: ignore[arg-type]
 
-    for p in llm._SAMPLING_PARAMS:
+    for p in DISABLED_SAMPLING_PARAMS:
         assert p not in captured
     assert captured["max_tokens"] == 50
 
@@ -278,15 +279,15 @@ def test_no_warning_when_nothing_to_strip(
 
 
 # --------------------------------------------------------------------------- #
-# eager resolution via model_post_init on direct instantiation
+# eager model_details resolution via the UiPathBaseLLMClient validator
 # --------------------------------------------------------------------------- #
 
 
-def test_post_init_populates_model_details_on_direct_instantiation(
+def test_validator_populates_model_details_on_direct_instantiation(
     monkeypatch: pytest.MonkeyPatch, client_settings: UiPathBaseSettings
 ) -> None:
     _stub_model_info(monkeypatch, client_settings, model_details={"shouldSkipTemperature": True})
-    # No model_details passed — model_post_init should fetch and populate it.
+    # No model_details passed — the validator should fetch and populate it.
     llm = UiPathChat(model="anthropic.claude-opus-4-7", settings=client_settings)
     assert llm.model_details == {"shouldSkipTemperature": True}
 
@@ -296,7 +297,7 @@ def test_post_init_populates_model_details_on_direct_instantiation(
     assert "temperature" not in captured
 
 
-def test_post_init_swallows_discovery_errors(
+def test_validator_swallows_discovery_errors(
     monkeypatch: pytest.MonkeyPatch, client_settings: UiPathBaseSettings
 ) -> None:
     _stub_model_info(monkeypatch, client_settings, raises=RuntimeError("boom"))
@@ -311,7 +312,7 @@ def test_post_init_swallows_discovery_errors(
     assert captured["temperature"] == 0.5
 
 
-def test_post_init_does_not_overwrite_explicitly_provided_model_details(
+def test_validator_does_not_overwrite_explicitly_provided_model_details(
     monkeypatch: pytest.MonkeyPatch, client_settings: UiPathBaseSettings
 ) -> None:
     # If a caller (or the factory) already passed model_details, post_init

@@ -27,7 +27,7 @@ import logging
 from abc import ABC
 from collections.abc import AsyncGenerator, Generator, Mapping, Sequence
 from functools import cached_property
-from typing import Any, ClassVar, Literal, Self
+from typing import Any, ClassVar, Literal
 
 from httpx import URL, Response
 from langchain_core.callbacks import (
@@ -38,7 +38,14 @@ from langchain_core.embeddings import Embeddings
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import BaseMessage
 from langchain_core.outputs import ChatGeneration, ChatGenerationChunk, ChatResult
-from pydantic import AliasChoices, BaseModel, ConfigDict, Field, model_validator
+from pydantic import (
+    AliasChoices,
+    BaseModel,
+    ConfigDict,
+    Field,
+    ValidationInfo,
+    field_validator,
+)
 
 from uipath.llm_client.httpx_client import (
     UiPathHttpxAsyncClient,
@@ -49,13 +56,12 @@ from uipath.llm_client.utils.headers import (
     get_captured_response_headers,
     set_captured_response_headers,
 )
-from uipath_langchain_client._sampling import strip_disabled_sampling_kwargs
 from uipath_langchain_client.settings import (
     UiPathAPIConfig,
     UiPathBaseSettings,
     get_default_client_settings,
 )
-from uipath_langchain_client.utils import RetryConfig
+from uipath_langchain_client.utils import RetryConfig, strip_disabled_sampling_kwargs
 
 
 class UiPathBaseLLMClient(BaseModel, ABC):
@@ -112,9 +118,35 @@ class UiPathBaseLLMClient(BaseModel, ABC):
     model_details: dict[str, Any] | None = Field(
         default=None,
         description="Per-model capability flags sourced from the discovery endpoint "
-        "(e.g. {'shouldSkipTemperature': True}). The factory forwards it; direct "
-        "instantiation lazy-resolves it from client_settings on first construction.",
+        "(e.g. {'shouldSkipTemperature': True}). The factory forwards it; when absent, "
+        "the field validator below eagerly resolves it from client_settings.",
     )
+
+    @field_validator("model_details", mode="after")
+    @classmethod
+    def _resolve_model_details(
+        cls, value: dict[str, Any] | None, info: ValidationInfo
+    ) -> dict[str, Any]:
+        # Fields validate in declaration order, so by the time this runs both
+        # ``client_settings`` and ``model_name`` are already in ``info.data``.
+        # Eager resolution here keeps direct instantiation and the factory
+        # path consistent. ``get_available_models`` is class-cached inside
+        # the settings layer, so at most one discovery HTTP call fires per
+        # process regardless of how many chat/embedding models are built.
+        if value is not None:
+            return value
+        settings = info.data.get("client_settings")
+        model_name = info.data.get("model_name")
+        if settings is None or not model_name:
+            return {}
+        try:
+            model_info = settings.get_model_info(
+                model_name,
+                byo_connection_id=info.data.get("byo_connection_id"),
+            )
+            return model_info.get("modelDetails") or {}
+        except Exception:
+            return {}
 
     default_headers: Mapping[str, str] | None = Field(
         default=None,
@@ -147,25 +179,6 @@ class UiPathBaseLLMClient(BaseModel, ABC):
         default=None,
         description="Logger for request/response logging",
     )
-
-    @model_validator(mode="after")
-    def _resolve_model_details(self) -> Self:
-        # Populate model_details eagerly so direct instantiation behaves the
-        # same as the factory path. get_available_models is class-cached inside
-        # the settings layer, so at most one discovery HTTP call fires per
-        # process regardless of how many chat/embedding models are built.
-        # Placed on UiPathBaseLLMClient (not just the chat subclass) because
-        # model_details is meaningful for embedding wrappers too.
-        if self.model_details is None:
-            try:
-                info = self.client_settings.get_model_info(
-                    self.model_name,
-                    byo_connection_id=self.byo_connection_id,
-                )
-                self.model_details = info.get("modelDetails") or {}
-            except Exception:
-                self.model_details = {}
-        return self
 
     @cached_property
     def uipath_sync_client(self) -> UiPathHttpxClient:

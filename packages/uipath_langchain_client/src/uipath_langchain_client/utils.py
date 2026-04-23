@@ -18,6 +18,11 @@ from uipath.llm_client.utils.model_family import (
     is_anthropic_model_name,
 )
 from uipath.llm_client.utils.retry import RetryConfig
+from uipath.llm_client.utils.sampling import (
+    DISABLED_SAMPLING_PARAMS,
+    should_skip_sampling,
+    strip_disabled_sampling_kwargs,
+)
 
 __all__ = [
     "RetryConfig",
@@ -36,4 +41,7 @@ __all__ = [
     "UiPathTooManyRequestsError",
     "ANTHROPIC_MODEL_NAME_KEYWORDS",
     "is_anthropic_model_name",
+    "DISABLED_SAMPLING_PARAMS",
+    "should_skip_sampling",
+    "strip_disabled_sampling_kwargs",
 ]

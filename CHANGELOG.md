@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_llm_client` (core package) will be documented in this file.
 
+## [1.10.0] - 2026-04-23
+
+### Added
+- `uipath.llm_client.utils.sampling` module exposing `DISABLED_SAMPLING_PARAMS`, `should_skip_sampling(model_details)`, and `strip_disabled_sampling_kwargs(...)`. Centralizes the gateway's rule that `modelDetails.shouldSkipTemperature=True` implies the full sampling set is rejected (temperature, top_p, top_k, frequency/presence penalty, seed, logit_bias, logprobs, top_logprobs). Framework-agnostic helpers intended for reuse by any wrapper layer.
+
 ## [1.9.9] - 2026-04-23
 
 ### Changed

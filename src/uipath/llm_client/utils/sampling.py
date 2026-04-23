@@ -3,8 +3,9 @@
 Reasoning-style models (e.g. ``anthropic.claude-opus-4-7``) advertise
 ``modelDetails.shouldSkipTemperature: true`` on the discovery endpoint. When
 that flag is set, the gateway rejects the entire sampling set, not just
-``temperature``. The helpers here centralize that knowledge so every chat
-wrapper can reuse them via ``UiPathBaseChatModel``.
+``temperature``. The helpers here centralize that knowledge so every framework
+wrapper (LangChain chat models, future LlamaIndex wrappers, the core
+normalized client, etc.) can reuse the same rule.
 """
 
 from __future__ import annotations

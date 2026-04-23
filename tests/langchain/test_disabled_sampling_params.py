@@ -14,9 +14,9 @@ from typing import Any
 import pytest
 from langchain_core.messages import AIMessage
 from langchain_core.outputs import ChatGeneration, ChatResult
-from uipath_langchain_client._sampling import DISABLED_SAMPLING_PARAMS
 from uipath_langchain_client.clients.normalized.chat_models import UiPathChat
 from uipath_langchain_client.factory import get_chat_model
+from uipath_langchain_client.utils import DISABLED_SAMPLING_PARAMS
 
 from uipath.llm_client.settings import UiPathBaseSettings
 

@@ -5,8 +5,11 @@ All notable changes to `uipath_langchain_client` will be documented in this file
 ## [1.10.0] - 2026-04-23
 
 ### Added
-- `UiPathBaseChatModel` now strips sampling kwargs (`temperature`, `top_p`, `top_k`, `frequency_penalty`, `presence_penalty`, `seed`, `logit_bias`, `logprobs`, `top_logprobs`) at invocation time when the model's `modelDetails.shouldSkipTemperature` is true. Fixes `anthropic.claude-opus-4-7` rejecting any sampling parameter passed to `.invoke()` / `.ainvoke()` / streams.
-- `model_details` field on `UiPathBaseLLMClient`, populated eagerly: `get_chat_model` forwards it from the discovery response it already fetches; direct instantiation resolves it in `model_post_init` via `client_settings.get_model_info` (backed by the class-cached discovery response, so at most one network call per process). Each strip logs a warning via `self.logger` when one is configured.
+- `UiPathBaseChatModel` now strips sampling kwargs (`temperature`, `top_p`, `top_k`, `frequency_penalty`, `presence_penalty`, `seed`, `logit_bias`, `logprobs`, `top_logprobs`) at invocation time when the model's `modelDetails.shouldSkipTemperature` is true. Fixes `anthropic.claude-opus-4-7` rejecting any sampling parameter passed to `.invoke()` / `.ainvoke()` / streams. The shared helpers live in the core package at `uipath.llm_client.utils.sampling` and are re-exported from `uipath_langchain_client.utils`.
+- `model_details` field on `UiPathBaseLLMClient`, populated eagerly via a `@field_validator("model_details", mode="after")`: `get_chat_model` forwards it from the discovery response it already fetches; direct instantiation resolves it via `client_settings.get_model_info` (backed by the class-cached discovery response, so at most one network call per process). Each strip logs a warning via `self.logger` when one is configured.
+
+### Changed
+- Bumped `uipath-llm-client` floor to `>=1.10.0` to match the release that adds `uipath.llm_client.utils.sampling`.
 
 ## [1.9.9] - 2026-04-23
 

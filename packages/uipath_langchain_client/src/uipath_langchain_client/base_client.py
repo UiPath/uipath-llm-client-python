@@ -49,12 +49,13 @@ from uipath.llm_client.utils.headers import (
     get_captured_response_headers,
     set_captured_response_headers,
 )
+from uipath.llm_client.utils.sampling import strip_disabled_sampling_kwargs
 from uipath_langchain_client.settings import (
     UiPathAPIConfig,
     UiPathBaseSettings,
     get_default_client_settings,
 )
-from uipath_langchain_client.utils import RetryConfig, strip_disabled_sampling_kwargs
+from uipath_langchain_client.utils import RetryConfig
 
 
 class UiPathBaseLLMClient(BaseModel, ABC):

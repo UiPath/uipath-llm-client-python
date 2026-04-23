@@ -8,8 +8,6 @@ wrapper (LangChain chat models, future LlamaIndex wrappers, the core
 normalized client, etc.) can reuse the same rule.
 """
 
-from __future__ import annotations
-
 from collections.abc import Mapping
 from logging import Logger
 from typing import Any

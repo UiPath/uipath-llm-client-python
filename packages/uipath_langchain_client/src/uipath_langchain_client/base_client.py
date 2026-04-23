@@ -381,25 +381,25 @@ class UiPathBaseChatModel(UiPathBaseLLMClient, BaseChatModel):
         "top_logprobs",
     )
 
-    def _skip_sampling(self) -> bool:
-        # Lazy-resolve model_details on first access rather than at construction
-        # time: the factory forwards it eagerly (zero extra cost), and
-        # get_available_models is class-cached inside the settings layer, so
-        # direct instantiation pays at most one discovery call per process.
-        # Running this lazily keeps existing unit tests that don't invoke the
-        # model from triggering an unrelated HTTP call at construction time.
-        details = self.model_details
-        if details is None:
+    def model_post_init(self, __context: Any) -> None:
+        # Populate model_details eagerly so that direct instantiation
+        # (e.g. ``UiPathChat(model="opus47")``) behaves the same as the factory
+        # path. ``get_available_models`` is class-cached inside the settings
+        # layer, so at most one discovery HTTP call fires per process even if
+        # many chat models get constructed.
+        super().model_post_init(__context)
+        if self.model_details is None:
             try:
                 info = self.client_settings.get_model_info(
                     self.model_name,
                     byo_connection_id=self.byo_connection_id,
                 )
-                details = info.get("modelDetails") or {}
+                self.model_details = info.get("modelDetails") or {}
             except Exception:
-                details = {}
-            self.model_details = details
-        return bool(details.get("shouldSkipTemperature"))
+                self.model_details = {}
+
+    def _skip_sampling(self) -> bool:
+        return bool(self.model_details and self.model_details.get("shouldSkipTemperature"))
 
     def _strip_disabled_sampling_kwargs(self, kwargs: dict[str, Any]) -> dict[str, Any]:
         if not self._skip_sampling():

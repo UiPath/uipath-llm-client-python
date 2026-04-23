@@ -278,39 +278,59 @@ def test_no_warning_when_nothing_to_strip(
 
 
 # --------------------------------------------------------------------------- #
-# lazy resolution on direct instantiation
+# eager resolution via model_post_init on direct instantiation
 # --------------------------------------------------------------------------- #
 
 
-def test_lazy_resolution_populates_model_details_on_first_invoke(
+def test_post_init_populates_model_details_on_direct_instantiation(
     monkeypatch: pytest.MonkeyPatch, client_settings: UiPathBaseSettings
 ) -> None:
     _stub_model_info(monkeypatch, client_settings, model_details={"shouldSkipTemperature": True})
-    # No model_details passed — construction leaves it None.
+    # No model_details passed — model_post_init should fetch and populate it.
     llm = UiPathChat(model="anthropic.claude-opus-4-7", settings=client_settings)
-    assert llm.model_details is None
+    assert llm.model_details == {"shouldSkipTemperature": True}
 
     captured: dict[str, Any] = {}
     _stub_generate(monkeypatch, llm, captured)
     llm.invoke("x", temperature=0.5)
-
-    assert llm.model_details == {"shouldSkipTemperature": True}
     assert "temperature" not in captured
 
 
-def test_lazy_resolution_swallows_discovery_errors(
+def test_post_init_swallows_discovery_errors(
     monkeypatch: pytest.MonkeyPatch, client_settings: UiPathBaseSettings
 ) -> None:
     _stub_model_info(monkeypatch, client_settings, raises=RuntimeError("boom"))
     llm = UiPathChat(model="anthropic.claude-opus-4-7", settings=client_settings)
 
+    # Discovery failure => we fall back to empty model_details and don't strip.
+    assert llm.model_details == {}
+
     captured: dict[str, Any] = {}
     _stub_generate(monkeypatch, llm, captured)
     llm.invoke("x", temperature=0.5)
-
-    # Discovery failure => we fall back to empty model_details and don't strip.
-    assert llm.model_details == {}
     assert captured["temperature"] == 0.5
+
+
+def test_post_init_does_not_overwrite_explicitly_provided_model_details(
+    monkeypatch: pytest.MonkeyPatch, client_settings: UiPathBaseSettings
+) -> None:
+    # If a caller (or the factory) already passed model_details, post_init
+    # must not call get_model_info and must not overwrite the forwarded value.
+    called: dict[str, bool] = {"called": False}
+
+    def _stub(*args: Any, **kwargs: Any) -> dict[str, Any]:
+        called["called"] = True
+        return {"modelDetails": {"shouldSkipTemperature": False}}
+
+    monkeypatch.setattr(client_settings, "get_model_info", _stub)
+
+    llm = UiPathChat(
+        model="anthropic.claude-opus-4-7",
+        settings=client_settings,
+        model_details={"shouldSkipTemperature": True},
+    )
+    assert llm.model_details == {"shouldSkipTemperature": True}
+    assert called["called"] is False
 
 
 # --------------------------------------------------------------------------- #

@@ -158,7 +158,7 @@ class UiPathBaseLLMClient(BaseModel, ABC):
     )
 
     @model_validator(mode="after")
-    def _finalize_model_metadata(self) -> Self:
+    def setup_model_info(self) -> Self:
         """Resolve ``model_details`` from discovery and merge ``disabled_params``.
 
         Runs after pydantic has validated the fields, so ``self.client_settings``

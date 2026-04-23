@@ -15,7 +15,6 @@ from uipath_langchain_client.settings import (
 )
 from uipath_langchain_client.utils import (
     CLAUDE_OPUS_4_UNSUPPORTED_SAMPLING_PARAMS,
-    is_claude_opus_4_or_above,
 )
 
 try:
@@ -85,7 +84,7 @@ class UiPathChatBedrockConverse(UiPathBaseChatModel, ChatBedrockConverse):  # ty
     @override
     def _converse_params(self, **kwargs: Any) -> dict:
         params = super()._converse_params(**kwargs)
-        if is_claude_opus_4_or_above(self.model_id):
+        if self._should_skip_sampling_params:
             inference = params.get("inferenceConfig")
             if isinstance(inference, dict):
                 inference.pop("temperature", None)
@@ -119,7 +118,7 @@ class UiPathChatBedrock(UiPathBaseChatModel, ChatBedrock):  # type: ignore[overr
     @model_validator(mode="after")
     def setup_uipath_client(self) -> Self:
         self.client = WrappedBotoClient(self.uipath_sync_client)
-        if is_claude_opus_4_or_above(self.model_id):
+        if self._should_skip_sampling_params:
             self.temperature = None
             if self.model_kwargs:
                 self.model_kwargs = {
@@ -181,7 +180,7 @@ class UiPathChatAnthropicBedrock(UiPathBaseChatModel, ChatAnthropicBedrock):
         **kwargs: Any,
     ) -> dict:
         payload = super()._get_request_payload(input_, stop=stop, **kwargs)
-        if is_claude_opus_4_or_above(self.model):
+        if self._should_skip_sampling_params:
             for param in CLAUDE_OPUS_4_UNSUPPORTED_SAMPLING_PARAMS:
                 payload.pop(param, None)
         return payload

@@ -69,7 +69,6 @@ from uipath_langchain_client.settings import ApiType, RoutingMode, UiPathAPIConf
 from uipath_langchain_client.utils import (
     CLAUDE_OPUS_4_UNSUPPORTED_SAMPLING_PARAMS,
     is_anthropic_model_name,
-    is_claude_opus_4_or_above,
 )
 
 _DictOrPydanticClass = Union[dict[str, Any], type[BaseModel], type]
@@ -256,7 +255,7 @@ class UiPathChat(UiPathBaseChatModel):
             params.pop("temperature", None)
 
         # Claude Opus 4+ reasoning models reject temperature, top_k and top_p entirely.
-        if is_claude_opus_4_or_above(self.model_name):
+        if self._should_skip_sampling_params:
             for param in CLAUDE_OPUS_4_UNSUPPORTED_SAMPLING_PARAMS:
                 params.pop(param, None)
 

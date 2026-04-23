@@ -15,7 +15,6 @@ from uipath_langchain_client.settings import (
 )
 from uipath_langchain_client.utils import (
     CLAUDE_OPUS_4_UNSUPPORTED_SAMPLING_PARAMS,
-    is_claude_opus_4_or_above,
 )
 
 try:
@@ -165,7 +164,7 @@ class UiPathChatAnthropic(UiPathBaseChatModel, ChatAnthropic):
         **kwargs: Any,
     ) -> dict:
         payload = super()._get_request_payload(input_, stop=stop, **kwargs)
-        if is_claude_opus_4_or_above(self.model):
+        if self._should_skip_sampling_params:
             for param in CLAUDE_OPUS_4_UNSUPPORTED_SAMPLING_PARAMS:
                 payload.pop(param, None)
         return payload

@@ -49,6 +49,7 @@ from uipath.llm_client.utils.headers import (
     get_captured_response_headers,
     set_captured_response_headers,
 )
+from uipath.llm_client.utils.model_family import is_claude_opus_4_or_above
 from uipath_langchain_client.settings import (
     UiPathAPIConfig,
     UiPathBaseSettings,
@@ -189,6 +190,19 @@ class UiPathBaseLLMClient(BaseModel, ABC):
             retry_config=self.retry_config,
             logger=self.logger,
         )
+
+    @cached_property
+    def _should_skip_sampling_params(self) -> bool:
+        """True if the model's discovery metadata marks temperature/top_k/top_p as unsupported.
+
+        Reads ``modelDetails.shouldSkipTemperature`` from the model discovery API.
+        Falls back to a name-based heuristic when the model is not found in discovery.
+        """
+        try:
+            info = self.client_settings.get_model_info(model_name=self.model_name)
+            return bool(info.get("modelDetails", {}).get("shouldSkipTemperature", False))
+        except Exception:
+            return is_claude_opus_4_or_above(self.model_name)
 
     def uipath_request(
         self,

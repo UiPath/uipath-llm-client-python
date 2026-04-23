@@ -73,6 +73,8 @@ class TestClaudeOpus4SamplingParamFiltering:
     def test_unsupported_params_stripped_from_payload(
         self, opus4_client: UiPathChatAnthropicBedrock
     ) -> None:
+        # Force _should_skip_sampling_params without a real discovery call.
+        opus4_client.__dict__["_should_skip_sampling_params"] = True
         with patch.object(opus4_client, "_client") as mock_client:
             mock_client.messages.create.return_value = MagicMock(
                 content=[MagicMock(type="text", text="hi")],
@@ -94,6 +96,8 @@ class TestClaudeOpus4SamplingParamFiltering:
             settings=client_settings,
             temperature=0.5,
         )
+        # Discovery returns False for haiku; ensure params are not stripped.
+        haiku.__dict__["_should_skip_sampling_params"] = False
         with patch.object(haiku, "_client") as mock_client:
             mock_client.messages.create.return_value = MagicMock(
                 content=[MagicMock(type="text", text="hi")],

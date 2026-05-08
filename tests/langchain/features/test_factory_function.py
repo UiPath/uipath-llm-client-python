@@ -128,3 +128,82 @@ class TestFactoryDefaultApiFlavor:
             },
         )
         assert captured["api_flavor"] == ApiFlavor.CHAT_COMPLETIONS
+
+
+class TestFactoryAgentHubConfig:
+    """The ``agenthub_config`` factory kwarg overrides ``client_settings.agenthub_config``
+    via ``model_copy`` so the caller's instance is not mutated."""
+
+    def _capture_settings(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        model_info: dict,
+        original_settings,
+        **factory_kwargs,
+    ):
+        captured: dict = {}
+
+        class _StubModel:
+            def __init__(self, **kwargs):
+                captured.update(kwargs)
+
+        monkeypatch.setattr(
+            "uipath_langchain_client.clients.openai.chat_models.UiPathAzureChatOpenAI",
+            _StubModel,
+        )
+        get_chat_model(
+            model_name=model_info["modelName"],
+            client_settings=original_settings,
+            **factory_kwargs,
+        )
+        return captured
+
+    def _make_settings(self, agenthub_config: str | None):
+        settings = MagicMock()
+        settings.get_model_info.return_value = {
+            "modelName": "gpt-4o",
+            "vendor": "OpenAi",
+            "apiFlavor": None,
+            "modelFamily": "OpenAi",
+        }
+        settings.agenthub_config = agenthub_config
+
+        def _model_copy(*, update):
+            copied = MagicMock()
+            copied.get_model_info.return_value = settings.get_model_info.return_value
+            copied.agenthub_config = update.get("agenthub_config", agenthub_config)
+            return copied
+
+        settings.model_copy.side_effect = _model_copy
+        return settings
+
+    def test_kwarg_overrides_settings_value(self, monkeypatch: pytest.MonkeyPatch):
+        original = self._make_settings(agenthub_config="agentsruntime")
+        captured = self._capture_settings(
+            monkeypatch,
+            original.get_model_info.return_value,
+            original,
+            agenthub_config="agentsplayground",
+        )
+        assert captured["settings"].agenthub_config == "agentsplayground"
+        original.model_copy.assert_called_once_with(update={"agenthub_config": "agentsplayground"})
+
+    def test_caller_settings_not_mutated(self, monkeypatch: pytest.MonkeyPatch):
+        original = self._make_settings(agenthub_config="agentsruntime")
+        self._capture_settings(
+            monkeypatch,
+            original.get_model_info.return_value,
+            original,
+            agenthub_config="agentsplayground",
+        )
+        assert original.agenthub_config == "agentsruntime"
+
+    def test_no_kwarg_keeps_settings_value(self, monkeypatch: pytest.MonkeyPatch):
+        original = self._make_settings(agenthub_config="agentsruntime")
+        captured = self._capture_settings(
+            monkeypatch,
+            original.get_model_info.return_value,
+            original,
+        )
+        assert captured["settings"] is original
+        original.model_copy.assert_not_called()

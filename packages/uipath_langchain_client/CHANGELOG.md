@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_langchain_client` will be documented in this file.
 
+## [1.10.1] - 2026-05-08
+
+### Added
+- `agenthub_config` kwarg on `get_chat_model` and `get_embedding_model`. When set, overrides `client_settings.agenthub_config` for that call via `model_copy`, so the caller's settings instance is not mutated. Lets callers (e.g. low-code agent runtimes) pass the per-execution AgentHub config (`agentsruntime`, `agentsplayground`, `agentsevals`, …) without rebuilding settings.
+
 ## [1.10.0] - 2026-04-23
 
 ### Added

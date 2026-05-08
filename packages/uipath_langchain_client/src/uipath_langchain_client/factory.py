@@ -48,6 +48,7 @@ def get_chat_model(
     vendor_type: VendorType | str | None = None,
     api_flavor: ApiFlavor | str | None = None,
     custom_class: type[UiPathBaseChatModel] | None = None,
+    agenthub_config: str | None = None,
     **model_kwargs: Any,
 ) -> UiPathBaseChatModel:
     """Factory function to create the appropriate LangChain chat model for a given model name.
@@ -70,6 +71,9 @@ def get_chat_model(
         custom_class: A custom class to use for instantiating the chat model instead of the
             auto-detected one. Must be a subclass of UiPathBaseChatModel. When provided,
             the factory skips vendor detection and uses this class directly.
+        agenthub_config: AgentHub config header value to send with requests. When set,
+            overrides ``client_settings.agenthub_config`` for this call. Returns a copy
+            of ``client_settings`` so the caller's instance is not mutated.
         **model_kwargs: Additional keyword arguments to pass to the model constructor.
 
     Returns:
@@ -79,6 +83,8 @@ def get_chat_model(
         ValueError: If the model is not found in available models or vendor is not supported.
     """
     client_settings = client_settings or get_default_client_settings()
+    if agenthub_config is not None and hasattr(client_settings, "agenthub_config"):
+        client_settings = client_settings.model_copy(update={"agenthub_config": agenthub_config})
     model_info = client_settings.get_model_info(
         model_name,
         byo_connection_id=byo_connection_id,
@@ -238,6 +244,7 @@ def get_embedding_model(
     routing_mode: RoutingMode | str = RoutingMode.PASSTHROUGH,
     vendor_type: VendorType | str | None = None,
     custom_class: type[UiPathBaseEmbeddings] | None = None,
+    agenthub_config: str | None = None,
     **model_kwargs: Any,
 ) -> UiPathBaseEmbeddings:
     """Factory function to create the appropriate LangChain embeddings model.
@@ -255,6 +262,9 @@ def get_embedding_model(
         custom_class: A custom class to use for instantiating the embedding model instead of
             the auto-detected one. Must be a subclass of UiPathBaseEmbeddings. When provided,
             the factory skips vendor detection and uses this class directly.
+        agenthub_config: AgentHub config header value to send with requests. When set,
+            overrides ``client_settings.agenthub_config`` for this call. Returns a copy
+            of ``client_settings`` so the caller's instance is not mutated.
         **model_kwargs: Additional arguments passed to the embeddings constructor.
 
     Returns:
@@ -269,6 +279,8 @@ def get_embedding_model(
         >>> vectors = embeddings.embed_documents(["Hello world"])
     """
     client_settings = client_settings or get_default_client_settings()
+    if agenthub_config is not None and hasattr(client_settings, "agenthub_config"):
+        client_settings = client_settings.model_copy(update={"agenthub_config": agenthub_config})
     model_info = client_settings.get_model_info(
         model_name,
         byo_connection_id=byo_connection_id,

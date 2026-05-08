@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_llm_client` (core package) will be documented in this file.
 
+## [1.11.0] - 2026-05-08
+
+### Changed
+- **Behavior change**: `PlatformSettings.agenthub_config` field default flipped from `"agentsruntime"` to `None`. When unset, the `X-UiPath-AgentHub-Config` header is omitted from outgoing requests. The `UIPATH_AGENTHUB_CONFIG` environment variable still wins when set.
+
 ## [1.10.0] - 2026-04-23
 
 ### Added

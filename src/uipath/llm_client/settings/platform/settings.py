@@ -64,9 +64,7 @@ class PlatformBaseSettings(UiPathBaseSettings):
     refresh_token: SecretStr | None = Field(default=None, validation_alias="UIPATH_REFRESH_TOKEN")
 
     # AgentHub configuration (used for discovery)
-    agenthub_config: str | None = Field(
-        default="agentsruntime", validation_alias="UIPATH_AGENTHUB_CONFIG"
-    )
+    agenthub_config: str | None = Field(default=None, validation_alias="UIPATH_AGENTHUB_CONFIG")
 
     # Tracing configuration
     process_key: str | None = Field(default=None, validation_alias=ENV_PROCESS_KEY)

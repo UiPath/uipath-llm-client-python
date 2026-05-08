@@ -155,7 +155,7 @@ export UIPATH_ORGANIZATION_ID="your-org-id"
 export UIPATH_TENANT_ID="your-tenant-id"
 export UIPATH_ACCESS_TOKEN="your-access-token"
 
-# Optional: AgentHub configuration for discovery (default: "agentsruntime")
+# Optional: AgentHub configuration for discovery (default: None, header omitted when unset)
 export UIPATH_AGENTHUB_CONFIG="agentsruntime"
 
 # Optional: tracing
@@ -190,7 +190,7 @@ export UIPATH_JOB_KEY="your-job-key"
 | `base_url` | `UIPATH_URL` | `str \| None` | `None` | Base URL of the UiPath Platform API |
 | `tenant_id` | `UIPATH_TENANT_ID` | `str \| None` | `None` | Tenant ID for request routing |
 | `organization_id` | `UIPATH_ORGANIZATION_ID` | `str \| None` | `None` | Organization ID for request routing |
-| `agenthub_config` | `UIPATH_AGENTHUB_CONFIG` | `str \| None` | `"agentsruntime"` | AgentHub configuration for discovery |
+| `agenthub_config` | `UIPATH_AGENTHUB_CONFIG` | `str \| None` | `None` | AgentHub configuration for discovery (header omitted when unset) |
 | `process_key` | `UIPATH_PROCESS_KEY` | `str \| None` | `None` | Process key for tracing |
 | `job_key` | `UIPATH_JOB_KEY` | `str \| None` | `None` | Job key for tracing |
 

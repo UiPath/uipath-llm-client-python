@@ -2,10 +2,15 @@
 
 All notable changes to `uipath_langchain_client` will be documented in this file.
 
+## [1.11.0] - 2026-05-08
+
+### Changed
+- Bumped `uipath-llm-client` floor to `>=1.11.0` to match the core release that flips `PlatformSettings.agenthub_config` default from `"agentsruntime"` to `None`.
+
 ## [1.10.1] - 2026-05-08
 
 ### Added
-- `agenthub_config` kwarg on `get_chat_model` and `get_embedding_model`. When set, overrides `client_settings.agenthub_config` for that call via `model_copy`, so the caller's settings instance is not mutated. Lets callers (e.g. low-code agent runtimes) pass the per-execution AgentHub config (`agentsruntime`, `agentsplayground`, `agentsevals`, …) without rebuilding settings.
+- `agenthub_config` kwarg on `get_chat_model` and `get_embedding_model`. When set, overrides `client_settings.agenthub_config` for that call via `model_copy` (the supplied settings instance is not mutated).
 
 ## [1.10.0] - 2026-04-23
 

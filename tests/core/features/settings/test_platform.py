@@ -57,15 +57,17 @@ class TestPlatformSettings:
             )
             assert "agenthub_/llm/api/chat/completions" in url
 
-    def test_build_auth_headers_has_default_config(self, platform_env_vars, mock_platform_auth):
-        """Test build_auth_headers includes default agenthub_config."""
+    def test_build_auth_headers_omits_agenthub_config_by_default(
+        self, platform_env_vars, mock_platform_auth
+    ):
+        """``agenthub_config`` defaults to None and the header is omitted unless
+        the caller (or ``UIPATH_AGENTHUB_CONFIG``) sets it explicitly."""
         with patch.dict(os.environ, platform_env_vars, clear=True):
             settings = PlatformSettings()
             headers = settings.build_auth_headers()
             assert headers == {
                 "x-uipath-internal-accountid": "test-org-id",
                 "x-uipath-internal-tenantid": "test-tenant-id",
-                "x-uipath-agenthub-config": "agentsruntime",
             }
 
     def test_build_auth_headers_with_tracing(self, platform_env_vars, mock_platform_auth):

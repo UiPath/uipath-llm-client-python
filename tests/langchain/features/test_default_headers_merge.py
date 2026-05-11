@@ -35,7 +35,7 @@ class TestClassDefaultHeadersAlwaysPresent:
         with patch.dict(os.environ, LLMGW_ENV, clear=True):
             chat = UiPathChat(model="gpt-4o", settings=LLMGatewaySettings())
             headers = chat.uipath_sync_client.headers
-        assert headers.get("x-uipath-llmgateway-timeoutseconds") == "295"
+        assert headers.get("x-uipath-llmgateway-timeoutseconds") == "895"
         assert headers.get("x-uipath-llmgateway-allowfull4xxresponse") == "false"
 
     def test_user_headers_do_not_remove_class_defaults(self):
@@ -46,7 +46,7 @@ class TestClassDefaultHeadersAlwaysPresent:
                 default_headers={"x-my-custom": "value"},
             )
             headers = chat.uipath_sync_client.headers
-        assert headers.get("x-uipath-llmgateway-timeoutseconds") == "295"
+        assert headers.get("x-uipath-llmgateway-timeoutseconds") == "895"
         assert headers.get("x-uipath-llmgateway-allowfull4xxresponse") == "false"
         assert headers.get("x-my-custom") == "value"
 
@@ -69,6 +69,6 @@ class TestClassDefaultHeadersAlwaysPresent:
                 default_headers={"x-my-custom": "async-value"},
             )
             headers = chat.uipath_async_client.headers
-        assert headers.get("x-uipath-llmgateway-timeoutseconds") == "295"
+        assert headers.get("x-uipath-llmgateway-timeoutseconds") == "895"
         assert headers.get("x-uipath-llmgateway-allowfull4xxresponse") == "false"
         assert headers.get("x-my-custom") == "async-value"

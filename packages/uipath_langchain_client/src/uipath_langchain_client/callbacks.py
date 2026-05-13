@@ -5,7 +5,10 @@ from typing import Any
 
 from langchain_core.callbacks import BaseCallbackHandler
 
-from uipath.llm_client.utils.headers import set_dynamic_request_headers
+from uipath.llm_client.utils.headers import (
+    get_dynamic_request_headers,
+    set_dynamic_request_headers,
+)
 
 
 class UiPathDynamicHeadersCallback(BaseCallbackHandler, ABC):
@@ -37,13 +40,18 @@ class UiPathDynamicHeadersCallback(BaseCallbackHandler, ABC):
         """Return headers to inject into the next LLM gateway request."""
         ...
 
+    def _merge_headers(self) -> None:
+        merged = get_dynamic_request_headers()
+        merged.update(self.get_headers())
+        set_dynamic_request_headers(merged)
+
     def on_chat_model_start(
         self,
         serialized: dict[str, Any],
         messages: list[list[Any]],
         **kwargs: Any,
     ) -> None:
-        set_dynamic_request_headers(self.get_headers())
+        self._merge_headers()
 
     def on_llm_start(
         self,
@@ -51,7 +59,7 @@ class UiPathDynamicHeadersCallback(BaseCallbackHandler, ABC):
         prompts: list[str],
         **kwargs: Any,
     ) -> None:
-        set_dynamic_request_headers(self.get_headers())
+        self._merge_headers()
 
     def on_llm_end(self, response: Any, **kwargs: Any) -> None:
         set_dynamic_request_headers({})

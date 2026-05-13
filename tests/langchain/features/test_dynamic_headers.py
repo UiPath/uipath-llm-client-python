@@ -235,10 +235,42 @@ class TestCallbackLifecycle:
             cb.on_chat_model_start({}, [[]])
         assert "x-trace-id" in get_dynamic_request_headers()
 
-    def test_on_chat_model_start_no_span_sets_empty(self):
-        """When there is no active span, on_chat_model_start clears the ContextVar."""
-        set_dynamic_request_headers({"x-stale": "value"})
+    def test_on_chat_model_start_no_span_injects_nothing(self):
+        """When there is no active span, on_chat_model_start adds no headers of its own."""
         OtelHeadersCallback().on_chat_model_start({}, [[]])
+        assert "x-trace-id" not in get_dynamic_request_headers()
+        assert "x-span-id" not in get_dynamic_request_headers()
+
+    def test_on_chat_model_start_preserves_other_callbacks_headers(self):
+        """Merge semantics: a callback returning {} leaves existing headers intact."""
+        set_dynamic_request_headers({"x-other-callback": "value"})
+        OtelHeadersCallback().on_chat_model_start({}, [[]])
+        assert get_dynamic_request_headers() == {"x-other-callback": "value"}
+
+    def test_two_callbacks_compose_without_clobbering(self, tracer):
+        """Two callbacks in a row produce the union of their headers."""
+
+        class StaticHeadersCallback(UiPathDynamicHeadersCallback):
+            def __init__(self, headers: dict[str, str]):
+                super().__init__()
+                self._headers = headers
+
+            def get_headers(self) -> dict[str, str]:
+                return self._headers
+
+        first = StaticHeadersCallback({"x-previous-header": "abc"})
+        second = OtelHeadersCallback()
+        with active_span(tracer, "llm-call"):
+            first.on_chat_model_start({}, [[]])
+            second.on_chat_model_start({}, [[]])
+            headers = get_dynamic_request_headers()
+        assert headers.get("x-previous-header") == "abc"
+        assert "x-trace-id" in headers
+
+    def test_on_llm_end_clears_all_headers(self):
+        """on_llm_end resets the ContextVar wholesale for the next call."""
+        set_dynamic_request_headers({"x-header": "1", "x-other-header": "2"})
+        OtelHeadersCallback().on_llm_end(None)
         assert get_dynamic_request_headers() == {}
 
 

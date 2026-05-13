@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_langchain_client` will be documented in this file.
 
+## [1.11.1] - 2026-05-13
+
+### Fixed
+- `UiPathDynamicHeadersCallback` now merges `get_headers()` into the dynamic-headers ContextVar instead of replacing it wholesale. This prevents two stacked callbacks from overwriting each other.
+
 ## [1.11.0] - 2026-05-08
 
 ### Changed

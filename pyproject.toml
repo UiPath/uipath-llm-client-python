@@ -47,6 +47,14 @@ dev = [
     "openinference-instrumentation-langchain>=0.1.63,<1.0.0",
 ]
 
+[tool.uv]
+exclude-newer = "2 days"
+
+[tool.uv.exclude-newer-package]
+uipath-platform = false
+uipath-llm-client = false
+uipath-langchain-client = false
+
 [tool.uv.workspace]
 members = [
     "packages/uipath_langchain_client",

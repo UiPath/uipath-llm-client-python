@@ -132,6 +132,4 @@ def strip_disabled_fields(
                     current,
                     model_name,
                 )
-            # object.__setattr__ bypasses pydantic field validation in case the
-            # field's declared type forbids None.
-            object.__setattr__(instance, key, None)
+            setattr(instance, key, None)

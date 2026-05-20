@@ -784,9 +784,9 @@ The logger will record:
 
 All requests automatically include the following default headers:
 
-| Header | Value | Description |
-|--------|-------|-------------|
-| `X-UiPath-LLMGateway-TimeoutSeconds` | `295` | Server-side timeout for LLM Gateway |
+| Header | Value  | Description |
+|--------|--------|-------------|
+| `X-UiPath-LLMGateway-TimeoutSeconds` | `895`  | Server-side timeout for LLM Gateway |
 | `X-UiPath-LLMGateway-AllowFull4xxResponse` | `true` | Returns full error response bodies for 4xx errors |
 
 ### Authentication Auto-Refresh

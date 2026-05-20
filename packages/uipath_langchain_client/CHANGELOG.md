@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_langchain_client` will be documented in this file.
 
+## [1.11.2] - 2026-05-18
+
+### Changed
+- Bumped `uipath-llm-client` floor to `>=1.11.2` to pick up the increased default `X-UiPath-LLMGateway-TimeoutSeconds` (295 → 895) in `UIPATH_DEFAULT_REQUEST_HEADERS`.
+
 ## [1.11.1] - 2026-05-13
 
 ### Fixed

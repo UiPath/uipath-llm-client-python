@@ -25,13 +25,17 @@ from pydantic import BaseModel, Field
 
 INVOICE_NUMBER = "INV-7421"
 CUSTOMER = "Acme Corp"
-TOTAL_AMOUNT = 1234.56
+# Whole-dollar amount on purpose: when rendered into an image, OCR sometimes
+# drops the decimal point of values like "$1234.56" and the model then returns
+# 123456.0 instead of 1234.56 (observed on Bedrock-hosted Claude and flaky
+# Gemini thinking runs). An integer total sidesteps the ambiguity.
+TOTAL_AMOUNT = 4200
 DUE_DATE = "2026-03-15"
 
 INVOICE_TEXT = (
     f"Invoice Number: {INVOICE_NUMBER}\n"
     f"Customer: {CUSTOMER}\n"
-    f"Total Amount: ${TOTAL_AMOUNT:.2f}\n"
+    f"Total Amount: ${TOTAL_AMOUNT}\n"
     f"Due Date: {DUE_DATE}\n"
 )
 
@@ -55,7 +59,7 @@ def make_md() -> bytes:
         "# Invoice\n\n"
         f"- **Invoice Number:** {INVOICE_NUMBER}\n"
         f"- **Customer:** {CUSTOMER}\n"
-        f"- **Total Amount:** ${TOTAL_AMOUNT:.2f}\n"
+        f"- **Total Amount:** ${TOTAL_AMOUNT}\n"
         f"- **Due Date:** {DUE_DATE}\n"
     )
     return body.encode("utf-8")
@@ -67,7 +71,7 @@ def make_csv() -> bytes:
     writer.writerow(["field", "value"])
     writer.writerow(["invoice_number", INVOICE_NUMBER])
     writer.writerow(["customer", CUSTOMER])
-    writer.writerow(["total_amount", f"{TOTAL_AMOUNT:.2f}"])
+    writer.writerow(["total_amount", str(TOTAL_AMOUNT)])
     writer.writerow(["due_date", DUE_DATE])
     return buf.getvalue().encode("utf-8")
 
@@ -78,7 +82,7 @@ def make_html() -> bytes:
         "<h1>Invoice</h1>"
         f"<p>Invoice Number: <strong>{INVOICE_NUMBER}</strong></p>"
         f"<p>Customer: {CUSTOMER}</p>"
-        f"<p>Total Amount: ${TOTAL_AMOUNT:.2f}</p>"
+        f"<p>Total Amount: ${TOTAL_AMOUNT}</p>"
         f"<p>Due Date: {DUE_DATE}</p>"
         "</body></html>"
     )

@@ -50,8 +50,8 @@ from uipath.llm_client.utils.headers import (
     set_captured_response_headers,
 )
 from uipath.llm_client.utils.sampling import (
-    disabled_fields_stripped,
     disabled_params_from_model_details,
+    strip_disabled_fields,
     strip_disabled_kwargs,
 )
 from uipath_langchain_client.settings import (
@@ -173,6 +173,13 @@ class UiPathBaseLLMClient(BaseModel, ABC):
         can derive from ``model_details`` (via
         ``disabled_params_from_model_details``). User-provided keys win on
         conflicts, so callers can override a derived entry by name.
+
+        Once ``disabled_params`` is resolved, any matching instance field set at
+        construction time is nulled via ``strip_disabled_fields``. Vendor SDKs
+        that read ``self.<field>`` when serializing requests (langchain-
+        anthropic, langchain-aws) would otherwise leak disabled values past the
+        per-call ``strip_disabled_kwargs`` filter. The strip logs a warning per
+        field so the caller knows what was dropped.
         """
         if self.model_details is None:
             try:
@@ -188,6 +195,13 @@ class UiPathBaseLLMClient(BaseModel, ABC):
         user_provided = self.disabled_params or {}
         merged = {**derived, **user_provided}
         self.disabled_params = merged or None
+
+        strip_disabled_fields(
+            self,
+            disabled_params=self.disabled_params,
+            model_name=self.model_name,
+            logger=self.logger,
+        )
 
         return self
 
@@ -423,15 +437,7 @@ class UiPathBaseChatModel(UiPathBaseLLMClient, BaseChatModel):
         )
         set_captured_response_headers({})
         try:
-            with disabled_fields_stripped(
-                self,
-                disabled_params=self.disabled_params,
-                model_name=self.model_name,
-                logger=self.logger,
-            ):
-                result = self._uipath_generate(
-                    messages, stop=stop, run_manager=run_manager, **kwargs
-                )
+            result = self._uipath_generate(messages, stop=stop, run_manager=run_manager, **kwargs)
             self._inject_gateway_headers(result.generations)
             return result
         finally:
@@ -462,15 +468,9 @@ class UiPathBaseChatModel(UiPathBaseLLMClient, BaseChatModel):
         )
         set_captured_response_headers({})
         try:
-            with disabled_fields_stripped(
-                self,
-                disabled_params=self.disabled_params,
-                model_name=self.model_name,
-                logger=self.logger,
-            ):
-                result = await self._uipath_agenerate(
-                    messages, stop=stop, run_manager=run_manager, **kwargs
-                )
+            result = await self._uipath_agenerate(
+                messages, stop=stop, run_manager=run_manager, **kwargs
+            )
             self._inject_gateway_headers(result.generations)
             return result
         finally:
@@ -501,20 +501,14 @@ class UiPathBaseChatModel(UiPathBaseLLMClient, BaseChatModel):
         )
         set_captured_response_headers({})
         try:
-            with disabled_fields_stripped(
-                self,
-                disabled_params=self.disabled_params,
-                model_name=self.model_name,
-                logger=self.logger,
+            first = True
+            for chunk in self._uipath_stream(
+                messages, stop=stop, run_manager=run_manager, **kwargs
             ):
-                first = True
-                for chunk in self._uipath_stream(
-                    messages, stop=stop, run_manager=run_manager, **kwargs
-                ):
-                    if first:
-                        self._inject_gateway_headers([chunk])
-                        first = False
-                    yield chunk
+                if first:
+                    self._inject_gateway_headers([chunk])
+                    first = False
+                yield chunk
         finally:
             set_captured_response_headers({})
 
@@ -543,20 +537,14 @@ class UiPathBaseChatModel(UiPathBaseLLMClient, BaseChatModel):
         )
         set_captured_response_headers({})
         try:
-            with disabled_fields_stripped(
-                self,
-                disabled_params=self.disabled_params,
-                model_name=self.model_name,
-                logger=self.logger,
+            first = True
+            async for chunk in self._uipath_astream(
+                messages, stop=stop, run_manager=run_manager, **kwargs
             ):
-                first = True
-                async for chunk in self._uipath_astream(
-                    messages, stop=stop, run_manager=run_manager, **kwargs
-                ):
-                    if first:
-                        self._inject_gateway_headers([chunk])
-                        first = False
-                    yield chunk
+                if first:
+                    self._inject_gateway_headers([chunk])
+                    first = False
+                yield chunk
         finally:
             set_captured_response_headers({})
 

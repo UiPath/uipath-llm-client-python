@@ -2,21 +2,17 @@
 
 Recorded against the live LLM Gateway via the SQLite-backed VCR persister
 (see ``tests/conftest.py`` and ``tests/sqlite_persister.py``). The cassette
-captures a 200 response — which is itself proof that
-``disabled_fields_stripped`` removed the constructor-set field before the
-vendor SDK serialized the request body. Without the fix, the gateway returns
-400 for any sampling-knob value on ``anthropic.claude-opus-4-7`` (modelDetails
-advertises ``shouldSkipTemperature: True``), and the ``before_record_response``
-filter in ``conftest.py`` would refuse to persist the failed exchange.
+captures a 200 response — which is itself proof that ``strip_disabled_fields``
+nulled the constructor-set field before the vendor SDK serialized the request
+body. Without the fix, the gateway returns 400 for any sampling-knob value on
+``anthropic.claude-opus-4-7`` (modelDetails advertises
+``shouldSkipTemperature: True``), and the ``before_record_response`` filter in
+``conftest.py`` would refuse to persist the failed exchange.
 
 We exercise both vendor SDK families because they read ``self.temperature`` at
 different layers:
 - ``UiPathChatAnthropicBedrock`` -> langchain-anthropic's ``ChatAnthropic``
 - ``UiPathChatBedrockConverse`` -> langchain-aws's ``ChatBedrockConverse``
-
-The cassette is body-insensitive (default VCR matcher matches host+method+path),
-so the assertions also check ``chat.temperature`` is restored after the call —
-verifying the strip is per-call, not permanent.
 """
 
 import pytest
@@ -42,11 +38,12 @@ def test_opus_4_7_constructor_temperature_with_anthropic_bedrock(
         model_details={"shouldSkipTemperature": True},
         temperature=0.7,
     )
-    response = chat.invoke([HumanMessage(content="Reply with the single word: pong")])
+    # Eager strip: temperature was nulled at construction so the vendor SDK
+    # serializes the request body without it.
+    assert chat.temperature is None
 
+    response = chat.invoke([HumanMessage(content="Reply with the single word: pong")])
     assert response.content, "expected a non-empty response from the gateway"
-    # Per-call strip: caller-visible state survives the invoke.
-    assert chat.temperature == 0.7
 
 
 @pytest.mark.vcr
@@ -59,7 +56,7 @@ def test_opus_4_7_constructor_temperature_with_bedrock_converse(
         model_details={"shouldSkipTemperature": True},
         temperature=0.7,
     )
-    response = chat.invoke([HumanMessage(content="Reply with the single word: pong")])
+    assert chat.temperature is None
 
+    response = chat.invoke([HumanMessage(content="Reply with the single word: pong")])
     assert response.content
-    assert chat.temperature == 0.7

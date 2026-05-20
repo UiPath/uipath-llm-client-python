@@ -16,8 +16,7 @@ when the gateway's discovery endpoint advertises
 ``anthropic.claude-opus-4-7``), the entire sampling set gets disabled.
 """
 
-from collections.abc import Iterator, Mapping
-from contextlib import contextmanager
+from collections.abc import Mapping
 from logging import Logger
 from typing import Any
 
@@ -97,51 +96,42 @@ def strip_disabled_kwargs(
     return out
 
 
-@contextmanager
-def disabled_fields_stripped(
+def strip_disabled_fields(
     instance: Any,
     *,
     disabled_params: Mapping[str, Any] | None,
     model_name: str,
     logger: Logger | None,
-) -> Iterator[None]:
-    """Temporarily wipe matching instance attributes for the duration of the block.
+) -> None:
+    """Null instance attributes that match ``disabled_params``.
 
     Sibling of :func:`strip_disabled_kwargs` for fields set at construction time.
     Vendor SDKs that build request bodies from ``self.<field>`` (e.g. langchain-
     anthropic's ``ChatAnthropic``, langchain-aws's ``ChatBedrockConverse``) bypass
-    the kwargs-level strip; wrapping the underlying ``_generate`` call in this
-    context manager forces them to read ``None`` for any disabled field, then
-    restores the original value on exit so caller-visible state is unchanged.
+    the kwargs-level strip; this helper neutralizes them once, eagerly, so they
+    can't leak into any subsequent request.
 
     Matching rule mirrors ``strip_disabled_kwargs``: a field is nulled out when
     its name is in ``disabled_params`` AND its current value is non-None AND
-    ``is_disabled_value`` matches the spec.
+    ``is_disabled_value`` matches the spec. Each strip logs a warning that
+    includes the original value so the caller can see exactly what was dropped.
     """
     if not disabled_params:
-        yield
         return
-    saved: dict[str, Any] = {}
-    try:
-        for key, spec in disabled_params.items():
-            if not hasattr(instance, key):
-                continue
-            current = getattr(instance, key)
-            if current is None:
-                continue
-            if is_disabled_value(current, spec):
-                saved[key] = current
-                if logger is not None:
-                    logger.warning(
-                        "Stripping disabled field %r for model %r",
-                        key,
-                        model_name,
-                    )
-                # object.__setattr__ bypasses pydantic field validation so we can
-                # always restore the original — even if the field's declared type
-                # rejects None.
-                object.__setattr__(instance, key, None)
-        yield
-    finally:
-        for key, value in saved.items():
-            object.__setattr__(instance, key, value)
+    for key, spec in disabled_params.items():
+        if not hasattr(instance, key):
+            continue
+        current = getattr(instance, key)
+        if current is None:
+            continue
+        if is_disabled_value(current, spec):
+            if logger is not None:
+                logger.warning(
+                    "Disabling field %r (was %r) for model %r — parameter is in disabled_params",
+                    key,
+                    current,
+                    model_name,
+                )
+            # object.__setattr__ bypasses pydantic field validation in case the
+            # field's declared type forbids None.
+            object.__setattr__(instance, key, None)

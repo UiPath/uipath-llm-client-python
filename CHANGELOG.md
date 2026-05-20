@@ -5,7 +5,7 @@ All notable changes to `uipath_llm_client` (core package) will be documented in 
 ## [1.11.3] - 2026-05-21
 
 ### Added
-- `uipath.llm_client.utils.sampling.disabled_fields_stripped`: a context manager that temporarily nulls instance attributes matching `disabled_params` for the duration of the block, then restores them on exit. Sibling of `strip_disabled_kwargs` for the case where vendor SDKs (langchain-anthropic, langchain-aws) read `self.<field>` rather than per-call `**kwargs` when building request bodies.
+- `uipath.llm_client.utils.sampling.strip_disabled_fields`: eagerly nulls instance attributes whose names appear in `disabled_params` and whose current values match `is_disabled_value`. Sibling of `strip_disabled_kwargs` for the case where vendor SDKs (langchain-anthropic, langchain-aws) read `self.<field>` rather than per-call `**kwargs` when building request bodies. Each strip logs a warning that includes the original value so callers can see exactly what was dropped.
 
 ## [1.11.2] - 2026-05-18
 

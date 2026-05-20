@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_llm_client` (core package) will be documented in this file.
 
+## [1.11.2] - 2026-05-18
+
+### Changed
+- Increased the default `X-UiPath-LLMGateway-TimeoutSeconds` request header value in `UIPATH_DEFAULT_REQUEST_HEADERS` from `295` to `895` seconds.
+
 ## [1.11.0] - 2026-05-08
 
 ### Changed

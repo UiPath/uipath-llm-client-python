@@ -7,7 +7,7 @@ from uipath.llm_client.settings.base import UiPathAPIConfig
 from uipath.llm_client.settings.constants import ApiType, RoutingMode
 
 UIPATH_DEFAULT_REQUEST_HEADERS: dict[str, str] = {
-    "X-UiPath-LLMGateway-TimeoutSeconds": "295",  # server side timeout, default is 10, maximum is 300
+    "X-UiPath-LLMGateway-TimeoutSeconds": "895",  # server side timeout
     "X-UiPath-LLMGateway-AllowFull4xxResponse": "false",  # allow full 4xx responses (default is false) — kept false to avoid PII leakage in logs
 }
 

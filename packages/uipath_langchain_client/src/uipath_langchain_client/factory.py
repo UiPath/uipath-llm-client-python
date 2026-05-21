@@ -22,7 +22,6 @@ Example:
 
 from typing import Any
 
-from uipath.llm_client.utils.model_family import is_anthropic_model_name
 from uipath_langchain_client.base_client import (
     UiPathBaseChatModel,
     UiPathBaseEmbeddings,
@@ -65,9 +64,8 @@ def get_chat_model(
             If not provided, auto-detected from the model discovery endpoint.
         api_flavor: Vendor-specific API flavor to use. Effects:
             - OpenAI: ApiFlavor.RESPONSES sets use_responses_api=True.
-            - Bedrock Claude: Default uses UiPathChatAnthropicBedrock.
-              ApiFlavor.CONVERSE uses UiPathChatBedrockConverse,
-              ApiFlavor.INVOKE uses UiPathChatBedrock.
+            - Bedrock: ApiFlavor.INVOKE uses UiPathChatBedrock; otherwise
+              (None or ApiFlavor.CONVERSE) uses UiPathChatBedrockConverse.
         custom_class: A custom class to use for instantiating the chat model instead of the
             auto-detected one. Must be a subclass of UiPathBaseChatModel. When provided,
             the factory skips vendor detection and uses this class directly.
@@ -190,21 +188,6 @@ def get_chat_model(
                 **model_kwargs,
             )
         case VendorType.AWSBEDROCK:
-            if (
-                model_family == ModelFamily.ANTHROPIC_CLAUDE and api_flavor != ApiFlavor.CONVERSE
-            ) or (api_flavor == ApiFlavor.INVOKE and is_anthropic_model_name(model_name)):
-                from uipath_langchain_client.clients.bedrock.chat_models import (
-                    UiPathChatAnthropicBedrock,
-                )
-
-                return UiPathChatAnthropicBedrock(
-                    model=model_name,
-                    settings=client_settings,
-                    byo_connection_id=byo_connection_id,
-                    model_details=model_details,
-                    **model_kwargs,
-                )
-
             if api_flavor == ApiFlavor.INVOKE:
                 from uipath_langchain_client.clients.bedrock.chat_models import (
                     UiPathChatBedrock,

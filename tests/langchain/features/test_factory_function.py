@@ -130,6 +130,94 @@ class TestFactoryDefaultApiFlavor:
         assert captured["api_flavor"] == ApiFlavor.CHAT_COMPLETIONS
 
 
+class TestFactoryBedrockApiFlavorRouting:
+    """The AWSBEDROCK branch routes purely on ``api_flavor``:
+
+    - ``ApiFlavor.INVOKE`` -> ``UiPathChatBedrock``
+    - ``ApiFlavor.CONVERSE`` or ``None`` -> ``UiPathChatBedrockConverse``
+
+    Model family (e.g. ANTHROPIC_CLAUDE) no longer influences the choice.
+    """
+
+    def _patch_bedrock_classes(self, monkeypatch: pytest.MonkeyPatch) -> dict:
+        """Replace the three bedrock chat classes with sentinels and record which one was built."""
+        chosen: dict = {}
+
+        def _make_stub(name: str):
+            class _Stub:
+                def __init__(self, **kwargs):
+                    chosen["class"] = name
+                    chosen["kwargs"] = kwargs
+
+            return _Stub
+
+        for name in (
+            "UiPathChatBedrockConverse",
+            "UiPathChatBedrock",
+            "UiPathChatAnthropicBedrock",
+        ):
+            monkeypatch.setattr(
+                f"uipath_langchain_client.clients.bedrock.chat_models.{name}",
+                _make_stub(name),
+            )
+        return chosen
+
+    def _settings_with_model_info(self, model_info: dict):
+        settings = MagicMock()
+        settings.get_model_info.return_value = model_info
+        return settings
+
+    def test_no_api_flavor_uses_bedrock_converse(self, monkeypatch: pytest.MonkeyPatch):
+        chosen = self._patch_bedrock_classes(monkeypatch)
+        settings = self._settings_with_model_info(
+            {
+                "modelName": "anthropic.claude-3-5-sonnet-20240620-v1:0",
+                "vendor": "AwsBedrock",
+                "apiFlavor": None,
+                "modelFamily": None,
+            }
+        )
+        get_chat_model(
+            model_name="anthropic.claude-3-5-sonnet-20240620-v1:0",
+            client_settings=settings,
+        )
+        assert chosen["class"] == "UiPathChatBedrockConverse"
+
+    def test_converse_api_flavor_uses_bedrock_converse(self, monkeypatch: pytest.MonkeyPatch):
+        chosen = self._patch_bedrock_classes(monkeypatch)
+        settings = self._settings_with_model_info(
+            {
+                "modelName": "anthropic.claude-3-5-sonnet-20240620-v1:0",
+                "vendor": "AwsBedrock",
+                "apiFlavor": None,
+                "modelFamily": None,
+            }
+        )
+        get_chat_model(
+            model_name="anthropic.claude-3-5-sonnet-20240620-v1:0",
+            client_settings=settings,
+            api_flavor=ApiFlavor.CONVERSE,
+        )
+        assert chosen["class"] == "UiPathChatBedrockConverse"
+
+    def test_invoke_api_flavor_uses_bedrock_invoke(self, monkeypatch: pytest.MonkeyPatch):
+        chosen = self._patch_bedrock_classes(monkeypatch)
+        settings = self._settings_with_model_info(
+            {
+                "modelName": "amazon.titan-text-express-v1",
+                "vendor": "AwsBedrock",
+                "apiFlavor": None,
+                "modelFamily": None,
+            }
+        )
+        get_chat_model(
+            model_name="amazon.titan-text-express-v1",
+            client_settings=settings,
+            api_flavor=ApiFlavor.INVOKE,
+        )
+        assert chosen["class"] == "UiPathChatBedrock"
+
+
 class TestFactoryAgentHubConfig:
     """The ``agenthub_config`` factory kwarg overrides ``client_settings.agenthub_config``
     via ``model_copy`` so the caller's instance is not mutated."""

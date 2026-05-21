@@ -524,6 +524,135 @@ def test_azure_autoinit_parallel_tool_calls_merges_with_our_derivation(
     assert set(llm.disabled_params) == set(DISABLED_SAMPLING_PARAMS) | {"parallel_tool_calls"}
 
 
+# --------------------------------------------------------------------------- #
+# constructor-level field stripping (the second leak)
+# --------------------------------------------------------------------------- #
+#
+# Per-call ``temperature`` lands in ``**kwargs`` and is removed by
+# ``strip_disabled_kwargs``. But ``UiPathChat(..., temperature=0.5)`` stores
+# the value on ``self.temperature``, and vendor SDKs that don't honor
+# langchain-openai's ``_filter_disabled_params`` (langchain-anthropic,
+# langchain-aws) read ``self.<field>`` when building the request body —
+# leaking the disabled value into the wire payload. ``strip_disabled_fields``
+# eagerly nulls matching fields once, inside ``setup_model_info``, so the
+# gateway never sees a value the caller already declared disabled. The strip
+# is permanent and logs a warning per field so the caller can see exactly
+# which value was dropped.
+
+
+def test_constructor_temperature_is_nulled_when_flag_set(
+    client_settings: UiPathBaseSettings,
+) -> None:
+    llm = UiPathChat(
+        model="anthropic.claude-opus-4-7",
+        settings=client_settings,
+        model_details={"shouldSkipTemperature": True},
+        temperature=0.7,
+        top_p=0.9,
+    )
+    # Eager strip: caller-supplied disabled values are nulled before any call.
+    assert llm.temperature is None
+    assert llm.top_p is None
+
+
+def test_constructor_field_strip_skipped_when_flag_absent(
+    client_settings: UiPathBaseSettings,
+) -> None:
+    llm = UiPathChat(
+        model="some-chatty-model",
+        settings=client_settings,
+        model_details={},
+        temperature=0.7,
+    )
+    # No shouldSkipTemperature => no strip.
+    assert llm.temperature == 0.7
+
+
+def test_constructor_field_strip_honors_value_list_spec(
+    client_settings: UiPathBaseSettings,
+) -> None:
+    # Spec list semantics: strip only when the current value is in the list.
+    keep = UiPathChat(
+        model="some-chatty-model",
+        settings=client_settings,
+        model_details={},
+        disabled_params={"temperature": [0.0]},
+        temperature=0.7,  # not in [0.0] -> kept
+    )
+    assert keep.temperature == 0.7
+
+    drop = UiPathChat(
+        model="some-chatty-model",
+        settings=client_settings,
+        model_details={},
+        disabled_params={"temperature": [0.0]},
+        temperature=0.0,  # in [0.0] -> stripped
+    )
+    assert drop.temperature is None
+
+
+def test_constructor_field_strip_skips_fields_already_none(
+    client_settings: UiPathBaseSettings,
+) -> None:
+    # Field not set by caller (default None) => the strip is a no-op for it,
+    # nothing weird happens to other fields. Just confirms the helper's
+    # current=None guard.
+    llm = UiPathChat(
+        model="anthropic.claude-opus-4-7",
+        settings=client_settings,
+        model_details={"shouldSkipTemperature": True},
+    )
+    assert llm.temperature is None  # default, not from strip
+    assert llm.disabled_params is not None
+    assert "temperature" in llm.disabled_params
+
+
+def test_constructor_field_strip_logs_warning_with_original_value(
+    client_settings: UiPathBaseSettings,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    logger = logging.getLogger("uipath.test.skip-sampling-field")
+    with caplog.at_level(logging.WARNING, logger=logger.name):
+        llm = UiPathChat(
+            model="anthropic.claude-opus-4-7",
+            settings=client_settings,
+            model_details={"shouldSkipTemperature": True},
+            temperature=0.7,
+            logger=logger,
+        )
+
+    # Sanity: the strip actually ran.
+    assert llm.temperature is None
+
+    # Warning must include the field name AND the original value so the caller
+    # knows exactly what was dropped.
+    matching = [
+        rec
+        for rec in caplog.records
+        if "'temperature'" in rec.getMessage() and "0.7" in rec.getMessage()
+    ]
+    assert matching, (
+        f"expected a warning mentioning 'temperature' and the original value 0.7; "
+        f"got: {[r.getMessage() for r in caplog.records]}"
+    )
+
+
+def test_constructor_field_strip_silent_when_logger_is_none(
+    client_settings: UiPathBaseSettings,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    with caplog.at_level(logging.DEBUG):
+        llm = UiPathChat(
+            model="anthropic.claude-opus-4-7",
+            settings=client_settings,
+            model_details={"shouldSkipTemperature": True},
+            temperature=0.7,
+            logger=None,
+        )
+    assert llm.temperature is None
+    assert not any("Disabling field" in rec.getMessage() for rec in caplog.records)
+
+
 def test_openai_subclass_runtime_strip_honors_merged_disabled_params(
     monkeypatch: pytest.MonkeyPatch, client_settings: UiPathBaseSettings
 ) -> None:

@@ -2,6 +2,14 @@
 
 All notable changes to `uipath_langchain_client` will be documented in this file.
 
+## [1.11.3] - 2026-05-21
+
+### Fixed
+- `UiPathBaseLLMClient.setup_model_info` now calls `strip_disabled_fields` after merging `disabled_params`, so constructor-set sampling fields (e.g. `UiPathChatAnthropicBedrock(model="anthropic.claude-opus-4-7", temperature=0.7)`) are nulled on the instance once `disabled_params` is resolved. Plugs the init-time leak called out as a known follow-up in 1.10.0 — langchain-anthropic and langchain-aws's Bedrock Converse client read `self.temperature`/`self.top_p`/etc. when serializing the request body, so the existing kwargs-level strip alone wasn't enough. A warning is logged per stripped field with the original value so the caller can see what was dropped.
+
+### Changed
+- Bumped `uipath-llm-client` floor to `>=1.11.3` to match the core release exposing `strip_disabled_fields`.
+
 ## [1.11.2] - 2026-05-18
 
 ### Changed

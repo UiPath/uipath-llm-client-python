@@ -94,3 +94,42 @@ def strip_disabled_kwargs(
                 )
             out.pop(key, None)
     return out
+
+
+def strip_disabled_fields(
+    instance: Any,
+    *,
+    disabled_params: Mapping[str, Any] | None,
+    model_name: str,
+    logger: Logger | None,
+) -> None:
+    """Null instance attributes that match ``disabled_params``.
+
+    Sibling of :func:`strip_disabled_kwargs` for fields set at construction time.
+    Vendor SDKs that build request bodies from ``self.<field>`` (e.g. langchain-
+    anthropic's ``ChatAnthropic``, langchain-aws's ``ChatBedrockConverse``) bypass
+    the kwargs-level strip; this helper neutralizes them once, eagerly, so they
+    can't leak into any subsequent request.
+
+    Matching rule mirrors ``strip_disabled_kwargs``: a field is nulled out when
+    its name is in ``disabled_params`` AND its current value is non-None AND
+    ``is_disabled_value`` matches the spec. Each strip logs a warning that
+    includes the original value so the caller can see exactly what was dropped.
+    """
+    if not disabled_params:
+        return
+    for key, spec in disabled_params.items():
+        if not hasattr(instance, key):
+            continue
+        current = getattr(instance, key)
+        if current is None:
+            continue
+        if is_disabled_value(current, spec):
+            if logger is not None:
+                logger.warning(
+                    "Disabling field %r (was %r) for model %r — parameter is in disabled_params",
+                    key,
+                    current,
+                    model_name,
+                )
+            setattr(instance, key, None)

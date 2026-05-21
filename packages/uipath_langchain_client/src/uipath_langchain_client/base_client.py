@@ -51,6 +51,7 @@ from uipath.llm_client.utils.headers import (
 )
 from uipath.llm_client.utils.sampling import (
     disabled_params_from_model_details,
+    strip_disabled_fields,
     strip_disabled_kwargs,
 )
 from uipath_langchain_client.settings import (
@@ -172,6 +173,13 @@ class UiPathBaseLLMClient(BaseModel, ABC):
         can derive from ``model_details`` (via
         ``disabled_params_from_model_details``). User-provided keys win on
         conflicts, so callers can override a derived entry by name.
+
+        Once ``disabled_params`` is resolved, any matching instance field set at
+        construction time is nulled via ``strip_disabled_fields``. Vendor SDKs
+        that read ``self.<field>`` when serializing requests (langchain-
+        anthropic, langchain-aws) would otherwise leak disabled values past the
+        per-call ``strip_disabled_kwargs`` filter. The strip logs a warning per
+        field so the caller knows what was dropped.
         """
         if self.model_details is None:
             try:
@@ -187,6 +195,13 @@ class UiPathBaseLLMClient(BaseModel, ABC):
         user_provided = self.disabled_params or {}
         merged = {**derived, **user_provided}
         self.disabled_params = merged or None
+
+        strip_disabled_fields(
+            self,
+            disabled_params=self.disabled_params,
+            model_name=self.model_name,
+            logger=self.logger,
+        )
 
         return self
 

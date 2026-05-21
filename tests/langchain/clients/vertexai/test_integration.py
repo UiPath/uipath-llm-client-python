@@ -1,53 +1,27 @@
 """LangChain integration tests for VertexAI provider client."""
 
+from collections.abc import Iterable
 from typing import Any
 
 import pytest
 from langchain_core.language_models.chat_models import BaseChatModel
-from langchain_core.messages import AIMessageChunk
-from langchain_tests.integration_tests import ChatModelIntegrationTests
+from langchain_core.runnables import Runnable
+
+from tests.langchain.integration_tests import UiPathChatModelIntegrationTests
 
 
 @pytest.mark.asyncio
 @pytest.mark.vcr
-class TestVertexAIIntegrationChatModel(ChatModelIntegrationTests):
-    @pytest.fixture(autouse=True)
-    def setup_models(self, completions_config: tuple[type[BaseChatModel], dict[str, Any]]):
-        self._completions_class, self.completions_kwargs = completions_config
-
-    @property
-    def supports_image_inputs(self) -> bool:
-        return True
-
-    @property
-    def supports_image_tool_message(self) -> bool:
-        return True
-
-    @property
-    def supports_image_urls(self) -> bool:
-        return True
-
-    @property
-    def supports_pdf_inputs(self) -> bool:
-        return True
-
-    @property
-    def supports_pdf_tool_message(self) -> bool:
-        return True
-
+class TestVertexAIIntegrationChatModel(UiPathChatModelIntegrationTests):
     @pytest.fixture(autouse=True)
     def skip_on_specific_configs(
         self,
         request: pytest.FixtureRequest,
         completions_config: tuple[type[BaseChatModel], dict[str, Any]],
     ) -> None:
-        model_class, model_kwargs = completions_config
+        _, model_kwargs = completions_config
         test_name = request.node.originalname
         has_thinking = "thinking" in model_kwargs
-
-        # Useless framework tests
-        if test_name in ["test_no_overrides_DO_NOT_OVERRIDE", "test_unicode_tool_call_integration"]:
-            pytest.skip(f"Skipping {test_name}: not relevant")
 
         # Claude + thinking: tool_choice forces tool use, incompatible with thinking
         if has_thinking and test_name in [
@@ -135,52 +109,22 @@ class TestVertexAIIntegrationChatModel(ChatModelIntegrationTests):
         ]:
             pytest.skip(f"Skipping {test_name}: not supported on this client")
 
-    @property
-    def chat_model_class(self) -> type[BaseChatModel]:
-        return self._completions_class
+        # File-input matrix: structured output not supported on this client (matches
+        # the test_structured_output skip above).
+        if test_name in ("test_file_inputs", "test_file_inputs_async"):
+            pytest.skip("Structured output is not currently supported on this client")
 
-    @property
-    def chat_model_params(self) -> dict[str, Any]:
-        return self.completions_kwargs
-
-    @pytest.mark.parametrize("model", [{}, {"output_version": "v1"}], indirect=True)
-    def test_stream(self, model: BaseChatModel) -> None:
-        chunks: list[AIMessageChunk] = []
-        full: AIMessageChunk | None = None
-        for chunk in model.stream("Hello"):
-            assert chunk is not None
-            assert isinstance(chunk, AIMessageChunk)
-            assert isinstance(chunk.content, str | list)
-            chunks.append(chunk)
-            full = chunk if full is None else full + chunk
-        assert len(chunks) > 0
-        assert isinstance(full, AIMessageChunk)
-        assert full.content
-        text_blocks = [block for block in full.content_blocks if block["type"] == "text"]
-        assert len(text_blocks) == 1
-
-        last_chunk = chunks[-1]
-        assert last_chunk.chunk_position == "last", (
-            f"Final chunk must have chunk_position='last', got {last_chunk.chunk_position!r}"
-        )
-
-    @pytest.mark.parametrize("model", [{}, {"output_version": "v1"}], indirect=True)
-    async def test_astream(self, model: BaseChatModel) -> None:
-        chunks: list[AIMessageChunk] = []
-        full: AIMessageChunk | None = None
-        async for chunk in model.astream("Hello"):
-            assert chunk is not None
-            assert isinstance(chunk, AIMessageChunk)
-            assert isinstance(chunk.content, str | list)
-            chunks.append(chunk)
-            full = chunk if full is None else full + chunk
-        assert len(chunks) > 0
-        assert isinstance(full, AIMessageChunk)
-        assert full.content
-        text_blocks = [block for block in full.content_blocks if block["type"] == "text"]
-        assert len(text_blocks) == 1
-
-        last_chunk = chunks[-1]
-        assert last_chunk.chunk_position == "last", (
-            f"Final chunk must have chunk_position='last', got {last_chunk.chunk_position!r}"
+    def _bind_parallel_and_sequential(
+        self, model: BaseChatModel, tools: Iterable[Any]
+    ) -> tuple[Runnable, Runnable]:
+        tools_list = list(tools)
+        return (
+            model.bind_tools(
+                tools_list,
+                tool_choice={"type": "any", "disable_parallel_tool_use": False},  # type: ignore
+            ),
+            model.bind_tools(
+                tools_list,
+                tool_choice={"type": "any", "disable_parallel_tool_use": True},  # type: ignore
+            ),
         )

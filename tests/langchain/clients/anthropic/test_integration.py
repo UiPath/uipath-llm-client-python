@@ -3,58 +3,33 @@
 Tests UiPathChatAnthropic with both vertexai and awsbedrock vendor_types.
 """
 
+from collections.abc import Iterable
 from typing import Any
 
 import pytest
 from langchain_core.language_models.chat_models import BaseChatModel
-from langchain_core.messages import AIMessageChunk
-from langchain_tests.integration_tests import ChatModelIntegrationTests
+from langchain_core.runnables import Runnable
 
-from tests.langchain.utils import search_accommodation, search_attractions, search_flights
+from tests.langchain.file_fixtures import IMAGE_FORMATS, PDF_FORMATS
+from tests.langchain.integration_tests import UiPathChatModelIntegrationTests
 
 
 @pytest.mark.asyncio
 @pytest.mark.vcr
-class TestAnthropicIntegrationChatModel(ChatModelIntegrationTests):
-    @pytest.fixture(autouse=True)
-    def setup_models(self, completions_config: tuple[type[BaseChatModel], dict[str, Any]]):
-        self._completions_class, self.completions_kwargs = completions_config
-
-    @property
-    def supports_image_inputs(self) -> bool:
-        return True
-
-    @property
-    def supports_image_tool_message(self) -> bool:
-        return True
-
-    @property
-    def supports_image_urls(self) -> bool:
-        return True
-
-    @property
-    def supports_pdf_inputs(self) -> bool:
-        return True
-
-    @property
-    def supports_pdf_tool_message(self) -> bool:
-        return True
-
+class TestAnthropicIntegrationChatModel(UiPathChatModelIntegrationTests):
     @pytest.fixture(autouse=True)
     def skip_on_specific_configs(
         self,
         request: pytest.FixtureRequest,
         completions_config: tuple[type[BaseChatModel], dict[str, Any]],
     ) -> None:
-        model_class, model_kwargs = completions_config
+        _, model_kwargs = completions_config
         model_name = model_kwargs.get("model", "")
         test_name = request.node.originalname
         has_thinking = "thinking" in model_kwargs
         is_vertex = model_kwargs.get("vendor_type") == "vertexai" or "@" in model_name
-
-        # Useless framework tests
-        if test_name in ["test_no_overrides_DO_NOT_OVERRIDE", "test_unicode_tool_call_integration"]:
-            pytest.skip(f"Skipping {test_name}: not relevant")
+        callspec = getattr(request.node, "callspec", None)
+        fmt = callspec.params.get("fmt") if callspec else None
 
         # Claude via Vertex AI: streaming bugged (502 / empty content)
         if is_vertex and test_name in [
@@ -111,102 +86,29 @@ class TestAnthropicIntegrationChatModel(ChatModelIntegrationTests):
         ]:
             pytest.skip(f"Skipping {test_name}: URL image sources not supported via gateway")
 
-    @property
-    def chat_model_class(self) -> type[BaseChatModel]:
-        return self._completions_class
+        # File-input matrix: structured output forces tool_choice (incompatible with
+        # thinking); image/PDF blocks don't round-trip through the Anthropic gateway.
+        if test_name in ("test_file_inputs", "test_file_inputs_async"):
+            if has_thinking:
+                pytest.skip(
+                    "Structured output forces tool_choice, which is incompatible with thinking"
+                )
+            if fmt in (IMAGE_FORMATS | PDF_FORMATS):
+                pytest.skip(
+                    "Image/PDF content blocks are not supported via the Anthropic gateway path"
+                )
 
-    @property
-    def chat_model_params(self) -> dict[str, Any]:
-        return self.completions_kwargs
-
-    @pytest.mark.parametrize("model", [{}, {"output_version": "v1"}], indirect=True)
-    def test_stream(self, model: BaseChatModel) -> None:
-        chunks: list[AIMessageChunk] = []
-        full: AIMessageChunk | None = None
-        for chunk in model.stream("Hello"):
-            assert chunk is not None
-            assert isinstance(chunk, AIMessageChunk)
-            assert isinstance(chunk.content, str | list)
-            chunks.append(chunk)
-            full = chunk if full is None else full + chunk
-        assert len(chunks) > 0
-        assert isinstance(full, AIMessageChunk)
-        assert full.content
-        text_blocks = [block for block in full.content_blocks if block["type"] == "text"]
-        assert len(text_blocks) == 1
-
-        last_chunk = chunks[-1]
-        assert last_chunk.chunk_position == "last", (
-            f"Final chunk must have chunk_position='last', got {last_chunk.chunk_position!r}"
+    def _bind_parallel_and_sequential(
+        self, model: BaseChatModel, tools: Iterable[Any]
+    ) -> tuple[Runnable, Runnable]:
+        tools_list = list(tools)
+        return (
+            model.bind_tools(
+                tools_list,
+                tool_choice={"type": "any", "disable_parallel_tool_use": False},  # type: ignore
+            ),
+            model.bind_tools(
+                tools_list,
+                tool_choice={"type": "any", "disable_parallel_tool_use": True},  # type: ignore
+            ),
         )
-
-    @pytest.mark.parametrize("model", [{}, {"output_version": "v1"}], indirect=True)
-    async def test_astream(self, model: BaseChatModel) -> None:
-        chunks: list[AIMessageChunk] = []
-        full: AIMessageChunk | None = None
-        async for chunk in model.astream("Hello"):
-            assert chunk is not None
-            assert isinstance(chunk, AIMessageChunk)
-            assert isinstance(chunk.content, str | list)
-            chunks.append(chunk)
-            full = chunk if full is None else full + chunk
-        assert len(chunks) > 0
-        assert isinstance(full, AIMessageChunk)
-        assert full.content
-        text_blocks = [block for block in full.content_blocks if block["type"] == "text"]
-        assert len(text_blocks) == 1
-
-        last_chunk = chunks[-1]
-        assert last_chunk.chunk_position == "last", (
-            f"Final chunk must have chunk_position='last', got {last_chunk.chunk_position!r}"
-        )
-
-    def test_parallel_and_sequential_tool_calling(self, model: BaseChatModel) -> None:
-        """Test parallel tool calling for Claude models."""
-        tools = [search_accommodation, search_flights, search_attractions]
-        prompt = (
-            "I want to plan a trip to Paris from New York. "
-            "I need to find flights for March 15th, accommodation from March 15th to March 20th, and things to do there.",
-            "Search for accomodations, flights and attractions in parallel. Don't repeat the same tool call.",
-        )
-        model_with_tools_parallel = model.bind_tools(
-            tools,
-            tool_choice={"type": "any", "disable_parallel_tool_use": False},  # type: ignore
-        )
-        model_with_tools_sequential = model.bind_tools(
-            tools,
-            tool_choice={"type": "any", "disable_parallel_tool_use": True},  # type: ignore
-        )
-
-        parallel_response = model_with_tools_parallel.invoke(prompt)
-        sequential_response = model_with_tools_sequential.invoke(prompt)
-
-        assert parallel_response.tool_calls is not None
-        assert sequential_response.tool_calls is not None
-        assert len(parallel_response.tool_calls) == len(tools)
-        assert len(sequential_response.tool_calls) == 1
-
-    async def test_parallel_and_sequential_tool_calling_async(self, model: BaseChatModel) -> None:
-        """Test parallel and sequential tool calling async for Claude."""
-        tools = [search_accommodation, search_flights, search_attractions]
-        prompt = (
-            "I want to plan a trip to Paris from New York. "
-            "I need to find flights for March 15th, accommodation from March 15th to March 20th, and things to do there.",
-            "Search for accomodations, flights and attractions in parallel. Don't repeat the same tool call.",
-        )
-        model_with_tools_parallel = model.bind_tools(
-            tools,
-            tool_choice={"type": "any", "disable_parallel_tool_use": False},  # type: ignore
-        )
-        model_with_tools_sequential = model.bind_tools(
-            tools,
-            tool_choice={"type": "any", "disable_parallel_tool_use": True},  # type: ignore
-        )
-
-        parallel_response = await model_with_tools_parallel.ainvoke(prompt)
-        sequential_response = await model_with_tools_sequential.ainvoke(prompt)
-
-        assert parallel_response.tool_calls is not None
-        assert sequential_response.tool_calls is not None
-        assert len(parallel_response.tool_calls) == len(tools)
-        assert len(sequential_response.tool_calls) == 1

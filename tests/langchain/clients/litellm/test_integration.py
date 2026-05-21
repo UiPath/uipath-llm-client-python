@@ -8,39 +8,25 @@ from typing import Any
 import pytest
 from langchain_core.embeddings import Embeddings
 from langchain_core.language_models.chat_models import BaseChatModel
-from langchain_tests.integration_tests import ChatModelIntegrationTests, EmbeddingsIntegrationTests
+from langchain_tests.integration_tests import EmbeddingsIntegrationTests
+
+from tests.langchain.integration_tests import UiPathChatModelIntegrationTests
 
 
 @pytest.mark.asyncio
 @pytest.mark.vcr
-class TestLiteLLMIntegrationChatModel(ChatModelIntegrationTests):
-    @pytest.fixture(autouse=True)
-    def setup_models(self, completions_config: tuple[type[BaseChatModel], dict[str, Any]]):
-        self._completions_class, self.completions_kwargs = completions_config
-
-    @property
-    def chat_model_class(self) -> type[BaseChatModel]:
-        return self._completions_class
-
-    @property
-    def chat_model_params(self) -> dict[str, Any]:
-        return self.completions_kwargs
-
-    @property
-    def supports_image_inputs(self) -> bool:
-        return True
-
-    @property
-    def supports_image_tool_message(self) -> bool:
-        return True
-
-    @property
-    def supports_image_urls(self) -> bool:
-        return True
-
+class TestLiteLLMIntegrationChatModel(UiPathChatModelIntegrationTests):
     @property
     def supports_pdf_inputs(self) -> bool:
         return False
+
+    @property
+    def supports_pdf_tool_message(self) -> bool:
+        return False
+
+    @property
+    def tool_choice_value(self) -> str:
+        return "required"
 
     @pytest.fixture(autouse=True)
     def skip_on_specific_configs(
@@ -55,10 +41,6 @@ class TestLiteLLMIntegrationChatModel(ChatModelIntegrationTests):
         is_gemini = "gemini" in model_name.lower()
         is_bedrock = model_name.startswith("anthropic.")
         is_vertex_claude = "@" in model_name and is_claude
-
-        # Skip framework-internal tests
-        if test_name in ["test_no_overrides_DO_NOT_OVERRIDE", "test_unicode_tool_call_integration"]:
-            pytest.skip(f"Skipping {test_name}: not relevant")
 
         # Streaming tests — Bedrock invoke streaming returns 500 from gateway
         # ("Unable to extract claim sub_type from token")
@@ -125,9 +107,22 @@ class TestLiteLLMIntegrationChatModel(ChatModelIntegrationTests):
                 "ls_structured_output_format (upstream langchain-litellm issue)"
             )
 
-    @property
-    def tool_choice_value(self) -> str:
-        return "required"
+        # Parallel tool calling has historically not been exercised on the litellm
+        # client (the previous class didn't override the test); leave the assertion
+        # off until it has dedicated coverage.
+        if test_name in (
+            "test_parallel_and_sequential_tool_calling",
+            "test_parallel_and_sequential_tool_calling_async",
+        ):
+            pytest.skip(f"Skipping {test_name}: not yet exercised on the LiteLLM client")
+
+        # File-input matrix: reuses with_structured_output, which is unreliable on
+        # ChatLiteLLM for the same reason `test_structured_output` is skipped.
+        if test_name in ("test_file_inputs", "test_file_inputs_async"):
+            pytest.skip(
+                "Structured output via ChatLiteLLM is not currently exercised "
+                "(upstream langchain-litellm issue)"
+            )
 
 
 @pytest.mark.asyncio

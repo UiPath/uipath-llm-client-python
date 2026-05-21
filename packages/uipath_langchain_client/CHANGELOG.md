@@ -2,6 +2,14 @@
 
 All notable changes to `uipath_langchain_client` will be documented in this file.
 
+## [1.12.0] - 2026-05-21
+
+### Changed
+- `get_chat_model` routes the AWSBEDROCK branch purely by `api_flavor`: `ApiFlavor.INVOKE` selects `UiPathChatBedrock`, while `None` or `ApiFlavor.CONVERSE` select `UiPathChatBedrockConverse`. Model family no longer influences the choice.
+
+### Removed
+- The AWSBEDROCK branch no longer auto-selects `UiPathChatAnthropicBedrock` for `ANTHROPIC_CLAUDE` models. Callers who want that class can pass it via the `custom_class` kwarg.
+
 ## [1.11.3] - 2026-05-21
 
 ### Fixed

@@ -64,8 +64,10 @@ def get_chat_model(
             If not provided, auto-detected from the model discovery endpoint.
         api_flavor: Vendor-specific API flavor to use. Effects:
             - OpenAI: ApiFlavor.RESPONSES sets use_responses_api=True.
-            - Bedrock: ApiFlavor.INVOKE uses UiPathChatBedrock; otherwise
-              (None or ApiFlavor.CONVERSE) uses UiPathChatBedrockConverse.
+            - Bedrock: ApiFlavor.INVOKE with model_family=ANTHROPIC_CLAUDE uses
+              UiPathChatAnthropicBedrock; ApiFlavor.INVOKE otherwise uses
+              UiPathChatBedrock; None or ApiFlavor.CONVERSE uses
+              UiPathChatBedrockConverse.
         custom_class: A custom class to use for instantiating the chat model instead of the
             auto-detected one. Must be a subclass of UiPathBaseChatModel. When provided,
             the factory skips vendor detection and uses this class directly.
@@ -189,6 +191,19 @@ def get_chat_model(
             )
         case VendorType.AWSBEDROCK:
             if api_flavor == ApiFlavor.INVOKE:
+                if model_family == ModelFamily.ANTHROPIC_CLAUDE:
+                    from uipath_langchain_client.clients.bedrock.chat_models import (
+                        UiPathChatAnthropicBedrock,
+                    )
+
+                    return UiPathChatAnthropicBedrock(
+                        model=model_name,
+                        settings=client_settings,
+                        byo_connection_id=byo_connection_id,
+                        model_details=model_details,
+                        **model_kwargs,
+                    )
+
                 from uipath_langchain_client.clients.bedrock.chat_models import (
                     UiPathChatBedrock,
                 )

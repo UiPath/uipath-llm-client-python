@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_langchain_client` will be documented in this file.
 
+## [1.12.1] - 2026-05-22
+
+### Changed
+- `get_chat_model` once again routes to `UiPathChatAnthropicBedrock` when `api_flavor == ApiFlavor.INVOKE` and discovery reports `modelFamily == AnthropicClaude`. Other INVOKE families still use `UiPathChatBedrock`, and `None`/`CONVERSE` continue to use `UiPathChatBedrockConverse`.
+
 ## [1.12.0] - 2026-05-21
 
 ### Changed

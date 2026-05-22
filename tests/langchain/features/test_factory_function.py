@@ -131,12 +131,11 @@ class TestFactoryDefaultApiFlavor:
 
 
 class TestFactoryBedrockApiFlavorRouting:
-    """The AWSBEDROCK branch routes purely on ``api_flavor``:
+    """The AWSBEDROCK branch routes on ``api_flavor`` and ``model_family``:
 
-    - ``ApiFlavor.INVOKE`` -> ``UiPathChatBedrock``
+    - ``ApiFlavor.INVOKE`` + ``ANTHROPIC_CLAUDE`` -> ``UiPathChatAnthropicBedrock``
+    - ``ApiFlavor.INVOKE`` (other families) -> ``UiPathChatBedrock``
     - ``ApiFlavor.CONVERSE`` or ``None`` -> ``UiPathChatBedrockConverse``
-
-    Model family (e.g. ANTHROPIC_CLAUDE) no longer influences the choice.
     """
 
     def _patch_bedrock_classes(self, monkeypatch: pytest.MonkeyPatch) -> dict:
@@ -216,6 +215,45 @@ class TestFactoryBedrockApiFlavorRouting:
             api_flavor=ApiFlavor.INVOKE,
         )
         assert chosen["class"] == "UiPathChatBedrock"
+
+    def test_invoke_api_flavor_with_anthropic_claude_uses_anthropic_bedrock(
+        self, monkeypatch: pytest.MonkeyPatch
+    ):
+        chosen = self._patch_bedrock_classes(monkeypatch)
+        settings = self._settings_with_model_info(
+            {
+                "modelName": "anthropic.claude-3-5-sonnet-20240620-v1:0",
+                "vendor": "AwsBedrock",
+                "apiFlavor": None,
+                "modelFamily": "AnthropicClaude",
+            }
+        )
+        get_chat_model(
+            model_name="anthropic.claude-3-5-sonnet-20240620-v1:0",
+            client_settings=settings,
+            api_flavor=ApiFlavor.INVOKE,
+        )
+        assert chosen["class"] == "UiPathChatAnthropicBedrock"
+
+    def test_converse_api_flavor_with_anthropic_claude_still_uses_converse(
+        self, monkeypatch: pytest.MonkeyPatch
+    ):
+        """ANTHROPIC_CLAUDE only diverts to AnthropicBedrock on INVOKE — CONVERSE still wins."""
+        chosen = self._patch_bedrock_classes(monkeypatch)
+        settings = self._settings_with_model_info(
+            {
+                "modelName": "anthropic.claude-3-5-sonnet-20240620-v1:0",
+                "vendor": "AwsBedrock",
+                "apiFlavor": None,
+                "modelFamily": "AnthropicClaude",
+            }
+        )
+        get_chat_model(
+            model_name="anthropic.claude-3-5-sonnet-20240620-v1:0",
+            client_settings=settings,
+            api_flavor=ApiFlavor.CONVERSE,
+        )
+        assert chosen["class"] == "UiPathChatBedrockConverse"
 
 
 class TestFactoryAgentHubConfig:

@@ -29,7 +29,7 @@ class UiPathChatOpenAI(UiPathBaseChatModel, ChatOpenAI):  # type: ignore[overrid
         api_type=ApiType.COMPLETIONS,
         routing_mode=RoutingMode.PASSTHROUGH,
         vendor_type=VendorType.OPENAI,
-        api_version="2025-03-01-preview",
+        api_version="2025-04-01-preview",
         freeze_base_url=False,
     )
     api_flavor: ApiFlavor | str | None = None
@@ -85,7 +85,7 @@ class UiPathAzureChatOpenAI(UiPathBaseChatModel, AzureChatOpenAI):  # type: igno
         api_type=ApiType.COMPLETIONS,
         routing_mode=RoutingMode.PASSTHROUGH,
         vendor_type=VendorType.OPENAI,
-        api_version="2025-03-01-preview",
+        api_version="2025-04-01-preview",
         freeze_base_url=False,
     )
     api_flavor: ApiFlavor | str | None = None

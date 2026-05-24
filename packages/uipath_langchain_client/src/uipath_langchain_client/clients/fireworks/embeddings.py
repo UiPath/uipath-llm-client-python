@@ -25,7 +25,7 @@ class UiPathFireworksEmbeddings(UiPathBaseEmbeddings, FireworksEmbeddings):
         api_type=ApiType.EMBEDDINGS,
         routing_mode=RoutingMode.PASSTHROUGH,
         vendor_type=VendorType.OPENAI,
-        api_version="2025-03-01-preview",
+        api_version="2025-04-01-preview",
         freeze_base_url=True,
     )
 

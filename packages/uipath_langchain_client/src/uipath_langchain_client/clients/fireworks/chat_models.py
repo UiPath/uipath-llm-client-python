@@ -27,7 +27,7 @@ class UiPathChatFireworks(UiPathBaseChatModel, ChatFireworks):  # type: ignore[o
         routing_mode=RoutingMode.PASSTHROUGH,
         vendor_type=VendorType.OPENAI,
         api_flavor=ApiFlavor.CHAT_COMPLETIONS,
-        api_version="2025-03-01-preview",
+        api_version="2025-04-01-preview",
         freeze_base_url=True,
     )
 

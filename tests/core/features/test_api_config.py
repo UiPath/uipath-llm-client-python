@@ -52,10 +52,10 @@ class TestUiPathAPIConfig:
             routing_mode=RoutingMode.PASSTHROUGH,
             vendor_type="openai",
             api_flavor="chat-completions",
-            api_version="2025-03-01-preview",
+            api_version="2025-04-01-preview",
         )
         assert config.api_flavor == "chat-completions"
-        assert config.api_version == "2025-03-01-preview"
+        assert config.api_version == "2025-04-01-preview"
 
 
 class TestEnumConstants:

@@ -72,7 +72,7 @@ class TestOpenAIRequestHandlerInit:
         cfg = handler.base_api_config
         assert cfg.routing_mode == RoutingMode.PASSTHROUGH
         assert cfg.vendor_type == VendorType.OPENAI
-        assert cfg.api_version == "2025-03-01-preview"
+        assert cfg.api_version == "2025-04-01-preview"
         assert cfg.freeze_base_url is False
         assert cfg.api_type is None
         assert cfg.api_flavor is None
@@ -101,7 +101,7 @@ class TestFixUrlCompletions:
         api_config: UiPathAPIConfig = call_args.kwargs["api_config"]
         assert api_config.routing_mode == RoutingMode.PASSTHROUGH
         assert api_config.vendor_type == VendorType.OPENAI
-        assert api_config.api_version == "2025-03-01-preview"
+        assert api_config.api_version == "2025-04-01-preview"
 
     def test_rewrites_url(self, handler):
         request = _make_request("/v1/chat/completions")
@@ -120,7 +120,7 @@ class TestFixUrlCompletions:
         request = _make_request("/v1/chat/completions")
         handler.fix_url_and_headers(request)
 
-        assert request.headers.get("X-UiPath-LlmGateway-ApiVersion") == "2025-03-01-preview"
+        assert request.headers.get("X-UiPath-LlmGateway-ApiVersion") == "2025-04-01-preview"
 
 
 # ============================================================================

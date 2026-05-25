@@ -22,7 +22,7 @@ class UiPathOpenAIEmbeddings(UiPathBaseEmbeddings, OpenAIEmbeddings):
         routing_mode=RoutingMode.PASSTHROUGH,
         vendor_type=VendorType.OPENAI,
         freeze_base_url=True,
-        api_version="2025-03-01-preview",
+        api_version="2025-04-01-preview",
     )
 
     # Override fields to avoid errors when instantiating the class
@@ -52,7 +52,7 @@ class UiPathAzureOpenAIEmbeddings(UiPathBaseEmbeddings, AzureOpenAIEmbeddings):
         routing_mode=RoutingMode.PASSTHROUGH,
         vendor_type=VendorType.OPENAI,
         freeze_base_url=True,
-        api_version="2025-03-01-preview",
+        api_version="2025-04-01-preview",
     )
 
     # Override fields to avoid errors when instantiating the class

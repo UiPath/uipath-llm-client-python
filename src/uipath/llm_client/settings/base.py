@@ -28,7 +28,7 @@ class UiPathAPIConfig(BaseModel):
         vendor_type: The LLM vendor (e.g., VendorType.OPENAI, VendorType.VERTEXAI).
             Required when routing_mode is PASSTHROUGH.
         api_flavor: Vendor-specific API flavor (e.g., ApiFlavor.CHAT_COMPLETIONS).
-        api_version: Vendor-specific API version (e.g., "2025-03-01-preview").
+        api_version: Vendor-specific API version (e.g., "2025-04-01-preview").
         freeze_base_url: If True, prevents httpx from modifying the base URL.
             Used when the URL must remain exactly as configured.
 

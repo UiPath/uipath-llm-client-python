@@ -2,6 +2,12 @@
 
 All notable changes to `uipath_langchain_client` will be documented in this file.
 
+## [1.12.2] - 2026-05-24
+
+### Changed
+- Bumped the default Azure OpenAI API version from `2025-03-01-preview` to `2025-04-01-preview` on `UiPathChatOpenAI`, `UiPathAzureChatOpenAI`, `UiPathOpenAIEmbeddings`, `UiPathAzureOpenAIEmbeddings`, `UiPathChatFireworks`, and `UiPathFireworksEmbeddings`.
+- Bumped `uipath-llm-client` floor to `>=1.12.2` to pick up the matching API version default.
+
 ## [1.12.1] - 2026-05-22
 
 ### Changed

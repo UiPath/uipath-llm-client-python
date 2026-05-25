@@ -729,7 +729,7 @@ config = UiPathAPIConfig(
     client_type="passthrough",
     vendor_type="openai",
     api_flavor="chat-completions",
-    api_version="2025-03-01-preview",
+    api_version="2025-04-01-preview",
 )
 ```
 
@@ -739,7 +739,7 @@ config = UiPathAPIConfig(
 | `client_type` | `"passthrough"` \| `"normalized"` \| `None` | `None` | `"passthrough"` uses vendor-native APIs; `"normalized"` uses UiPath's unified API |
 | `vendor_type` | `str \| None` | `None` | LLM vendor identifier: `"openai"`, `"vertexai"`, `"awsbedrock"`, `"anthropic"`, `"azure"` |
 | `api_flavor` | `str \| None` | `None` | Vendor-specific API flavor (e.g., `"chat-completions"`, `"responses"`, `"generate-content"`, `"converse"`, `"invoke"`, `"anthropic-claude"`) |
-| `api_version` | `str \| None` | `None` | Vendor-specific API version (e.g., `"2025-03-01-preview"`, `"v1beta1"`) |
+| `api_version` | `str \| None` | `None` | Vendor-specific API version (e.g., `"2025-04-01-preview"`, `"v1beta1"`) |
 | `freeze_base_url` | `bool` | `False` | Prevents httpx from modifying the base URL (required for some vendor SDKs) |
 
 ## Advanced Configuration

@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_llm_client` (core package) will be documented in this file.
 
+## [1.12.2] - 2026-05-24
+
+### Changed
+- Bumped the default Azure OpenAI API version from `2025-03-01-preview` to `2025-04-01-preview` in the OpenAI passthrough handler's `base_api_config`.
+
 ## [1.11.3] - 2026-05-21
 
 ### Added

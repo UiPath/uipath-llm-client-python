@@ -4,14 +4,37 @@ import logging
 from unittest.mock import MagicMock, patch
 
 from uipath.llm_client.utils.exceptions import (
+    UiPathBadGatewayError,
+    UiPathGatewayTimeoutError,
     UiPathInternalServerError,
     UiPathRateLimitError,
+    UiPathRequestTimeoutError,
+    UiPathServiceUnavailableError,
+    UiPathTooManyRequestsError,
 )
 from uipath.llm_client.utils.retry import (
+    _DEFAULT_RETRY_ON_EXCEPTIONS,
     RetryableAsyncHTTPTransport,
     RetryableHTTPTransport,
     RetryConfig,
 )
+
+
+class TestDefaultRetryOnExceptions:
+    """Pins the default retry set so HTTP 408/429/502/503/504/529 stay retryable."""
+
+    def test_default_set_covers_required_status_codes(self):
+        assert set(_DEFAULT_RETRY_ON_EXCEPTIONS) == {
+            UiPathRequestTimeoutError,
+            UiPathRateLimitError,
+            UiPathBadGatewayError,
+            UiPathServiceUnavailableError,
+            UiPathGatewayTimeoutError,
+            UiPathTooManyRequestsError,
+        }
+
+    def test_internal_server_error_is_not_retried_by_default(self):
+        assert UiPathInternalServerError not in _DEFAULT_RETRY_ON_EXCEPTIONS
 
 
 class TestRetryConfig:

@@ -2,6 +2,15 @@
 
 All notable changes to `uipath_llm_client` (core package) will be documented in this file.
 
+## [1.13.0] - 2026-05-27
+
+### Added
+- `UiPathRequestTimeoutError` (HTTP 408) and `UiPathBadGatewayError` (HTTP 502) exception classes. Both are registered in `_STATUS_CODE_TO_EXCEPTION`, re-exported from `uipath.llm_client`, and inherit from `UiPathAPIError` for compatibility with existing handlers.
+
+### Changed
+- **Default retry set expanded.** `_DEFAULT_RETRY_ON_EXCEPTIONS` in `uipath.llm_client.utils.retry` now covers `UiPathRequestTimeoutError` (408), `UiPathRateLimitError` (429), `UiPathBadGatewayError` (502), `UiPathServiceUnavailableError` (503), `UiPathGatewayTimeoutError` (504), and `UiPathTooManyRequestsError` (529) — up from `{429, 529}`. Applies to every provider client (`UiPathOpenAI`, `UiPathAnthropic*`, `UiPathGoogle`) since they all share the same `UiPathHttpxClient`-backed retry transport. `Retry-After` / `x-retry-after` headers and exponential backoff with jitter behave as before.
+- **`UiPathHttpxClient` / `UiPathHttpxAsyncClient` default `max_retries` raised from `0` to `3`.** Callers that pass `max_retries=None` (or omit it entirely) now get 3 retries by default. Pass `max_retries=0` explicitly to opt out — `max_retries=0` continues to disable retries, so the opt-out path is unchanged.
+
 ## [1.12.2] - 2026-05-24
 
 ### Changed

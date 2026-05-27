@@ -39,6 +39,7 @@ from uipath.llm_client.settings import (
 from uipath.llm_client.utils.exceptions import (
     UiPathAPIError,
     UiPathAuthenticationError,
+    UiPathBadGatewayError,
     UiPathBadRequestError,
     UiPathConflictError,
     UiPathGatewayTimeoutError,
@@ -46,6 +47,7 @@ from uipath.llm_client.utils.exceptions import (
     UiPathNotFoundError,
     UiPathPermissionDeniedError,
     UiPathRateLimitError,
+    UiPathRequestTimeoutError,
     UiPathRequestTooLargeError,
     UiPathServiceUnavailableError,
     UiPathTooManyRequestsError,
@@ -69,6 +71,7 @@ __all__ = [
     # Exceptions
     "UiPathAPIError",
     "UiPathAuthenticationError",
+    "UiPathBadGatewayError",
     "UiPathBadRequestError",
     "UiPathConflictError",
     "UiPathGatewayTimeoutError",
@@ -76,6 +79,7 @@ __all__ = [
     "UiPathNotFoundError",
     "UiPathPermissionDeniedError",
     "UiPathRateLimitError",
+    "UiPathRequestTimeoutError",
     "UiPathRequestTooLargeError",
     "UiPathServiceUnavailableError",
     "UiPathTooManyRequestsError",

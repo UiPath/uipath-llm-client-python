@@ -62,6 +62,7 @@ def test_exception_imports():
     from uipath.llm_client import (
         UiPathAPIError,
         UiPathAuthenticationError,
+        UiPathBadGatewayError,
         UiPathBadRequestError,
         UiPathConflictError,
         UiPathGatewayTimeoutError,
@@ -69,6 +70,7 @@ def test_exception_imports():
         UiPathNotFoundError,
         UiPathPermissionDeniedError,
         UiPathRateLimitError,
+        UiPathRequestTimeoutError,
         UiPathRequestTooLargeError,
         UiPathServiceUnavailableError,
         UiPathTooManyRequestsError,
@@ -79,6 +81,7 @@ def test_exception_imports():
     exceptions = [
         UiPathAPIError,
         UiPathAuthenticationError,
+        UiPathBadGatewayError,
         UiPathBadRequestError,
         UiPathConflictError,
         UiPathGatewayTimeoutError,
@@ -86,6 +89,7 @@ def test_exception_imports():
         UiPathNotFoundError,
         UiPathPermissionDeniedError,
         UiPathRateLimitError,
+        UiPathRequestTimeoutError,
         UiPathRequestTooLargeError,
         UiPathServiceUnavailableError,
         UiPathTooManyRequestsError,
@@ -176,6 +180,7 @@ def test_exceptions_module_imports():
     from uipath.llm_client.utils.exceptions import (
         UiPathAPIError,
         UiPathAuthenticationError,
+        UiPathBadGatewayError,
         UiPathBadRequestError,
         UiPathConflictError,
         UiPathGatewayTimeoutError,
@@ -183,6 +188,7 @@ def test_exceptions_module_imports():
         UiPathNotFoundError,
         UiPathPermissionDeniedError,
         UiPathRateLimitError,
+        UiPathRequestTimeoutError,
         UiPathRequestTooLargeError,
         UiPathServiceUnavailableError,
         UiPathTooManyRequestsError,
@@ -198,6 +204,7 @@ def test_exceptions_module_imports():
     # Verify all specific exceptions inherit from UiPathAPIError
     specific_exceptions = [
         UiPathAuthenticationError,
+        UiPathBadGatewayError,
         UiPathBadRequestError,
         UiPathConflictError,
         UiPathGatewayTimeoutError,
@@ -205,6 +212,7 @@ def test_exceptions_module_imports():
         UiPathNotFoundError,
         UiPathPermissionDeniedError,
         UiPathRateLimitError,
+        UiPathRequestTimeoutError,
         UiPathRequestTooLargeError,
         UiPathServiceUnavailableError,
         UiPathTooManyRequestsError,

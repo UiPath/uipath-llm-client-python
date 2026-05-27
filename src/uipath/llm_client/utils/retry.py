@@ -49,13 +49,22 @@ from typing_extensions import TypedDict
 
 from uipath.llm_client.utils.exceptions import (
     UiPathAPIError,
+    UiPathBadGatewayError,
+    UiPathGatewayTimeoutError,
     UiPathRateLimitError,
+    UiPathRequestTimeoutError,
+    UiPathServiceUnavailableError,
     UiPathTooManyRequestsError,
 )
 
 # Default retry configuration values
+# Status codes retried by default: 408, 429, 502, 503, 504, 529.
 _DEFAULT_RETRY_ON_EXCEPTIONS: tuple[type[Exception], ...] = (
+    UiPathRequestTimeoutError,
     UiPathRateLimitError,
+    UiPathBadGatewayError,
+    UiPathServiceUnavailableError,
+    UiPathGatewayTimeoutError,
     UiPathTooManyRequestsError,
 )
 _DEFAULT_INITIAL_DELAY: float = 2.0
@@ -127,7 +136,7 @@ class RetryConfig(TypedDict):
 
     Attributes:
         retry_on_exceptions: Tuple of exception types to retry on.
-            Defaults to (UiPathRateLimitError,).
+            Defaults to the typed exceptions for HTTP 408, 429, 502, 503, 504, 529.
         initial_delay: Initial delay in seconds before first retry.
             Defaults to 2.0.
         max_delay: Maximum delay in seconds between retries.

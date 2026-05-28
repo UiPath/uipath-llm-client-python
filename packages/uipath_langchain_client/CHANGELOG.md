@@ -2,6 +2,12 @@
 
 All notable changes to `uipath_langchain_client` will be documented in this file.
 
+## [1.13.0] - 2026-05-27
+
+### Changed
+- **`UiPathBaseLLMClient.max_retries` field default raised from `0` to `3`.** Every LangChain chat and embedding client built on this base (`UiPathChat`, `UiPathChatOpenAI`, `UiPathAzureChatOpenAI`, `UiPathChatAnthropic`, `UiPathChatAnthropicBedrock`, `UiPathChatBedrock`, `UiPathChatBedrockConverse`, `UiPathChatVertexAI`, `UiPathChatFireworks`, `UiPathChatLiteLLM`, plus the matching embeddings classes) now retries failed requests 3 times by default. Pass `max_retries=0` explicitly to disable retries — the opt-out path is unchanged. Combined with the expanded default retry set in `uipath-llm-client` 1.13.0, every LangChain client now retries on HTTP 408, 429, 502, 503, 504, and 529 out of the box.
+- Bumped `uipath-llm-client` floor to `>=1.13.0` to pick up the expanded default retry set and the new `UiPathRequestTimeoutError` / `UiPathBadGatewayError` typed exceptions.
+
 ## [1.12.2] - 2026-05-24
 
 ### Changed

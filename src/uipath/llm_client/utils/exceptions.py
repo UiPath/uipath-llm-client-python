@@ -118,6 +118,12 @@ class UiPathNotFoundError(UiPathAPIError):
     status_code: Literal[404] = 404  # pyright: ignore[reportIncompatibleVariableOverride]
 
 
+class UiPathRequestTimeoutError(UiPathAPIError):
+    """HTTP 408 Request Timeout error."""
+
+    status_code: Literal[408] = 408  # pyright: ignore[reportIncompatibleVariableOverride]
+
+
 class UiPathConflictError(UiPathAPIError):
     """HTTP 409 Conflict error."""
 
@@ -211,6 +217,12 @@ class UiPathInternalServerError(UiPathAPIError):
     status_code: Literal[500] = 500  # pyright: ignore[reportIncompatibleVariableOverride]
 
 
+class UiPathBadGatewayError(UiPathAPIError):
+    """HTTP 502 Bad Gateway error."""
+
+    status_code: Literal[502] = 502  # pyright: ignore[reportIncompatibleVariableOverride]
+
+
 class UiPathServiceUnavailableError(UiPathAPIError):
     """HTTP 503 Service Unavailable error."""
 
@@ -234,11 +246,13 @@ _STATUS_CODE_TO_EXCEPTION: dict[int, type[UiPathAPIError]] = {
     401: UiPathAuthenticationError,
     403: UiPathPermissionDeniedError,
     404: UiPathNotFoundError,
+    408: UiPathRequestTimeoutError,
     409: UiPathConflictError,
     413: UiPathRequestTooLargeError,
     422: UiPathUnprocessableEntityError,
     429: UiPathRateLimitError,
     500: UiPathInternalServerError,
+    502: UiPathBadGatewayError,
     503: UiPathServiceUnavailableError,
     504: UiPathGatewayTimeoutError,
     529: UiPathTooManyRequestsError,
@@ -266,11 +280,13 @@ __all__ = [
     "UiPathAuthenticationError",
     "UiPathPermissionDeniedError",
     "UiPathNotFoundError",
+    "UiPathRequestTimeoutError",
     "UiPathConflictError",
     "UiPathRequestTooLargeError",
     "UiPathUnprocessableEntityError",
     "UiPathRateLimitError",
     "UiPathInternalServerError",
+    "UiPathBadGatewayError",
     "UiPathServiceUnavailableError",
     "UiPathGatewayTimeoutError",
     "UiPathTooManyRequestsError",

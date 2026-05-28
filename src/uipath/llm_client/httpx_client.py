@@ -68,6 +68,10 @@ from uipath.llm_client.utils.ssl_config import get_httpx_ssl_client_kwargs
 # Sentinel to distinguish "not provided" from an explicit ``None`` / ``False``.
 _UNSET: Any = object()
 
+# Default applied when ``max_retries`` is left as ``None``. Callers can still
+# opt out by passing ``max_retries=0`` explicitly.
+_DEFAULT_MAX_RETRIES: typing.Final[int] = 3
+
 
 class UiPathHttpxClient(Client):
     """Synchronous HTTP client configured for UiPath LLM services.
@@ -135,8 +139,8 @@ class UiPathHttpxClient(Client):
             captured_headers: Case-insensitive header name prefixes to capture from
                 responses. Captured headers are stored in a ContextVar and can be
                 retrieved with get_captured_response_headers(). Defaults to ("x-uipath-",).
-            max_retries: Maximum retry attempts for failed requests. Defaults to 0
-                (retries disabled). Set to a positive integer to enable retries.
+            max_retries: Maximum retry attempts for failed requests. Defaults to 3
+                when left as ``None``. Pass ``0`` to disable retries explicitly.
             retry_config: Custom retry configuration (backoff, retryable status codes).
             logger: Logger instance for request/response logging.
             auth: HTTP authentication (same as httpx.Client).  Derived from
@@ -193,7 +197,7 @@ class UiPathHttpxClient(Client):
         # Setup retry transport if not provided
         if transport is None:
             transport = RetryableHTTPTransport(
-                max_retries=max_retries if max_retries is not None else 0,
+                max_retries=max_retries if max_retries is not None else _DEFAULT_MAX_RETRIES,
                 retry_config=retry_config,
                 logger=logger,
             )
@@ -354,7 +358,7 @@ class UiPathHttpxAsyncClient(AsyncClient):
         # Setup retry transport if not provided
         if transport is None:
             transport = RetryableAsyncHTTPTransport(
-                max_retries=max_retries if max_retries is not None else 0,
+                max_retries=max_retries if max_retries is not None else _DEFAULT_MAX_RETRIES,
                 retry_config=retry_config,
                 logger=logger,
             )

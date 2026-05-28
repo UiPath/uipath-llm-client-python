@@ -80,6 +80,24 @@ class TestUiPathHttpxClient:
         assert isinstance(client._transport, RetryableHTTPTransport)
         client.close()
 
+    def test_client_default_max_retries_is_three(self):
+        """Caller passing no ``max_retries`` should get the 3-retry default."""
+        from uipath.llm_client.httpx_client import UiPathHttpxClient
+
+        client = UiPathHttpxClient(base_url="https://example.com")
+        assert isinstance(client._transport, RetryableHTTPTransport)
+        assert client._transport.retryer is not None
+        client.close()
+
+    def test_client_explicit_zero_disables_retries(self):
+        """Passing ``max_retries=0`` must still disable retries."""
+        from uipath.llm_client.httpx_client import UiPathHttpxClient
+
+        client = UiPathHttpxClient(base_url="https://example.com", max_retries=0)
+        assert isinstance(client._transport, RetryableHTTPTransport)
+        assert client._transport.retryer is None
+        client.close()
+
     def test_client_with_byo_connection_id(self):
         """Test client adds BYO connection ID header."""
         from uipath.llm_client.httpx_client import UiPathHttpxClient
@@ -122,6 +140,22 @@ class TestUiPathHttpxAsyncClient:
         )
         # Transport should be RetryableAsyncHTTPTransport
         assert isinstance(client._transport, RetryableAsyncHTTPTransport)
+
+    def test_async_client_default_max_retries_is_three(self):
+        """Async caller passing no ``max_retries`` should get the 3-retry default."""
+        from uipath.llm_client.httpx_client import UiPathHttpxAsyncClient
+
+        client = UiPathHttpxAsyncClient(base_url="https://example.com")
+        assert isinstance(client._transport, RetryableAsyncHTTPTransport)
+        assert client._transport.retryer is not None
+
+    def test_async_client_explicit_zero_disables_retries(self):
+        """Async client: passing ``max_retries=0`` must still disable retries."""
+        from uipath.llm_client.httpx_client import UiPathHttpxAsyncClient
+
+        client = UiPathHttpxAsyncClient(base_url="https://example.com", max_retries=0)
+        assert isinstance(client._transport, RetryableAsyncHTTPTransport)
+        assert client._transport.retryer is None
 
 
 class TestBuildRoutingHeaders:

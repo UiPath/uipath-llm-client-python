@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_llm_client` (core package) will be documented in this file.
 
+## [1.13.1] - 2026-06-09
+
+### Fixed
+- `PlatformSettings` now accepts non-JWT access tokens (e.g. opaque UiPath reference tokens) for `UIPATH_ACCESS_TOKEN`. Previously any token that was not a parseable JWT failed validation with "Invalid access token: expected JWT with at least 2 dot-separated parts". Token introspection is now best-effort: `is_token_expired` returns `False` when the token is not a parseable JWT, and the settings validator only extracts `client_id` when the token is a parseable JWT. Added `try_parse_access_token` helper in `uipath.llm_client.settings.platform.utils`.
+
 ## [1.13.0] - 2026-05-27
 
 ### Added

@@ -30,7 +30,10 @@ from uipath.platform.common.constants import (
 
 from uipath.llm_client.settings.base import UiPathAPIConfig, UiPathBaseSettings
 from uipath.llm_client.settings.constants import ApiType, RoutingMode
-from uipath.llm_client.settings.platform.utils import is_token_expired, parse_access_token
+from uipath.llm_client.settings.platform.utils import (
+    is_token_expired,
+    try_parse_access_token,
+)
 
 
 class PlatformBaseSettings(UiPathBaseSettings):
@@ -81,8 +84,11 @@ class PlatformBaseSettings(UiPathBaseSettings):
                 "Access token is expired. Try running `uipath auth` to refresh the token."
             )
 
-        parsed_token_data = parse_access_token(access_token)
-        self.client_id = parsed_token_data.get("client_id")
+        # The access token may be any form, not just a JWT (e.g. opaque
+        # reference tokens). Only extract client_id when it is a parseable JWT.
+        parsed_token_data = try_parse_access_token(access_token)
+        if parsed_token_data is not None:
+            self.client_id = parsed_token_data.get("client_id")
         return self
 
     @staticmethod

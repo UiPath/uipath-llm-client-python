@@ -69,6 +69,21 @@ class TestBedrockIntegrationChatModel(UiPathChatModelIntegrationTests):
         ]:
             pytest.skip(f"Skipping {test_name}: file blocks not supported on this client")
 
+        # UiPathChatBedrock: these are multi-turn exchanges (image/PDF -> tool call ->
+        # follow-up) that issue several identical `POST /` invoke requests. With the
+        # VCR config (`allow_playback_repeats: False`, path-only matching) they cannot
+        # be replayed deterministically from a recorded cassette, so they fail in CI
+        # (empty response body -> JSONDecodeError) even though they pass against a live
+        # gateway. Skip until per-turn (body-based) cassette matching is added.
+        if model_class == UiPathChatBedrock and test_name in [
+            "test_image_tool_message",
+            "test_pdf_tool_message",
+        ]:
+            pytest.skip(
+                f"Skipping {test_name}: multi-turn invoke exchange is not reproducible "
+                "via VCR cassettes (see allow_playback_repeats in tests/conftest.py)"
+            )
+
         # UiPathChatBedrockConverse: parallel tool calling not supported
         if model_class == UiPathChatBedrockConverse and test_name in [
             "test_parallel_and_sequential_tool_calling",

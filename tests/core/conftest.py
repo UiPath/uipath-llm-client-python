@@ -57,14 +57,14 @@ def platform_env_vars():
 
 @pytest.fixture
 def mock_platform_auth():
-    """Patches is_token_expired and parse_access_token for PlatformSettings tests."""
+    """Patches is_token_expired and try_parse_access_token for PlatformSettings tests."""
     with (
         patch(
             "uipath.llm_client.settings.platform.settings.is_token_expired",
             return_value=False,
         ),
         patch(
-            "uipath.llm_client.settings.platform.settings.parse_access_token",
+            "uipath.llm_client.settings.platform.settings.try_parse_access_token",
             return_value={"client_id": "test-client-id"},
         ),
     ):

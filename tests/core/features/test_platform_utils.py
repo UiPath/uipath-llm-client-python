@@ -6,7 +6,11 @@ import time
 
 import pytest
 
-from uipath.llm_client.settings.platform.utils import is_token_expired, parse_access_token
+from uipath.llm_client.settings.platform.utils import (
+    is_token_expired,
+    parse_access_token,
+    try_parse_access_token,
+)
 
 
 class TestParseAccessToken:
@@ -69,3 +73,40 @@ class TestIsTokenExpired:
         token = f"header.{encoded_payload}.signature"
 
         assert is_token_expired(token) is False
+
+    @pytest.mark.parametrize(
+        "token",
+        [
+            "rt_abc123",  # opaque reference token
+            "not-a-jwt-token",  # no dot-separated parts
+            "header.!!!invalid-base64!!!.signature",  # undecodable payload
+            "",  # empty
+        ],
+    )
+    def test_opaque_token_not_expired(self, token):
+        # Tokens that are not parseable JWTs cannot be introspected, so they
+        # are never treated as expired (and must not raise during parsing).
+        assert is_token_expired(token) is False
+
+
+class TestTryParseAccessToken:
+    def test_valid_jwt_returns_payload(self):
+        payload = {"sub": "user-123", "client_id": "abc"}
+        encoded_payload = (
+            base64.urlsafe_b64encode(json.dumps(payload).encode()).decode().rstrip("=")
+        )
+        token = f"header.{encoded_payload}.signature"
+
+        assert try_parse_access_token(token) == payload
+
+    @pytest.mark.parametrize(
+        "token",
+        [
+            "rt_abc123",  # opaque reference token
+            "not-a-jwt-token",  # no dot-separated parts
+            "header.!!!invalid-base64!!!.signature",  # undecodable payload (binascii.Error)
+            "",  # empty
+        ],
+    )
+    def test_non_jwt_returns_none(self, token):
+        assert try_parse_access_token(token) is None

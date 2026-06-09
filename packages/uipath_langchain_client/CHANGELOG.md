@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_langchain_client` will be documented in this file.
 
+## [1.13.1] - 2026-06-09
+
+### Fixed
+- Picks up the core `uipath-llm-client` 1.13.1 fix allowing non-JWT access tokens (e.g. opaque UiPath reference tokens) as `UIPATH_ACCESS_TOKEN`, so LangChain clients built on `PlatformSettings` no longer fail validation with "Invalid access token: expected JWT with at least 2 dot-separated parts".
+
 ## [1.13.0] - 2026-05-27
 
 ### Changed

@@ -1,4 +1,5 @@
 import base64
+import binascii
 import json
 import time
 from typing import Any
@@ -26,16 +27,41 @@ def parse_access_token(access_token: str) -> dict[str, Any]:
         raise ValueError(f"Invalid access token: failed to decode payload: {e}") from e
 
 
-def is_token_expired(token: str) -> bool:
-    """Check whether a JWT access token has expired.
+def try_parse_access_token(access_token: str) -> dict[str, Any] | None:
+    """Best-effort parse of an access token's JWT payload.
+
+    Access tokens are not guaranteed to be JWTs — UiPath also issues opaque
+    tokens (e.g. reference tokens) that carry no client-readable claims. This
+    returns the decoded payload when the token is a parseable JWT, or ``None``
+    when it is not, instead of raising.
 
     Args:
-        token: A JWT token string.
+        access_token: An access token string of any form.
 
     Returns:
-        True if the token is expired, False if it is still valid or has no ``exp`` claim.
+        The decoded payload as a dictionary, or ``None`` if the token is not a
+        parseable JWT.
     """
-    token_data = parse_access_token(token)
+    try:
+        return parse_access_token(access_token)
+    except (ValueError, binascii.Error):
+        return None
+
+
+def is_token_expired(token: str) -> bool:
+    """Check whether an access token has expired.
+
+    Args:
+        token: An access token string of any form.
+
+    Returns:
+        True if the token is a JWT with an ``exp`` claim in the past; False if
+        it is still valid, has no ``exp`` claim, or is an opaque token whose
+        expiry cannot be inspected.
+    """
+    token_data = try_parse_access_token(token)
+    if token_data is None:
+        return False
     exp = token_data.get("exp")
     if exp is None:
         return False

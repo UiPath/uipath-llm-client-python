@@ -236,7 +236,7 @@ class TestPlatformSettings:
                 return_value=True,
             ),
             patch(
-                "uipath.llm_client.settings.platform.settings.parse_access_token",
+                "uipath.llm_client.settings.platform.settings.try_parse_access_token",
                 return_value={"client_id": "test-client-id"},
             ),
         ):
@@ -249,6 +249,27 @@ class TestPlatformSettings:
             with patch.dict(os.environ, env, clear=True):
                 with pytest.raises(ValueError, match="Access token is expired"):
                     PlatformSettings()
+
+    @pytest.mark.parametrize(
+        "token",
+        ["rt_abc123", "some-opaque-token", "not.a.valid.jwt"],
+    )
+    def test_non_jwt_token_is_accepted(self, token):
+        """Non-JWT access tokens (e.g. opaque reference tokens) are accepted.
+
+        The token may be any form; client_id is only extracted when it is a
+        parseable JWT, otherwise it stays None.
+        """
+        env = {
+            "UIPATH_ACCESS_TOKEN": token,
+            "UIPATH_URL": "https://cloud.uipath.com/org/tenant",
+            "UIPATH_TENANT_ID": "test-tenant-id",
+            "UIPATH_ORGANIZATION_ID": "test-org-id",
+        }
+        with patch.dict(os.environ, env, clear=True):
+            settings = PlatformSettings()
+            assert settings.access_token.get_secret_value() == token
+            assert settings.client_id is None
 
     def test_validate_byo_model_is_noop(self, platform_env_vars, mock_platform_auth):
         """Test validate_byo_model does nothing (no-op)."""

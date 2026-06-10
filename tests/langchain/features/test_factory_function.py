@@ -1,9 +1,16 @@
 from unittest.mock import MagicMock
 
 import pytest
+from uipath_langchain_client.clients.bedrock.chat_models import (
+    UiPathChatBedrock,
+    UiPathChatBedrockConverse,
+)
 from uipath_langchain_client.clients.normalized.chat_models import UiPathChat
 from uipath_langchain_client.clients.normalized.embeddings import UiPathEmbeddings
-from uipath_langchain_client.factory import get_chat_model, get_embedding_model
+from uipath_langchain_client.factory import (
+    get_chat_model,
+    get_embedding_model,
+)
 
 from tests.langchain.conftest import COMPLETION_MODEL_NAMES, EMBEDDING_MODEL_NAMES
 from uipath.llm_client.settings import ApiFlavor, UiPathBaseSettings, VendorType
@@ -379,3 +386,93 @@ class TestFactoryAnthropicMessagesRouting:
         )
         assert captured["vendor_type"] == VendorType.AWSBEDROCK
         assert captured["api_flavor"] == ApiFlavor.ANTHROPIC_MESSAGES
+
+
+_BYO_BEDROCK_CONVERSE = {
+    "modelName": "AWS - Bedrock",
+    "vendor": "AwsBedrock",
+    "modelFamily": None,
+    "apiFlavor": None,
+    "modelSubscriptionType": "BYOMAdded",
+    "byomDetails": {
+        "customerModel": "anthropic.claude-sonnet-4-5-20250929-v1:0",
+        "integrationServiceConnectionId": "conn-x",
+    },
+}
+_BYO_BEDROCK_INVOKE = {**_BYO_BEDROCK_CONVERSE, "apiFlavor": "AwsBedrockInvoke"}
+
+
+class TestBedrockFactoryBaseModel:
+    @pytest.fixture()
+    def client_settings(self):
+        import os
+        from unittest.mock import patch
+
+        from uipath.llm_client.settings.llmgateway import LLMGatewaySettings
+
+        env = {
+            "LLMGW_URL": "http://test-bedrock",
+            "LLMGW_SEMANTIC_ORG_ID": "org",
+            "LLMGW_SEMANTIC_TENANT_ID": "tenant",
+            "LLMGW_REQUESTING_PRODUCT": "test",
+            "LLMGW_REQUESTING_FEATURE": "test",
+            "LLMGW_ACCESS_TOKEN": "dummy-token",
+        }
+        with patch.dict(os.environ, env, clear=True):
+            return LLMGatewaySettings()
+
+    @pytest.fixture(autouse=True)
+    def _clear_discovery_cache(self):
+        UiPathBaseSettings._discovery_cache.clear()
+        yield
+        UiPathBaseSettings._discovery_cache.clear()
+
+    def _seed(self, client_settings, model_info):
+        key = client_settings._discovery_cache_key()
+        client_settings._discovery_cache[key] = [model_info]
+
+    def test_converse_byo_alias_gets_backing_base_model(self, client_settings):
+        self._seed(client_settings, _BYO_BEDROCK_CONVERSE)
+        model = get_chat_model(
+            "AWS - Bedrock",
+            byo_connection_id="conn-x",
+            client_settings=client_settings,
+        )
+        assert isinstance(model, UiPathChatBedrockConverse)
+        assert model.model_id == "AWS - Bedrock"
+        assert model.base_model_id == "anthropic.claude-sonnet-4-5-20250929-v1:0"
+        assert model.supports_tool_choice_values == ("auto", "any", "tool")
+
+        from langchain_core.tools import tool
+
+        @tool
+        def ping() -> str:
+            """ping."""
+            return "pong"
+
+        model.bind_tools([ping], tool_choice="any")
+
+    def test_converse_direct_construction_resolves_backing_model_from_discovery(
+        self, client_settings
+    ):
+        self._seed(client_settings, _BYO_BEDROCK_CONVERSE)
+        model = UiPathChatBedrockConverse(
+            model="AWS - Bedrock",
+            settings=client_settings,
+            byo_connection_id="conn-x",
+        )
+        assert model.base_model_id == "anthropic.claude-sonnet-4-5-20250929-v1:0"
+        assert model.supports_tool_choice_values == ("auto", "any", "tool")
+
+    def test_invoke_byo_alias_gets_provider(self, client_settings):
+        self._seed(client_settings, _BYO_BEDROCK_INVOKE)
+        model = get_chat_model(
+            "AWS - Bedrock",
+            byo_connection_id="conn-x",
+            client_settings=client_settings,
+        )
+        assert isinstance(model, UiPathChatBedrock)
+        assert model.model_id == "AWS - Bedrock"
+        assert model.base_model_id == "anthropic.claude-sonnet-4-5-20250929-v1:0"
+        assert model.provider == "anthropic"
+        assert model._get_provider() == "anthropic"

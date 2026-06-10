@@ -4,6 +4,10 @@ from typing import Any, Self
 from pydantic import Field, model_validator
 
 from uipath_langchain_client.base_client import UiPathBaseChatModel
+from uipath_langchain_client.clients.bedrock.model_resolution import (
+    apply_backing_model_detection_hints,
+    provider_from_model,
+)
 from uipath_langchain_client.settings import (
     ApiFlavor,
     ApiType,
@@ -48,6 +52,47 @@ except ImportError as e:
     ) from e
 
 
+def _setup_model_id_and_bedrock_hints(values: Any) -> Any:
+    if not isinstance(values, dict):
+        return values
+
+    updated = values
+    if "model_id" not in updated:
+        model = updated.get("model") or updated.get("model_name")
+        if model:
+            updated = {**updated, "model_id": model}
+
+    try:
+        base_model_id = updated.get("base_model_id") or updated.get("base_model")
+        if base_model_id and "provider" not in updated:
+            provider = provider_from_model(base_model_id)
+            if provider:
+                updated = {**updated, "provider": provider}
+
+        if "base_model_id" in updated or "base_model" in updated:
+            return updated
+
+        settings = updated.get("client_settings") or updated.get("settings")
+        model = updated.get("model") or updated.get("model_name") or updated.get("model_id")
+        if settings is None or model is None:
+            return updated
+
+        model_info = settings.get_model_info(
+            model,
+            byo_connection_id=updated.get("byo_connection_id"),
+        )
+        hints: dict[str, Any] = {}
+        apply_backing_model_detection_hints(hints, model_info)
+        if not hints:
+            return updated
+
+        updated = {**updated, **{k: v for k, v in hints.items() if k not in updated}}
+    except Exception:
+        return updated
+
+    return updated
+
+
 class UiPathChatBedrockConverse(UiPathBaseChatModel, ChatBedrockConverse):  # type: ignore[override]
     api_config: UiPathAPIConfig = UiPathAPIConfig(
         api_type=ApiType.COMPLETIONS,
@@ -65,11 +110,7 @@ class UiPathChatBedrockConverse(UiPathBaseChatModel, ChatBedrockConverse):  # ty
     @model_validator(mode="before")
     @classmethod
     def setup_model_id(cls, values: Any) -> Any:
-        if isinstance(values, dict) and "model_id" not in values:
-            model = values.get("model") or values.get("model_name")
-            if model:
-                values = {**values, "model_id": model}
-        return values
+        return _setup_model_id_and_bedrock_hints(values)
 
     @model_validator(mode="after")
     def setup_uipath_client(self) -> Self:
@@ -94,11 +135,7 @@ class UiPathChatBedrock(UiPathBaseChatModel, ChatBedrock):  # type: ignore[overr
     @model_validator(mode="before")
     @classmethod
     def setup_model_id(cls, values: Any) -> Any:
-        if isinstance(values, dict) and "model_id" not in values:
-            model = values.get("model") or values.get("model_name")
-            if model:
-                values = {**values, "model_id": model}
-        return values
+        return _setup_model_id_and_bedrock_hints(values)
 
     @model_validator(mode="after")
     def setup_uipath_client(self) -> Self:

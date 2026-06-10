@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_langchain_client` will be documented in this file.
 
+## [1.15.1] - 2026-06-30
+
+### Fixed
+- Bedrock clients now determine the provider and base model from the underlying customer model, in the case of BYOM configurations. This fixes a bug where agents with Bedrock BYOM configurations with custom aliases would fail to run.
+
 ## [1.15.0] - 2026-06-25
 
 ### Added

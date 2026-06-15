@@ -40,10 +40,20 @@ class UiPathChatAnthropic(UiPathBaseChatModel, ChatAnthropic):
         freeze_base_url=True,
     )
     vendor_type: VendorType = VendorType.ANTHROPIC
+    api_flavor: ApiFlavor | str | None = None
+    """Explicit API flavor. When ``ApiFlavor.ANTHROPIC_MESSAGES``, the request
+    uses the native Anthropic Messages wire format (model in body) while routing
+    through the hosting vendor's passthrough URL (e.g. ``vendor_type=awsbedrock``
+    for a Bedrock-hosted Claude). Otherwise the flavor is derived from
+    ``vendor_type``."""
 
     @model_validator(mode="after")
     def setup_api_flavor_and_version(self) -> Self:
         self.api_config.vendor_type = self.vendor_type
+        match self.api_flavor:
+            case ApiFlavor.ANTHROPIC_MESSAGES:
+                self.api_config.api_flavor = ApiFlavor.ANTHROPIC_MESSAGES
+                return self
         match self.vendor_type:
             case VendorType.ANTHROPIC:
                 self.api_config.api_flavor = None
@@ -67,6 +77,15 @@ class UiPathChatAnthropic(UiPathBaseChatModel, ChatAnthropic):
     def _anthropic_client(
         self,
     ) -> Anthropic | AnthropicVertex | AnthropicBedrock | AnthropicFoundry:
+        match self.api_config.api_flavor:
+            case ApiFlavor.ANTHROPIC_MESSAGES:
+                return Anthropic(
+                    api_key="PLACEHOLDER",
+                    base_url=str(self.uipath_sync_client.base_url),
+                    default_headers=dict(self.uipath_sync_client.headers),
+                    max_retries=0,  # handled by the UiPathBaseChatModel
+                    http_client=self.uipath_sync_client,
+                )
         match self.vendor_type:
             case VendorType.ANTHROPIC:
                 return Anthropic(
@@ -111,6 +130,15 @@ class UiPathChatAnthropic(UiPathBaseChatModel, ChatAnthropic):
     def _async_anthropic_client(
         self,
     ) -> AsyncAnthropic | AsyncAnthropicVertex | AsyncAnthropicBedrock | AsyncAnthropicFoundry:
+        match self.api_config.api_flavor:
+            case ApiFlavor.ANTHROPIC_MESSAGES:
+                return AsyncAnthropic(
+                    api_key="PLACEHOLDER",
+                    base_url=str(self.uipath_async_client.base_url),
+                    default_headers=dict(self.uipath_async_client.headers),
+                    max_retries=0,  # handled by the UiPathBaseChatModel
+                    http_client=self.uipath_async_client,
+                )
         match self.vendor_type:
             case VendorType.ANTHROPIC:
                 return AsyncAnthropic(

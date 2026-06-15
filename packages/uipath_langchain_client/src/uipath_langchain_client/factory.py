@@ -190,6 +190,21 @@ def get_chat_model(
                 **model_kwargs,
             )
         case VendorType.AWSBEDROCK:
+            if api_flavor == ApiFlavor.ANTHROPIC_MESSAGES:
+                from uipath_langchain_client.clients.anthropic.chat_models import (
+                    UiPathChatAnthropic,
+                )
+
+                return UiPathChatAnthropic(
+                    model=model_name,
+                    settings=client_settings,
+                    vendor_type=VendorType.AWSBEDROCK,
+                    api_flavor=ApiFlavor.ANTHROPIC_MESSAGES,
+                    byo_connection_id=byo_connection_id,
+                    model_details=model_details,
+                    **model_kwargs,
+                )
+
             if api_flavor == ApiFlavor.INVOKE:
                 if model_family == ModelFamily.ANTHROPIC_CLAUDE:
                     from uipath_langchain_client.clients.bedrock.chat_models import (

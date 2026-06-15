@@ -32,6 +32,7 @@ class ApiFlavor(StrEnum):
     CONVERSE = "converse"
     INVOKE = "invoke"
     ANTHROPIC_CLAUDE = "anthropic-claude"
+    ANTHROPIC_MESSAGES = "AnthropicMessages"
 
 
 class ByomApiFlavor(StrEnum):
@@ -44,6 +45,7 @@ class ByomApiFlavor(StrEnum):
     GEMINI_EMBEDDINGS = "GeminiEmbeddings"
     AWS_BEDROCK_INVOKE = "AwsBedrockInvoke"
     AWS_BEDROCK_CONVERSE = "AwsBedrockConverse"
+    ANTHROPIC_MESSAGES = "AnthropicMessages"
 
 
 API_FLAVOR_TO_VENDOR_TYPE: dict[str, VendorType] = {
@@ -53,6 +55,7 @@ API_FLAVOR_TO_VENDOR_TYPE: dict[str, VendorType] = {
     ApiFlavor.ANTHROPIC_CLAUDE: VendorType.VERTEXAI,
     ApiFlavor.CONVERSE: VendorType.AWSBEDROCK,
     ApiFlavor.INVOKE: VendorType.AWSBEDROCK,
+    ByomApiFlavor.ANTHROPIC_MESSAGES: VendorType.AWSBEDROCK,
     ByomApiFlavor.OPENAI_CHAT_COMPLETIONS: VendorType.OPENAI,
     ByomApiFlavor.OPENAI_RESPONSES: VendorType.OPENAI,
     ByomApiFlavor.OPENAI_EMBEDDINGS: VendorType.OPENAI,
@@ -69,4 +72,5 @@ BYOM_TO_ROUTING_FLAVOR: dict[str, ApiFlavor] = {
     ByomApiFlavor.GEMINI_GENERATE_CONTENT: ApiFlavor.GENERATE_CONTENT,
     ByomApiFlavor.AWS_BEDROCK_INVOKE: ApiFlavor.INVOKE,
     ByomApiFlavor.AWS_BEDROCK_CONVERSE: ApiFlavor.CONVERSE,
+    ByomApiFlavor.ANTHROPIC_MESSAGES: ApiFlavor.ANTHROPIC_MESSAGES,
 }

@@ -3,7 +3,13 @@
 import pytest
 
 from uipath.llm_client.settings import UiPathAPIConfig
-from uipath.llm_client.settings.constants import ApiFlavor, ApiType, RoutingMode, VendorType
+from uipath.llm_client.settings.constants import (
+    API_FLAVOR_TO_VENDOR_TYPE,
+    ApiFlavor,
+    ApiType,
+    RoutingMode,
+    VendorType,
+)
 
 
 class TestUiPathAPIConfig:
@@ -83,6 +89,10 @@ class TestEnumConstants:
         assert ApiFlavor.CONVERSE == "converse"
         assert ApiFlavor.INVOKE == "invoke"
         assert ApiFlavor.ANTHROPIC_CLAUDE == "anthropic-claude"
+        assert ApiFlavor.ANTHROPIC_MESSAGES == "AnthropicMessages"
+
+    def test_anthropic_messages_maps_to_bedrock_vendor(self):
+        assert API_FLAVOR_TO_VENDOR_TYPE[ApiFlavor.ANTHROPIC_MESSAGES] == VendorType.AWSBEDROCK
 
     def test_enum_string_comparison(self):
         assert ApiType.COMPLETIONS == "completions"

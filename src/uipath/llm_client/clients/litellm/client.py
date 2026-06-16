@@ -99,6 +99,7 @@ _FLAVOR_TO_LITELLM: dict[str, str] = {
     ByomApiFlavor.GEMINI_EMBEDDINGS: "gemini",
     ByomApiFlavor.AWS_BEDROCK_INVOKE: "bedrock",
     ByomApiFlavor.AWS_BEDROCK_CONVERSE: "bedrock",
+    ByomApiFlavor.ANTHROPIC_MESSAGES: "bedrock",
 }
 
 

@@ -2,6 +2,15 @@
 
 All notable changes to `uipath_langchain_client` will be documented in this file.
 
+## [1.14.0] - 2026-06-15
+
+### Added
+- Support for the `AnthropicMessages` API flavor on Bedrock-hosted Claude models. `get_chat_model` now routes discovery's `apiFlavor=AnthropicMessages` (vendor `AwsBedrock`) to `UiPathChatAnthropic` configured with `vendor_type=awsbedrock` and `api_flavor=ApiFlavor.ANTHROPIC_MESSAGES`. The client keeps the Bedrock passthrough URL but uses the native `Anthropic`/`AsyncAnthropic` SDK (model-in-body wire format), which the gateway requires for this flavor, instead of `AnthropicBedrock`.
+- `UiPathChatAnthropic` now accepts an explicit `api_flavor`. When set to `ApiFlavor.ANTHROPIC_MESSAGES` it selects the native Anthropic SDK regardless of `vendor_type`; otherwise the flavor and SDK are derived from `vendor_type` exactly as before (`awsbedrock` → `invoke` + `AnthropicBedrock`, unchanged).
+
+### Changed
+- Bumped `uipath-llm-client` floor to `>=1.14.0` to pick up `ApiFlavor.ANTHROPIC_MESSAGES`.
+
 ## [1.13.1] - 2026-06-09
 
 ### Fixed

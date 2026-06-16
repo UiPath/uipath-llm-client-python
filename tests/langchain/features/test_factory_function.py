@@ -6,7 +6,7 @@ from uipath_langchain_client.clients.normalized.embeddings import UiPathEmbeddin
 from uipath_langchain_client.factory import get_chat_model, get_embedding_model
 
 from tests.langchain.conftest import COMPLETION_MODEL_NAMES, EMBEDDING_MODEL_NAMES
-from uipath.llm_client.settings import ApiFlavor, UiPathBaseSettings
+from uipath.llm_client.settings import ApiFlavor, UiPathBaseSettings, VendorType
 
 
 @pytest.mark.vcr
@@ -333,3 +333,49 @@ class TestFactoryAgentHubConfig:
         )
         assert captured["settings"] is original
         original.model_copy.assert_not_called()
+
+
+class TestFactoryAnthropicMessagesRouting:
+    """AwsBedrock + ``apiFlavor=AnthropicMessages`` routes to ``UiPathChatAnthropic``
+    configured for the native Anthropic Messages wire format over the Bedrock
+    passthrough URL (not the Bedrock Converse/Invoke clients)."""
+
+    def _capture(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        model_info: dict,
+        **factory_kwargs,
+    ) -> dict:
+        settings = MagicMock()
+        settings.get_model_info.return_value = model_info
+        captured: dict = {}
+
+        class _StubModel:
+            def __init__(self, **kwargs):
+                captured.update(kwargs)
+
+        monkeypatch.setattr(
+            "uipath_langchain_client.clients.anthropic.chat_models.UiPathChatAnthropic",
+            _StubModel,
+        )
+        get_chat_model(
+            model_name=model_info["modelName"],
+            client_settings=settings,
+            **factory_kwargs,
+        )
+        return captured
+
+    def test_anthropic_messages_routes_to_uipath_chat_anthropic(
+        self, monkeypatch: pytest.MonkeyPatch
+    ):
+        captured = self._capture(
+            monkeypatch,
+            {
+                "modelName": "anthropic.claude-sonnet-4-6",
+                "vendor": "AwsBedrock",
+                "apiFlavor": "AnthropicMessages",
+                "modelFamily": "AnthropicClaude",
+            },
+        )
+        assert captured["vendor_type"] == VendorType.AWSBEDROCK
+        assert captured["api_flavor"] == ApiFlavor.ANTHROPIC_MESSAGES

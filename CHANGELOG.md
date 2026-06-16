@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_llm_client` (core package) will be documented in this file.
 
+## [1.14.0] - 2026-06-15
+
+### Added
+- `ApiFlavor.ANTHROPIC_MESSAGES` (`"AnthropicMessages"`) for Bedrock-hosted Claude models that the discovery endpoint exposes with the native Anthropic Messages wire format. The value is the discovery string verbatim because it is forwarded as the `X-UiPath-LlmGateway-ApiFlavor` header. Also mapped in `API_FLAVOR_TO_VENDOR_TYPE` to `VendorType.AWSBEDROCK` so it resolves to the Bedrock passthrough route when discovery omits the vendor field.
+
 ## [1.13.1] - 2026-06-09
 
 ### Fixed

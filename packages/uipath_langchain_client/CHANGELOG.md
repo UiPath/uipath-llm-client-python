@@ -2,6 +2,12 @@
 
 All notable changes to `uipath_langchain_client` will be documented in this file.
 
+## [1.15.0] - 2026-06-18
+
+### Changed
+- Bumped `uipath-llm-client` floor to `>=1.15.0` to pick up OpenAI Realtime (WebSocket) support on `UiPathOpenAI` / `UiPathAsyncOpenAI` (`client.realtime.connect()` routed through the LLM Gateway). The realtime clients live in the core package (`uipath.llm_client.clients.openai`); no LangChain-specific wrapper is added, since LangChain has no realtime chat-model abstraction — realtime is used by dropping down to the core client.
+- The `openai` extra now also installs `uipath-llm-client[openai]` (which pulls `openai[realtime]` → `websockets`), so realtime works out of the box from a `uipath-langchain-client[openai]` install.
+
 ## [1.14.0] - 2026-06-15
 
 ### Added

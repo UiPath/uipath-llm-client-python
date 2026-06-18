@@ -19,7 +19,7 @@ authors = [
 
 [project.optional-dependencies]
 openai = [
-    "openai>=2.30.0,<3.0.0",
+    "openai[realtime]>=2.30.0,<3.0.0",
 ]
 google = [
     "google-genai>=1.73.1,<2.0.0",

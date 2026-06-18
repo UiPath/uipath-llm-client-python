@@ -6,12 +6,16 @@ readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
     "langchain>=1.2.15,<2.0.0",
-    "uipath-llm-client>=1.14.0,<2.0.0",
+    "uipath-llm-client>=1.15.0,<2.0.0",
 ]
 
 [project.optional-dependencies]
 openai = [
     "langchain-openai>=1.2.0,<2.0.0",
+    # Pulls the core OpenAI extra (openai[realtime] -> websockets) so realtime is
+    # usable via uipath.llm_client.clients.openai.UiPathAsyncOpenAI from a
+    # langchain install. LangChain itself has no realtime chat-model abstraction.
+    "uipath-llm-client[openai]>=1.15.0,<2.0.0",
 ]
 google = [
     "langchain-google-genai>=4.2.2,<5.0.0",

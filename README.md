@@ -466,6 +466,35 @@ All native SDK wrappers are available in sync and async variants:
 | `UiPathAnthropicFoundry` / `UiPathAsyncAnthropicFoundry` | `anthropic.AnthropicFoundry` | Anthropic via Azure Foundry |
 | `UiPathGoogle` | `google.genai.Client` | Google Gemini models |
 
+#### Realtime (WebSocket)
+
+`UiPathOpenAI` / `UiPathAsyncOpenAI` also expose the OpenAI Realtime API over a WebSocket, routed through the LLM Gateway. Use `client.realtime.connect()` exactly as with the stock OpenAI SDK — the bearer token and `X-UiPath-*` routing headers are applied on the WebSocket upgrade automatically. Requires the `openai` extra (it pulls in `websockets`).
+
+```python
+import asyncio
+from uipath.llm_client.clients.openai import UiPathAsyncOpenAI
+
+async def main():
+    client = UiPathAsyncOpenAI(model_name="gpt-realtime")
+    async with client.realtime.connect() as conn:
+        await conn.session.update(session={"type": "realtime", "output_modalities": ["text"]})
+        await conn.conversation.item.create(
+            item={
+                "type": "message",
+                "role": "user",
+                "content": [{"type": "input_text", "text": "Say hello!"}],
+            }
+        )
+        await conn.response.create()
+        async for event in conn:
+            if event.type == "response.output_text.delta":
+                print(event.delta, end="", flush=True)
+            elif event.type == "response.done":
+                break
+
+asyncio.run(main())
+```
+
 ### Low-Level HTTP Client
 
 For completely custom HTTP requests, use the low-level HTTPX client directly:

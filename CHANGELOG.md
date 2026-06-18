@@ -2,6 +2,12 @@
 
 All notable changes to `uipath_llm_client` (core package) will be documented in this file.
 
+## [1.15.0] - 2026-06-18
+
+### Added
+- **OpenAI Realtime (WebSocket) routed through the LLM Gateway.** `UiPathOpenAI` and `UiPathAsyncOpenAI` now expose `client.realtime.connect()`, exactly like the stock OpenAI SDK, opening a WebSocket to the gateway's passthrough realtime endpoint (`.../vendor/<vendor>/model/<model>/realtime`). On connect the client points its `websocket_base_url` at the gateway, refreshes the S2S bearer token into `api_key` (sent as `Authorization: Bearer` on the WebSocket upgrade), and injects the `X-UiPath-*` routing headers. The realtime URL uses the `nativeopenai` vendor segment and is built lazily on `.realtime` access, so completions/embeddings construction and auth are unaffected. New helper `build_realtime_ws_base_url(settings, model_name=..., vendor_type=...)` in `uipath.llm_client.clients.openai.realtime`.
+- The `openai` optional extra now installs `openai[realtime]`, pulling in the `websockets` dependency required for realtime connections.
+
 ## [1.14.0] - 2026-06-15
 
 ### Added

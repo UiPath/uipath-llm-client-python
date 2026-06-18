@@ -1,6 +1,12 @@
 import logging
 from collections.abc import Mapping, Sequence
+from functools import cached_property
 
+from uipath.llm_client.clients.openai.realtime import (
+    DEFAULT_REALTIME_VENDOR,
+    _UiPathAsyncRealtime,
+    _UiPathRealtime,
+)
 from uipath.llm_client.clients.openai.utils import OpenAIRequestHandler
 from uipath.llm_client.httpx_client import UiPathHttpxAsyncClient, UiPathHttpxClient
 from uipath.llm_client.settings import UiPathBaseSettings, get_default_client_settings
@@ -8,6 +14,7 @@ from uipath.llm_client.utils.retry import RetryConfig
 
 try:
     from openai import AsyncAzureOpenAI, AsyncOpenAI, AzureOpenAI, OpenAI
+    from openai.resources.realtime import AsyncRealtime, Realtime
 except ImportError as e:
     raise ImportError(
         "The 'openai' extra is required to use UiPathOpenAIClient. "
@@ -74,6 +81,24 @@ class UiPathOpenAI(OpenAI):
             http_client=httpx_client,
             base_url=str(httpx_client.base_url).rstrip("/"),
         )
+        self._uipath_client_settings = client_settings
+        self._uipath_realtime_model = model_name
+
+    # Subtype override of the SDK's cached_property; returns a gateway-routed
+    # Realtime resource. pyright flags any cached_property override, so suppress.
+    @cached_property
+    def realtime(self) -> Realtime:  # pyright: ignore[reportIncompatibleMethodOverride]
+        """OpenAI Realtime (WebSocket) resource routed through the LLM Gateway.
+
+        Use ``with client.realtime.connect() as conn:`` — the connection targets
+        the gateway's passthrough realtime endpoint for this client's model.
+        """
+        return _UiPathRealtime(
+            self,
+            settings=self._uipath_client_settings,
+            model=self._uipath_realtime_model,
+            vendor_type=DEFAULT_REALTIME_VENDOR,
+        )
 
 
 class UiPathAsyncOpenAI(AsyncOpenAI):
@@ -134,6 +159,24 @@ class UiPathAsyncOpenAI(AsyncOpenAI):
             _strict_response_validation=_strict_response_validation,
             http_client=httpx_client,
             base_url=str(httpx_client.base_url).rstrip("/"),
+        )
+        self._uipath_client_settings = client_settings
+        self._uipath_realtime_model = model_name
+
+    # Subtype override of the SDK's cached_property; returns a gateway-routed
+    # AsyncRealtime resource. pyright flags any cached_property override, so suppress.
+    @cached_property
+    def realtime(self) -> AsyncRealtime:  # pyright: ignore[reportIncompatibleMethodOverride]
+        """OpenAI Realtime (WebSocket) resource routed through the LLM Gateway.
+
+        Use ``async with client.realtime.connect() as conn:`` — the connection
+        targets the gateway's passthrough realtime endpoint for this client's model.
+        """
+        return _UiPathAsyncRealtime(
+            self,
+            settings=self._uipath_client_settings,
+            model=self._uipath_realtime_model,
+            vendor_type=DEFAULT_REALTIME_VENDOR,
         )
 
 

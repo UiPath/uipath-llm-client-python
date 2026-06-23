@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_langchain_client` will be documented in this file.
 
+## [1.14.1] - 2026-06-23
+
+### Fixed
+- `WrappedBotoClient` (the httpx-backed Bedrock shim) now calls `raise_for_status()` in `converse`, `invoke_model`, and the streaming generator before reading the response. Previously a non-2xx gateway response (e.g. 403 License-not-available) was parsed as a normal result and handed to `langchain_aws`, which raised a misleading `ValueError("No 'output' key found in the response from the Bedrock Converse API ... misconfiguration of endpoint or region")` — the real status code and `detail` were lost. Gateway HTTP errors now surface as the patched `UiPathAPIError` subclass (e.g. `UiPathPermissionDeniedError`), matching the OpenAI and Vertex paths. For streaming responses the error body is read first so the typed exception retains its `detail`.
+
 ## [1.14.0] - 2026-06-15
 
 ### Added

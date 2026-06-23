@@ -57,6 +57,12 @@ class WrappedBotoClient:
         if self.httpx_client is None:
             raise ValueError("httpx_client is not set")
         with self.httpx_client.stream("POST", "/", json=_serialize_bytes(request_body)) as response:
+            if response.is_error:
+                # The gateway returns a non-streamed JSON error body; read it so
+                # the patched raise_for_status surfaces it (with detail) instead
+                # of the EventStreamBuffer choking on a non-event payload.
+                response.read()
+            response.raise_for_status()
             buffer = EventStreamBuffer()
             for chunk in response.iter_bytes():
                 buffer.add_data(chunk)
@@ -71,12 +77,12 @@ class WrappedBotoClient:
     def invoke_model(self, **kwargs: Any) -> Any:
         if self.httpx_client is None:
             raise ValueError("httpx_client is not set")
-        return {
-            "body": self.httpx_client.post(
-                "/",
-                json=json.loads(kwargs.get("body", "{}")),
-            )
-        }
+        response = self.httpx_client.post(
+            "/",
+            json=json.loads(kwargs.get("body", "{}")),
+        )
+        response.raise_for_status()
+        return {"body": response}
 
     def invoke_model_with_response_stream(self, **kwargs: Any) -> Any:
         return {"body": self._stream_generator(json.loads(kwargs.get("body", "{}")))}
@@ -90,7 +96,7 @@ class WrappedBotoClient:
     ) -> Any:
         if self.httpx_client is None:
             raise ValueError("httpx_client is not set")
-        return self.httpx_client.post(
+        response = self.httpx_client.post(
             "/",
             json=_serialize_bytes(
                 {
@@ -99,7 +105,9 @@ class WrappedBotoClient:
                     **params,
                 }
             ),
-        ).json()
+        )
+        response.raise_for_status()
+        return response.json()
 
     def converse_stream(
         self,

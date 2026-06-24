@@ -7,7 +7,7 @@ from urllib.parse import quote
 from pydantic import Field, SecretStr, model_validator
 from typing_extensions import override
 from uipath.platform import UiPath
-from uipath.platform.common import EndpointManager
+from uipath.platform.common import EndpointManager, resolve_service_url
 from uipath.platform.common._config import UiPathConfig
 from uipath.platform.common.constants import (
     ENV_BASE_URL,
@@ -121,7 +121,7 @@ class PlatformBaseSettings(UiPathBaseSettings):
             api_config.routing_mode == RoutingMode.NORMALIZED
             and api_config.api_type == ApiType.COMPLETIONS
         ):
-            url = f"{self.base_url}/{EndpointManager.get_normalized_endpoint()}"
+            endpoint_path = EndpointManager.get_normalized_endpoint()
         elif (
             api_config.routing_mode == RoutingMode.NORMALIZED
             and api_config.api_type == ApiType.EMBEDDINGS
@@ -135,7 +135,12 @@ class PlatformBaseSettings(UiPathBaseSettings):
             and api_config.api_type == ApiType.COMPLETIONS
         ):
             endpoint = EndpointManager.get_vendor_endpoint()
-            url = f"{self.base_url}/{self._format_endpoint(endpoint, model=model_name, vendor=api_config.vendor_type, api_version=api_config.api_version)}"
+            endpoint_path = self._format_endpoint(
+                endpoint,
+                model=model_name,
+                vendor=api_config.vendor_type,
+                api_version=api_config.api_version,
+            )
         elif (
             api_config.routing_mode == RoutingMode.PASSTHROUGH
             and api_config.api_type == ApiType.EMBEDDINGS
@@ -146,10 +151,16 @@ class PlatformBaseSettings(UiPathBaseSettings):
                     f"got vendor_type='{api_config.vendor_type}'."
                 )
             endpoint = EndpointManager.get_embeddings_endpoint()
-            url = f"{self.base_url}/{self._format_endpoint(endpoint, model=model_name, api_version=api_config.api_version)}"
+            endpoint_path = self._format_endpoint(
+                endpoint, model=model_name, api_version=api_config.api_version
+            )
         else:
             raise ValueError(f"Invalid API configuration: {api_config}")
-        return url
+
+        override_url = resolve_service_url(endpoint_path)
+        if override_url:
+            return override_url
+        return f"{self.base_url}/{endpoint_path}"
 
     @override
     def build_auth_headers(

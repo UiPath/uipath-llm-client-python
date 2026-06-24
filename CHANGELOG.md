@@ -2,6 +2,16 @@
 
 All notable changes to `uipath_llm_client` (core package) will be documented in this file.
 
+## [1.15.0] - 2026-06-24
+
+### Added
+- `UiPathError` — a common root exception for everything the client can raise, re-exported from `uipath.llm_client`. `UiPathAPIError` (and therefore every status-specific subclass) now inherits from it, so `except UiPathError` is a single catch-all across all backends and providers. Fully backward compatible: `UiPathAPIError` still inherits `httpx.HTTPStatusError` and all existing handlers keep working.
+- `as_uipath_error(exc)` and the `wrap_provider_errors()` context manager (in `uipath.llm_client.utils.exceptions`). They re-tag a provider/SDK exception in place so it is catchable as **both** its original type (e.g. `openai.BadRequestError`) and the matching UiPath type. When the error carries an `httpx.Response`, its status code is mapped onto the corresponding `UiPathAPIError` subclass (e.g. a 429 becomes a `UiPathRateLimitError`) so semantic handling works identically across providers; otherwise the error is tagged with the `UiPathError` root only. The re-tagged exception **presents as the UiPath type** — `type(exc).__name__` reads e.g. `UiPathBadRequestError` and reprs/tracebacks show it — while the original vendor type stays visible via the MRO (`isinstance`/`except` against it still succeed). Built-in exceptions whose layout forbids `__class__` reassignment are rebuilt and chained via `raise ... from`.
+
+### Changed
+- `UiPathRateLimitError.retry_after` is now parsed lazily from `self.response` (via a property) instead of being cached in `__init__`, so the value is correct for both constructed and re-tagged instances. `_parse_retry_after` and the parsing behaviour are unchanged.
+- `UiPathAPIError.__str__` / `__repr__` read `message`/`status_code`/`body` defensively so a re-tagged foreign exception without those attributes cannot raise `AttributeError`. Output is unchanged for normally-constructed instances.
+
 ## [1.14.0] - 2026-06-15
 
 ### Added

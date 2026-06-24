@@ -2,6 +2,14 @@
 
 All notable changes to `uipath_langchain_client` will be documented in this file.
 
+## [1.15.0] - 2026-06-24
+
+### Added
+- `UiPathBaseChatModel` now re-tags provider SDK exceptions as `UiPathError`. When any chat client (`UiPathChatOpenAI`, `UiPathChatAnthropic`, `UiPathChat`, Bedrock/Vertex/Google/LiteLLM/Fireworks, …) raises during `_generate`/`_agenerate`/`_stream`/`_astream`, the error is re-tagged in place so callers can catch it as **both** its original vendor type (e.g. `openai.BadRequestError`) and as a UiPath type. HTTP-shaped vendor errors map onto the matching semantic subclass (a 429 → `UiPathRateLimitError`, a 400 → `UiPathBadRequestError`, …), giving provider-agnostic error handling across every client; non-HTTP errors are tagged with the `UiPathError` root. `UiPathError` is re-exported from `uipath_langchain_client`.
+
+### Changed
+- Bumped `uipath-llm-client` floor to `>=1.15.0` to pick up `UiPathError` and the `wrap_provider_errors` / `as_uipath_error` helpers.
+
 ## [1.14.1] - 2026-06-23
 
 ### Fixed

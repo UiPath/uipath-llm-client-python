@@ -1,10 +1,18 @@
 import contextvars
 from collections.abc import Mapping, Sequence
+from urllib.parse import quote
 
 from httpx import Headers
 
 from uipath.llm_client.settings.base import UiPathAPIConfig
 from uipath.llm_client.settings.constants import ApiType, RoutingMode
+
+# HTTP/1.1 carries header values as ISO-8859-1 (latin-1) octets. httpx, however,
+# re-encodes ``str`` values as ASCII in ``Headers.update`` and crashes with
+# ``UnicodeEncodeError`` on anything outside that range. We pre-encode values to
+# latin-1 bytes (transmitted verbatim) and, for the rare value outside latin-1
+# (e.g. CJK/emoji), fall back to ASCII percent-encoding which never crashes.
+HTTP_HEADER_ENCODING = "latin-1"
 
 UIPATH_DEFAULT_REQUEST_HEADERS: dict[str, str] = {
     "X-UiPath-LLMGateway-TimeoutSeconds": "895",  # server side timeout
@@ -49,6 +57,40 @@ def set_dynamic_request_headers(
 ) -> contextvars.Token[dict[str, str] | None]:
     """Set headers to be injected into the next outgoing request."""
     return _DYNAMIC_REQUEST_HEADERS.set(headers)
+
+
+def encode_header_value(value: str) -> bytes:
+    """Encode a header value to bytes so httpx can transmit it without crashing.
+
+    httpx encodes ``str`` header values as ASCII and raises ``UnicodeEncodeError``
+    on any non-ASCII character. HTTP/1.1 header values are carried as ISO-8859-1
+    (latin-1) octets, so latin-1-representable values are encoded as latin-1 bytes
+    (passed through by httpx verbatim). Values outside latin-1 (e.g. CJK or emoji)
+    are percent-encoded to pure-ASCII bytes so the send path never crashes.
+
+    Args:
+        value: The raw header value, possibly containing non-ASCII characters.
+
+    Returns:
+        latin-1 ``bytes`` when the value is latin-1-representable, otherwise
+        percent-encoded ASCII ``bytes``.
+    """
+    try:
+        return value.encode(HTTP_HEADER_ENCODING)
+    except UnicodeEncodeError:
+        return quote(value).encode("ascii")
+
+
+def encode_header_items(headers: Mapping[str, str]) -> list[tuple[bytes, bytes]]:
+    """Encode header names and values to bytes for safe injection via ``Headers.update``.
+
+    Returns ``(name, value)`` byte tuples — the form httpx accepts without
+    re-encoding — applying :func:`encode_header_value` to each value.
+    """
+    return [
+        (name.encode(HTTP_HEADER_ENCODING), encode_header_value(value))
+        for name, value in headers.items()
+    ]
 
 
 def extract_matching_headers(

@@ -10,8 +10,9 @@ they can be caught by a UiPath-wide ``except UiPathError`` handler, by
 status-specific UiPath handlers, or by generic httpx error handlers.
 
 For the LangChain passthrough chat models, vendor SDK exceptions (e.g.
-``openai.BadRequestError``) are additionally re-tagged via as_uipath_error so
-they too are catchable as UiPathError without losing their original type.
+``openai.BadRequestError``) are converted into the matching UiPath exception by
+:func:`wrap_provider_errors`, so callers handle one taxonomy regardless of which
+provider produced the error.
 
 The UiPathAPIError.from_response() factory method automatically creates
 the appropriate exception type based on the HTTP response status code.
@@ -33,7 +34,7 @@ Example:
 from collections.abc import Iterator
 from contextlib import contextmanager
 from json import JSONDecodeError
-from typing import Literal, cast
+from typing import Literal
 
 from httpx import HTTPStatusError, Request, Response
 
@@ -41,23 +42,24 @@ from httpx import HTTPStatusError, Request, Response
 class UiPathError(Exception):
     """Common base class for every error surfaced by the UiPath LLM client.
 
-    Two distinct kinds of error are catchable as ``UiPathError``:
+    Everything the client can raise is catchable as ``UiPathError``:
 
     * :class:`UiPathAPIError` and its status-specific subclasses, raised by the
       core HTTP client for non-2xx responses.
-    * Vendor SDK exceptions (e.g. ``openai.BadRequestError``) raised by the
-      LangChain passthrough chat models. These are re-tagged in place by
-      :func:`as_uipath_error` so they remain catchable as *both* their original
-      type and ``UiPathError``.
+    * Provider SDK exceptions (e.g. ``openai.BadRequestError``) raised by the
+      LangChain passthrough chat models, which :func:`wrap_provider_errors`
+      converts into the matching UiPath exception (mapping the HTTP status when
+      the error carries an ``httpx.Response``, else the ``UiPathError`` root).
+      The original provider exception is preserved as ``__cause__``.
 
     Catch ``UiPathError`` to handle any UiPath LLM failure regardless of which
     backend or provider produced it::
 
         try:
             chat.invoke(...)
-        except openai.BadRequestError:   # provider-specific handling still works
-            ...
-        except UiPathError:              # catch-all across every provider
+        except UiPathRateLimitError as e:   # same semantic class for every provider
+            backoff(e.retry_after)
+        except UiPathError:                 # catch-all across every provider
             ...
     """
 
@@ -92,24 +94,16 @@ class UiPathAPIError(UiPathError, HTTPStatusError):
         self.message = message
         self.body = body
 
-    def _message(self) -> object:
-        # ``message`` is set by __init__, but a vendor error re-tagged into this
-        # class via as_uipath_error() bypasses __init__ — fall back to args.
-        message = getattr(self, "message", None)
-        if message is None:
-            message = self.args[0] if self.args else ""
-        return message
-
     def __str__(self) -> str:
         return (
-            f"{self.__class__.__name__}: {self._message()} "
-            f"(Status Code: {getattr(self, 'status_code', None)}) {getattr(self, 'body', None)}"
+            f"{self.__class__.__name__}: {self.message} "
+            f"(Status Code: {self.status_code}) {self.body}"
         )
 
     def __repr__(self) -> str:
         return (
-            f"{self.__class__.__name__}(message={self._message()!r}, "
-            f"status_code={getattr(self, 'status_code', None)}, body={getattr(self, 'body', None)!r})"
+            f"{self.__class__.__name__}(message={self.message!r}, "
+            f"status_code={self.status_code}, body={self.body!r})"
         )
 
     @classmethod
@@ -202,9 +196,8 @@ class UiPathRateLimitError(UiPathAPIError):
     def retry_after(self) -> float | None:
         """Get the retry-after value in seconds, if available.
 
-        Parsed lazily from ``self.response`` so the value is correct both for
-        instances built via ``__init__`` and for vendor errors re-tagged into
-        this class by :func:`as_uipath_error` (which bypasses ``__init__``).
+        Parsed lazily from ``self.response`` (the Retry-After / x-retry-after
+        header).
         """
         response = getattr(self, "response", None)
         if not isinstance(response, Response):
@@ -318,112 +311,70 @@ def patch_raise_for_status(response: Response) -> Response:
     return response
 
 
-# Cache of (original exception class, UiPath base) -> synthesized subclass.
-# Tagged classes are generated once per (original type, base) pair so
-# ``isinstance`` results are stable and we never leak a new class per raised
-# exception.
-_uipath_tagged_classes: dict[tuple[type[Exception], type[Exception]], type[Exception]] = {}
+def _iter_error_chain(exc: BaseException) -> Iterator[BaseException]:
+    """Yield ``exc`` then its ``__cause__``/``__context__`` ancestors, once each.
 
-
-def _uipath_tagged_class(cls: type[Exception], base: type[Exception]) -> type[Exception]:
-    """Return a cached ``(base, cls)`` subclass for ``cls``.
-
-    The synthesized class presents as the UiPath ``base``: it takes ``base``'s
-    ``__name__`` and ``__module__`` (so ``type(exc).__name__`` reads e.g.
-    ``UiPathBadRequestError`` in reprs and tracebacks) while remaining a subclass
-    of the original vendor exception ``cls`` -- so it stays catchable as both.
-    The original vendor type remains visible via ``__bases__`` / the MRO.
+    Providers wrap the underlying error at different depths: openai/anthropic
+    raise an error that carries the ``httpx.Response`` directly, while
+    langchain-google re-raises ``ChatGoogleGenerativeAIError`` ``from`` the
+    underlying ``google.genai`` error (which holds the response). Walking the
+    chain lets a single rule recover the HTTP status from either shape.
     """
-    key = (cls, base)
-    tagged = _uipath_tagged_classes.get(key)
-    if tagged is None:
-        tagged = cast(
-            "type[Exception]",
-            type(base.__name__, (base, cls), {"__module__": base.__module__}),
-        )
-        _uipath_tagged_classes[key] = tagged
-    return tagged
+    seen: set[int] = set()
+    current: BaseException | None = exc
+    while current is not None and id(current) not in seen:
+        seen.add(id(current))
+        yield current
+        current = current.__cause__ or current.__context__
 
 
-def _uipath_base_for(exc: Exception) -> type[Exception]:
-    """Pick the UiPath base class to tag ``exc`` with.
+def as_uipath_error(exc: Exception) -> UiPathError:
+    """Convert a provider/SDK exception into the matching UiPath exception.
 
-    When ``exc`` carries a real ``httpx.Response`` (openai, anthropic, httpx,
-    litellm, fireworks, ...), map its HTTP status code onto the matching
-    :class:`UiPathAPIError` subclass so the error is catchable by its semantic
-    UiPath type (e.g. ``UiPathRateLimitError``) across every provider. An
-    unmapped status still becomes a generic :class:`UiPathAPIError`.
+    Walks ``exc`` and its cause chain for an ``httpx.Response``. When one is
+    found, its status code is mapped onto the matching :class:`UiPathAPIError`
+    subclass (a provider's 429 becomes a :class:`UiPathRateLimitError`, a 400 a
+    :class:`UiPathBadRequestError`, …) so semantic handling is identical across
+    providers; an unmapped status becomes a generic :class:`UiPathAPIError`.
 
-    When no httpx response is available (botocore, google, plain exceptions), we
-    cannot safely claim HTTP semantics, so we tag with the :class:`UiPathError`
-    root marker only — still catchable as ``UiPathError`` plus the original type.
-    """
-    response = getattr(exc, "response", None)
-    if not isinstance(response, Response):
-        return UiPathError
-    status_code = getattr(exc, "status_code", None)
-    if not isinstance(status_code, int):
-        status_code = response.status_code
-    return _STATUS_CODE_TO_EXCEPTION.get(status_code, UiPathAPIError)
+    When no response is available anywhere in the chain (client-side validation
+    errors, connection failures, plain exceptions) we cannot claim HTTP
+    semantics, so the :class:`UiPathError` root is returned — still catchable as
+    ``UiPathError``. ``UiPathError`` instances are returned unchanged.
 
-
-def as_uipath_error(exc: Exception) -> Exception:
-    """Tag ``exc`` so it is catchable as both its original type and ``UiPathError``.
-
-    The tag is chosen by :func:`_uipath_base_for`: an HTTP-shaped vendor error is
-    tagged with the matching :class:`UiPathAPIError` subclass (so a provider's
-    429 becomes a ``UiPathRateLimitError``, a 400 a ``UiPathBadRequestError``,
-    etc.), while anything else is tagged with the :class:`UiPathError` root.
-
-    For mutable exception types (all vendor SDK exceptions: openai, anthropic,
-    botocore, google, httpx) the instance is re-tagged in place via ``__class__``
-    assignment, preserving its message, attributes and traceback. The returned
-    object *is* ``exc``.
-
-    For immutable built-in exception types (e.g. ``ValueError``) whose memory
-    layout forbids ``__class__`` reassignment, a fresh instance of the tagged
-    subclass is rebuilt from ``exc.args`` and returned instead; callers should
-    chain it with ``raise ... from exc``. If the rebuild fails, a plain
-    :class:`UiPathError` carrying the original message is returned as a last
-    resort.
-
-    ``UiPathError`` instances (including :class:`UiPathAPIError`) are returned
-    unchanged.
+    The returned exception is a *new* object; callers should chain it to the
+    original via ``raise ... from exc`` to preserve the provider error as
+    ``__cause__``.
     """
     if isinstance(exc, UiPathError):
         return exc
-    base = _uipath_base_for(exc)
-    tagged_cls = _uipath_tagged_class(type(exc), base)
-    try:
-        exc.__class__ = tagged_cls
-        return exc
-    except TypeError:
-        try:
-            return tagged_cls(*exc.args)
-        except Exception:
-            return UiPathError(str(exc))
+    for err in _iter_error_chain(exc):
+        response = getattr(err, "response", None)
+        if isinstance(response, Response):
+            return UiPathAPIError.from_response(response)
+    return UiPathError(str(exc))
 
 
 @contextmanager
 def wrap_provider_errors() -> Iterator[None]:
-    """Re-raise provider/SDK exceptions tagged as :class:`UiPathError`.
+    """Convert provider/SDK exceptions into UiPath exceptions.
 
-    Any ``Exception`` raised inside the ``with`` block is re-tagged via
-    :func:`as_uipath_error` so callers can catch it as either its original type
-    (e.g. ``openai.BadRequestError``) or ``UiPathError``. ``UiPathError``
-    instances pass through untouched, and non-``Exception`` ``BaseException``
-    subclasses (``GeneratorExit``, ``KeyboardInterrupt``, ``SystemExit``) are
-    never wrapped.
+    Any ``Exception`` raised inside the ``with`` block is converted via
+    :func:`as_uipath_error` into the matching :class:`UiPathAPIError` subclass
+    (or the :class:`UiPathError` root when no HTTP response is available) and
+    re-raised, chained to the original via ``raise ... from``.
+
+    ``UiPathError`` instances pass through untouched — the core HTTP client and
+    the Bedrock shim already raise them, so there is a single conversion point.
+    Non-``Exception`` ``BaseException`` subclasses (``GeneratorExit``,
+    ``KeyboardInterrupt``, ``SystemExit``) are never wrapped.
     """
     try:
         yield
     except UiPathError:
         raise
     except Exception as exc:
-        tagged = as_uipath_error(exc)
-        if tagged is exc:
-            raise
-        raise tagged from exc
+        raise as_uipath_error(exc) from exc
 
 
 __all__ = [

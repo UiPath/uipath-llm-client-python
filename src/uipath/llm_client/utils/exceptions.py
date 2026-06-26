@@ -297,14 +297,20 @@ _STATUS_CODE_TO_EXCEPTION: dict[int, type[UiPathAPIError]] = {
 
 
 def patch_raise_for_status(response: Response) -> Response:
-    """Patch response.raise_for_status() to raise UiPath-specific exceptions."""
+    """Patch response.raise_for_status() to raise UiPath-specific exceptions.
+
+    The httpx ``HTTPStatusError`` is routed through :func:`wrap_provider_errors`
+    so direct ``raise_for_status()`` callers (the core normalized client, the
+    raw ``uipath_request``/``uipath_stream`` API, the Bedrock shim) go through
+    the *same* conversion and status mapping as provider SDK exceptions — a
+    single entry point. The original ``HTTPStatusError`` is preserved as
+    ``__cause__``.
+    """
     original_raise_for_status = response.raise_for_status
 
     def raise_for_status() -> Response:
-        try:
+        with wrap_provider_errors():
             original_raise_for_status()
-        except HTTPStatusError:
-            raise UiPathAPIError.from_response(response)
         return response
 
     response.raise_for_status = raise_for_status

@@ -10,6 +10,7 @@ All notable changes to `uipath_llm_client` (core package) will be documented in 
 
 ### Changed
 - `UiPathRateLimitError.retry_after` is now parsed lazily from `self.response` (via a property) instead of being cached in `__init__`. `_parse_retry_after` and the parsing behaviour are unchanged.
+- `patch_raise_for_status` now routes the httpx `HTTPStatusError` through `wrap_provider_errors`, so direct `raise_for_status()` callers and provider SDK exceptions share a single conversion path. The raised `UiPathAPIError` now carries the original `HTTPStatusError` as `__cause__` (previously `None`); status mapping is unchanged.
 
 ### Note
 - Provider errors are surfaced as **pure** UiPath types: an `openai.RateLimitError` raised through a passthrough chat model becomes a `UiPathRateLimitError` and is **not** catchable as `openai.RateLimitError` (the vendor exception is kept as `__cause__`). Standardise handlers on `UiPathError` and its subclasses.

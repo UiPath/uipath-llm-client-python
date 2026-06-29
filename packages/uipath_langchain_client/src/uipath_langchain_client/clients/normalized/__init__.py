@@ -1,0 +1,9 @@
+"""LangChain provider-agnostic chat model and embeddings via UiPath's normalized API.
+
+No optional dependencies required.
+"""
+
+from uipath_langchain_client.clients.normalized.chat_models import UiPathChat
+from uipath_langchain_client.clients.normalized.embeddings import UiPathEmbeddings
+
+__all__ = ["UiPathChat", "UiPathEmbeddings"]

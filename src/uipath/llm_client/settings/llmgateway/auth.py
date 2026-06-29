@@ -1,0 +1,83 @@
+from collections.abc import Generator
+
+from httpx import Auth, Client, Request, Response
+
+from uipath.llm_client.settings.llmgateway.settings import LLMGatewayBaseSettings
+from uipath.llm_client.settings.llmgateway.utils import LLMGatewayEndpoints
+from uipath.llm_client.settings.utils import SingletonMeta
+from uipath.llm_client.utils.ssl_config import get_httpx_ssl_client_kwargs
+
+
+class LLMGatewayS2SAuth(Auth, metaclass=SingletonMeta):
+    """Bearer authentication handler with automatic token refresh.
+
+    Singleton keyed by (client_id, client_secret) so that clients sharing the
+    same credentials reuse one token while different credentials get separate
+    instances.  Automatically refreshes the token on 401 responses.
+
+    Does not raise errors on token retrieval failures — the request is sent
+    without a valid token and the downstream client handles the error response.
+    """
+
+    @classmethod
+    def _singleton_cache_key(cls, settings: LLMGatewayBaseSettings) -> tuple:
+        """Derive a cache key from the credentials so different settings get different instances."""
+        return (
+            settings.base_url,
+            settings.client_id.get_secret_value() if settings.client_id else None,
+            settings.client_secret.get_secret_value() if settings.client_secret else None,
+        )
+
+    def __init__(
+        self,
+        settings: LLMGatewayBaseSettings,
+    ):
+        self.base_url = settings.base_url
+        self.client_id: str | None = (
+            settings.client_id.get_secret_value() if settings.client_id else None
+        )
+        self.client_secret: str | None = (
+            settings.client_secret.get_secret_value() if settings.client_secret else None
+        )
+        self.access_token: str | None = (
+            settings.access_token.get_secret_value()
+            if settings.access_token
+            else self.get_llmgw_token()
+        )
+
+    def get_llmgw_token(
+        self,
+    ) -> str | None:
+        """Retrieve a new access token from the LLM Gateway identity endpoint.
+
+        Returns None on failure instead of raising, so the request proceeds
+        and the client receives the actual error response from the server.
+        """
+        if self.client_id is None or self.client_secret is None:
+            return None
+        url_get_token = f"{self.base_url}/{LLMGatewayEndpoints.IDENTITY_ENDPOINT.value}"
+        token_credentials = dict(
+            client_id=self.client_id,
+            client_secret=self.client_secret,
+            grant_type="client_credentials",
+        )
+        try:
+            with Client(**get_httpx_ssl_client_kwargs()) as http_client:
+                response = http_client.post(url_get_token, data=token_credentials)
+                if response.is_error:
+                    return None
+                return response.json().get("access_token")
+        except Exception:
+            return None
+
+    def auth_flow(self, request: Request) -> Generator[Request, Response, None]:
+        """HTTPX auth flow that handles token refresh on authentication failures."""
+        if self.access_token:
+            request.headers["Authorization"] = f"Bearer {self.access_token}"
+        response = yield request
+        if response.status_code == 401:
+            new_token = self.get_llmgw_token()
+            if new_token:
+                self.access_token = new_token
+                request.headers["Authorization"] = f"Bearer {self.access_token}"
+                yield request

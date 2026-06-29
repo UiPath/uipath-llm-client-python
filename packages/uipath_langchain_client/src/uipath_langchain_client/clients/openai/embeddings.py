@@ -1,0 +1,80 @@
+from collections.abc import Awaitable, Callable
+from typing import Self
+
+from pydantic import Field, SecretStr, model_validator
+
+from uipath_langchain_client.base_client import UiPathBaseEmbeddings
+from uipath_langchain_client.settings import ApiType, RoutingMode, UiPathAPIConfig, VendorType
+
+try:
+    from langchain_openai.embeddings import AzureOpenAIEmbeddings, OpenAIEmbeddings
+    from openai import AsyncAzureOpenAI, AsyncOpenAI, AzureOpenAI, OpenAI
+except ImportError as e:
+    raise ImportError(
+        "The 'openai' extra is required to use UiPathOpenAIEmbeddings and UiPathAzureOpenAIEmbeddings. "
+        "Install it with: uv add uipath-langchain-client[openai]"
+    ) from e
+
+
+class UiPathOpenAIEmbeddings(UiPathBaseEmbeddings, OpenAIEmbeddings):
+    api_config: UiPathAPIConfig = UiPathAPIConfig(
+        api_type=ApiType.EMBEDDINGS,
+        routing_mode=RoutingMode.PASSTHROUGH,
+        vendor_type=VendorType.OPENAI,
+        freeze_base_url=True,
+        api_version="2025-04-01-preview",
+    )
+
+    # Override fields to avoid errors when instantiating the class
+    model: str = Field(default="", alias="model_name")
+    openai_api_key: SecretStr | None | Callable[[], str] | Callable[[], Awaitable[str]] = Field(
+        alias="api_key", default=SecretStr("PLACEHOLDER")
+    )
+
+    @model_validator(mode="after")
+    def setup_uipath_client(self) -> Self:
+        self.client = OpenAI(
+            api_key="PLACEHOLDER",
+            max_retries=0,  # handled by the UiPath client
+            http_client=self.uipath_sync_client,
+        ).embeddings
+        self.async_client = AsyncOpenAI(
+            api_key="PLACEHOLDER",
+            max_retries=0,  # handled by the UiPath client
+            http_client=self.uipath_async_client,
+        ).embeddings
+        return self
+
+
+class UiPathAzureOpenAIEmbeddings(UiPathBaseEmbeddings, AzureOpenAIEmbeddings):
+    api_config: UiPathAPIConfig = UiPathAPIConfig(
+        api_type=ApiType.EMBEDDINGS,
+        routing_mode=RoutingMode.PASSTHROUGH,
+        vendor_type=VendorType.OPENAI,
+        freeze_base_url=True,
+        api_version="2025-04-01-preview",
+    )
+
+    # Override fields to avoid errors when instantiating the class
+    model: str = Field(default="", alias="model_name")
+    azure_endpoint: str | None = Field(default="PLACEHOLDER")
+    openai_api_version: str | None = Field(default="PLACEHOLDER", alias="api_version")
+    openai_api_key: SecretStr | None = Field(default=SecretStr("PLACEHOLDER"), alias="api_key")
+
+    @model_validator(mode="after")
+    def setup_uipath_client(self) -> Self:
+        self.client = AzureOpenAI(
+            azure_endpoint="PLACEHOLDER",
+            api_version="PLACEHOLDER",
+            api_key="PLACEHOLDER",
+            max_retries=0,  # handled by the UiPath client
+            http_client=self.uipath_sync_client,
+        ).embeddings
+        self.async_client = AsyncAzureOpenAI(
+            azure_endpoint="PLACEHOLDER",
+            api_version="PLACEHOLDER",
+            api_key="PLACEHOLDER",
+            max_retries=0,  # handled by the UiPath client
+            http_client=self.uipath_async_client,
+        ).embeddings
+        return self

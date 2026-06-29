@@ -1,8 +1,9 @@
 """Tests for HTTPX client functionality."""
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
-from httpx import Client, Headers, Request, Response
+import pytest
+from httpx import AsyncClient, Client, Headers, Request, Response
 
 from uipath.llm_client.settings import UiPathAPIConfig
 from uipath.llm_client.settings.constants import ApiType, RoutingMode
@@ -156,6 +157,35 @@ class TestUiPathHttpxAsyncClient:
         client = UiPathHttpxAsyncClient(base_url="https://example.com", max_retries=0)
         assert isinstance(client._transport, RetryableAsyncHTTPTransport)
         assert client._transport.retryer is None
+
+
+class TestUiPathHttpxAsyncClientSend:
+    """Tests for UiPathHttpxAsyncClient.send() behavior."""
+
+    @pytest.mark.asyncio
+    async def test_non_ascii_dynamic_header_does_not_crash_send(self):
+        """Regression for PC-4776: non-ASCII dynamic header must not crash async send()."""
+        from uipath.llm_client.httpx_client import UiPathHttpxAsyncClient
+        from uipath.llm_client.utils.headers import set_dynamic_request_headers
+
+        client = UiPathHttpxAsyncClient(base_url="https://example.com")
+        request = Request("POST", "https://example.com/test")
+
+        mock_response = MagicMock(spec=Response, headers=Headers(), is_error=False)
+        mock_response.raise_for_status = MagicMock(return_value=mock_response)
+
+        set_dynamic_request_headers({"X-UiPath-Agent-Name": "Análisis y Formaté"})
+        try:
+            with patch.object(
+                AsyncClient, "send", new=AsyncMock(return_value=mock_response)
+            ) as mock_send:
+                await client.send(request, stream=False)
+                sent_request = mock_send.call_args[0][0]
+                raw = dict(sent_request.headers.raw)
+                assert raw[b"X-UiPath-Agent-Name"] == "Análisis y Formaté".encode("latin-1")
+        finally:
+            set_dynamic_request_headers({})
+            await client.aclose()
 
 
 class TestBuildRoutingHeaders:
@@ -314,3 +344,64 @@ class TestUiPathHttpxClientSend:
             # raise_for_status should have been replaced by patch_raise_for_status
             assert result.raise_for_status is not original_raise
         client.close()
+
+    def test_non_ascii_dynamic_header_does_not_crash_send(self):
+        """Regression for PC-4776: a non-ASCII dynamic header value must not crash send().
+
+        Previously ``request.headers.update(dynamic_headers)`` re-encoded str values
+        as ASCII and raised ``UnicodeEncodeError`` for latin-1 characters, faulting the
+        job before the request left the process.
+        """
+        from uipath.llm_client.httpx_client import UiPathHttpxClient
+        from uipath.llm_client.utils.headers import set_dynamic_request_headers
+
+        client = UiPathHttpxClient(base_url="https://example.com")
+        request = Request("POST", "https://example.com/test")
+
+        set_dynamic_request_headers({"X-UiPath-Agent-Name": "Análisis y Formaté"})
+        try:
+            with patch.object(
+                Client,
+                "send",
+                return_value=MagicMock(spec=Response, headers=Headers(), is_error=False),
+            ) as mock_send:
+                mock_send.return_value.raise_for_status = MagicMock(
+                    return_value=mock_send.return_value
+                )
+                client.send(request, stream=False)
+                sent_request = mock_send.call_args[0][0]
+                raw = dict(sent_request.headers.raw)
+                assert raw[b"X-UiPath-Agent-Name"] == "Análisis y Formaté".encode("latin-1")
+        finally:
+            set_dynamic_request_headers({})
+            client.close()
+
+    def test_non_latin1_dynamic_header_is_percent_encoded(self):
+        """Values outside latin-1 (e.g. CJK) fall back to ASCII percent-encoding."""
+        from urllib.parse import quote
+
+        from uipath.llm_client.httpx_client import UiPathHttpxClient
+        from uipath.llm_client.utils.headers import set_dynamic_request_headers
+
+        client = UiPathHttpxClient(base_url="https://example.com")
+        request = Request("POST", "https://example.com/test")
+
+        value = "日本語エージェント"
+        set_dynamic_request_headers({"X-UiPath-Agent-Name": value})
+        try:
+            with patch.object(
+                Client,
+                "send",
+                return_value=MagicMock(spec=Response, headers=Headers(), is_error=False),
+            ) as mock_send:
+                mock_send.return_value.raise_for_status = MagicMock(
+                    return_value=mock_send.return_value
+                )
+                client.send(request, stream=False)
+                sent_request = mock_send.call_args[0][0]
+                raw = dict(sent_request.headers.raw)
+                expected = quote(value).encode("ascii")
+                assert raw[b"X-UiPath-Agent-Name"] == expected
+        finally:
+            set_dynamic_request_headers({})
+            client.close()

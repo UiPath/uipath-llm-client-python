@@ -51,8 +51,10 @@ from httpx._types import (
 from uipath.llm_client.settings.base import UiPathAPIConfig, UiPathBaseSettings
 from uipath.llm_client.utils.exceptions import patch_raise_for_status
 from uipath.llm_client.utils.headers import (
+    HTTP_HEADER_ENCODING,
     UIPATH_DEFAULT_REQUEST_HEADERS,
     build_routing_headers,
+    encode_header_items,
     extract_matching_headers,
     get_dynamic_request_headers,
     set_captured_response_headers,
@@ -263,7 +265,8 @@ class UiPathHttpxClient(Client):
         request.headers[self._streaming_header] = str(stream).lower()
         dynamic_headers = get_dynamic_request_headers()
         if dynamic_headers:
-            request.headers.update(dynamic_headers)
+            request.headers.encoding = HTTP_HEADER_ENCODING
+            request.headers.update(encode_header_items(dynamic_headers))
         response = super().send(request, stream=stream, **kwargs)
         if self._captured_headers:
             captured = extract_matching_headers(response.headers, self._captured_headers)
@@ -424,7 +427,8 @@ class UiPathHttpxAsyncClient(AsyncClient):
         request.headers[self._streaming_header] = str(stream).lower()
         dynamic_headers = get_dynamic_request_headers()
         if dynamic_headers:
-            request.headers.update(dynamic_headers)
+            request.headers.encoding = HTTP_HEADER_ENCODING
+            request.headers.update(encode_header_items(dynamic_headers))
         response = await super().send(request, stream=stream, **kwargs)
         if self._captured_headers:
             captured = extract_matching_headers(response.headers, self._captured_headers)

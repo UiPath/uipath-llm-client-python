@@ -2,6 +2,14 @@
 
 All notable changes to `uipath_llm_client` (core package) will be documented in this file.
 
+## [1.15.1] - 2026-07-01
+
+### Added
+- `UiPathUnsupportedAttachmentError` — a typed `UiPathError` subclass with a stable `UNSUPPORTED_ATTACHMENT_FORMAT` `error_code`, re-exported from `uipath.llm_client`. Raised when a provider rejects a file attachment before any HTTP response exists (e.g. Bedrock Converse request conversion raising a bare `ValueError("Unsupported MIME type: …")`). Preserves the offending `mime_type` and the raw `provider_detail` for downstream, agent-specific mapping.
+
+### Changed
+- `as_uipath_error` now dispatches client-side (pre-response) provider errors through a `_CLIENT_SIDE_CLASSIFIERS` registry, tried ahead of HTTP status mapping because a typed semantic error is more actionable than the raw status. Previously such errors fell through to the `UiPathError` root. HTTP status mapping and the root fallback are otherwise unchanged.
+
 ## [1.15.0] - 2026-06-25
 
 ### Added

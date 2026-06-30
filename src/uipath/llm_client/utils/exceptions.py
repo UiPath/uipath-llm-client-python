@@ -31,12 +31,16 @@ Example:
     ...     print(f"API Error: {e.status_code} - {e.message}")
 """
 
-from collections.abc import Iterator
+import re
+from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from json import JSONDecodeError
 from typing import Literal
 
 from httpx import HTTPStatusError, Request, Response
+
+_UNSUPPORTED_MIME_MARKER = "Unsupported MIME type"
+_UNSUPPORTED_MIME_RE = re.compile(r"Unsupported MIME type:\s*(?P<mime_type>\S+)")
 
 
 class UiPathError(Exception):
@@ -62,6 +66,24 @@ class UiPathError(Exception):
         except UiPathError:                 # catch-all across every provider
             ...
     """
+
+
+class UiPathUnsupportedAttachmentError(UiPathError):
+    """A file attachment has a format unsupported by the selected model/provider."""
+
+    error_code = "UNSUPPORTED_ATTACHMENT_FORMAT"
+
+    def __init__(
+        self,
+        message: str = "Unsupported file attachment format.",
+        *,
+        mime_type: str | None = None,
+        provider_detail: str | None = None,
+    ):
+        super().__init__(message)
+        self.message = message
+        self.mime_type = mime_type
+        self.provider_detail = provider_detail
 
 
 class UiPathAPIError(UiPathError, HTTPStatusError):
@@ -334,10 +356,47 @@ def _iter_error_chain(exc: BaseException) -> Iterator[BaseException]:
         current = current.__cause__ or current.__context__
 
 
+def _extract_unsupported_mime_type(message: str) -> str | None:
+    match = _UNSUPPORTED_MIME_RE.search(message)
+    if not match:
+        return None
+    return match.group("mime_type").rstrip(".,;")
+
+
+def _as_unsupported_attachment_error(
+    exc: BaseException,
+) -> UiPathUnsupportedAttachmentError | None:
+    for err in _iter_error_chain(exc):
+        message = str(err)
+        if isinstance(err, ValueError) and _UNSUPPORTED_MIME_MARKER in message:
+            return UiPathUnsupportedAttachmentError(
+                mime_type=_extract_unsupported_mime_type(message),
+                provider_detail=message,
+            )
+    return None
+
+
+_ClientSideClassifier = Callable[[BaseException], UiPathError | None]
+
+# Classifiers for provider errors raised *before* an HTTP response exists
+# (client-side request rejection). Tried in order, ahead of HTTP status mapping,
+# because a typed semantic error is more actionable than the generic status.
+# Adding a new non-HTTP error propagation = append its classifier here.
+_CLIENT_SIDE_CLASSIFIERS: list[_ClientSideClassifier] = [
+    _as_unsupported_attachment_error,
+]
+
+
 def as_uipath_error(exc: Exception) -> UiPathError:
     """Convert a provider/SDK exception into the matching UiPath exception.
 
-    Walks ``exc`` and its cause chain for an ``httpx.Response``. When one is
+    First offers ``exc`` to each client-side classifier in
+    ``_CLIENT_SIDE_CLASSIFIERS`` (provider errors rejected before any HTTP
+    response exists, e.g. an unsupported attachment). A match yields its typed
+    :class:`UiPathError` subclass, which takes precedence over status mapping
+    because the semantic error is more actionable than the raw HTTP status.
+
+    Otherwise, walks ``exc`` and its cause chain for an ``httpx.Response``. When one is
     found, its status code is mapped onto the matching :class:`UiPathAPIError`
     subclass (a provider's 429 becomes a :class:`UiPathRateLimitError`, a 400 a
     :class:`UiPathBadRequestError`, …) so semantic handling is identical across
@@ -354,6 +413,9 @@ def as_uipath_error(exc: Exception) -> UiPathError:
     """
     if isinstance(exc, UiPathError):
         return exc
+    for classify in _CLIENT_SIDE_CLASSIFIERS:
+        if typed_error := classify(exc):
+            return typed_error
     for err in _iter_error_chain(exc):
         response = getattr(err, "response", None)
         if isinstance(response, Response):
@@ -385,6 +447,7 @@ def wrap_provider_errors() -> Iterator[None]:
 
 __all__ = [
     "UiPathError",
+    "UiPathUnsupportedAttachmentError",
     "UiPathAPIError",
     "UiPathBadRequestError",
     "UiPathAuthenticationError",

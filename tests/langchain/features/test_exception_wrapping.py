@@ -32,6 +32,7 @@ from uipath.llm_client.utils.exceptions import (
     UiPathInternalServerError,
     UiPathPermissionDeniedError,
     UiPathRateLimitError,
+    UiPathUnsupportedAttachmentError,
 )
 
 LLMGW_ENV = {
@@ -96,6 +97,19 @@ def _bedrock_exc(status: int):
     return lambda: UiPathAPIError.from_response(_resp(status))
 
 
+def _unsupported_mime_exc():
+    def build():
+        root = ValueError(
+            "Unsupported MIME type: application/octet-stream. Please refer to the "
+            "Bedrock Converse API documentation for supported formats."
+        )
+        err = RuntimeError("model invocation failed")
+        err.__cause__ = root
+        return err
+
+    return build
+
+
 # (provider, builds the native exc, expected pure UiPath type, already_uipath)
 PROVIDER_CASES: list[tuple[str, Callable[[], Exception], type[UiPathError], bool]] = [
     ("openai", _openai_exc(openai.BadRequestError, 400), UiPathBadRequestError, False),
@@ -118,6 +132,12 @@ PROVIDER_CASES: list[tuple[str, Callable[[], Exception], type[UiPathError], bool
     ("fireworks", _openai_exc(openai.AuthenticationError, 401), UiPathAuthenticationError, False),
     # bedrock: the shim already raised a pure UiPath error
     ("bedrock", _bedrock_exc(403), UiPathPermissionDeniedError, True),
+    (
+        "bedrock-unsupported-mime",
+        _unsupported_mime_exc(),
+        UiPathUnsupportedAttachmentError,
+        False,
+    ),
 ]
 
 CASE_IDS = [f"{name}-{exp.__name__}" for name, _, exp, _ in PROVIDER_CASES]
@@ -211,6 +231,38 @@ class TestProviderErrorConversion:
         assert type(info.value) is UiPathError
         assert not isinstance(info.value, UiPathAPIError)
         assert isinstance(info.value.__cause__, ValueError)
+
+    def test_unsupported_mime_error_preserves_attachment_context(self, llmgw_settings):
+        native = _unsupported_mime_exc()()
+        chat = _make_chat(llmgw_settings, native)
+
+        with pytest.raises(UiPathUnsupportedAttachmentError) as info:
+            chat.invoke("hi")
+
+        assert info.value.mime_type == "application/octet-stream"
+        assert info.value.provider_detail is not None
+        assert "Bedrock Converse API" in info.value.provider_detail
+
+
+def test_client_side_classifier_registry_is_extension_point(monkeypatch):
+    """A registered client-side classifier is consulted, ahead of HTTP mapping."""
+    from uipath.llm_client.utils import exceptions as exc_mod
+
+    class _CustomError(UiPathError):
+        error_code = "CUSTOM"
+
+    def _classify(exc):
+        return _CustomError("custom") if "trip me" in str(exc) else None
+
+    monkeypatch.setattr(exc_mod, "_CLIENT_SIDE_CLASSIFIERS", [_classify], raising=True)
+
+    matched = ValueError("trip me")
+    assert isinstance(exc_mod.as_uipath_error(matched), _CustomError)
+
+    http = openai.BadRequestError("trip me", response=_resp(400), body=None)
+    assert isinstance(exc_mod.as_uipath_error(http), _CustomError)
+
+    assert type(exc_mod.as_uipath_error(ValueError("nope"))) is UiPathError
 
 
 # ============================================================================

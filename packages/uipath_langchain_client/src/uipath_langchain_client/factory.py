@@ -205,20 +205,26 @@ def get_chat_model(
                     **model_kwargs,
                 )
 
+            if api_flavor == ApiFlavor.INVOKE and model_family == ModelFamily.ANTHROPIC_CLAUDE:
+                from uipath_langchain_client.clients.bedrock.chat_models import (
+                    UiPathChatAnthropicBedrock,
+                )
+
+                return UiPathChatAnthropicBedrock(
+                    model=model_name,
+                    settings=client_settings,
+                    byo_connection_id=byo_connection_id,
+                    model_details=model_details,
+                    **model_kwargs,
+                )
+
+            from uipath_langchain_client.clients.bedrock.model_resolution import (
+                apply_backing_model_detection_hints,
+            )
+
+            apply_backing_model_detection_hints(model_kwargs, model_info)
+
             if api_flavor == ApiFlavor.INVOKE:
-                if model_family == ModelFamily.ANTHROPIC_CLAUDE:
-                    from uipath_langchain_client.clients.bedrock.chat_models import (
-                        UiPathChatAnthropicBedrock,
-                    )
-
-                    return UiPathChatAnthropicBedrock(
-                        model=model_name,
-                        settings=client_settings,
-                        byo_connection_id=byo_connection_id,
-                        model_details=model_details,
-                        **model_kwargs,
-                    )
-
                 from uipath_langchain_client.clients.bedrock.chat_models import (
                     UiPathChatBedrock,
                 )

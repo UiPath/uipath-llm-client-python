@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_langchain_client` will be documented in this file.
 
+## [1.15.1] - 2026-06-30
+
+### Fixed
+- BYO AWS Bedrock backing-model resolution now reads the authoritative `byomDetails.customerModel` field that LLM Gateway discovery exposes for "add your own" (BYOMAdded) connections (LLM-3900). This is the upstream model the customer configured; `get_chat_model` uses it as `base_model_id`/`provider` for capability detection while the connection alias is still sent as `model_id` for gateway routing. Replaces the earlier speculative `byomDetails.baseModel`/`backingModel` lookups, which guessed at a field that did not yet exist. When `customerModel` is absent (UiPath-owned models) it falls back to the discovery `modelName`, which is itself the real model id.
+
 ## [1.15.0] - 2026-06-25
 
 ### Added

@@ -242,10 +242,44 @@ class TestProviderErrorConversion:
         assert info.value.mime_type == "application/octet-stream"
         assert info.value.provider_detail is not None
         assert "Bedrock Converse API" in info.value.provider_detail
+        # both dimensions are carried: semantic code set, no HTTP status
+        assert info.value.error_code == "UNSUPPORTED_ATTACHMENT_FORMAT"
+        assert info.value.status_code is None
+
+    def test_http_status_wins_over_incidental_client_side_marker(self, llmgw_settings):
+        """A response-bearing error is not masked by an unrelated MIME marker
+        elsewhere in its cause/context chain."""
+        native = openai.AuthenticationError("unauthorized", response=_resp(401), body=None)
+        native.__context__ = ValueError("Unsupported MIME type: application/octet-stream.")
+        chat = _make_chat(llmgw_settings, native)
+
+        with pytest.raises(UiPathAuthenticationError) as info:
+            chat.invoke("hi")
+
+        assert type(info.value) is UiPathAuthenticationError
+        assert info.value.status_code == 401
+
+
+def test_error_dimensions_are_both_present():
+    """Every UiPath error exposes error_code and status_code for the consumer."""
+    from uipath.llm_client.utils.exceptions import as_uipath_error
+
+    http = as_uipath_error(openai.BadRequestError("bad", response=_resp(400), body=None))
+    assert http.status_code == 400
+    assert http.error_code == "API_ERROR"
+
+    client_side = as_uipath_error(_unsupported_mime_exc()())
+    assert client_side.status_code is None
+    assert client_side.error_code == "UNSUPPORTED_ATTACHMENT_FORMAT"
+
+    root = as_uipath_error(ValueError("nope"))
+    assert root.status_code is None
+    assert root.error_code == "UIPATH_ERROR"
 
 
 def test_client_side_classifier_registry_is_extension_point(monkeypatch):
-    """A registered client-side classifier is consulted, ahead of HTTP mapping."""
+    """A registered classifier fires only when the chain carries no HTTP response;
+    a real response stays authoritative."""
     from uipath.llm_client.utils import exceptions as exc_mod
 
     class _CustomError(UiPathError):
@@ -256,11 +290,11 @@ def test_client_side_classifier_registry_is_extension_point(monkeypatch):
 
     monkeypatch.setattr(exc_mod, "_CLIENT_SIDE_CLASSIFIERS", [_classify], raising=True)
 
-    matched = ValueError("trip me")
-    assert isinstance(exc_mod.as_uipath_error(matched), _CustomError)
+    assert isinstance(exc_mod.as_uipath_error(ValueError("trip me")), _CustomError)
 
+    # response-bearing error is mapped by status, not by the matching classifier
     http = openai.BadRequestError("trip me", response=_resp(400), body=None)
-    assert isinstance(exc_mod.as_uipath_error(http), _CustomError)
+    assert type(exc_mod.as_uipath_error(http)) is UiPathBadRequestError
 
     assert type(exc_mod.as_uipath_error(ValueError("nope"))) is UiPathError
 

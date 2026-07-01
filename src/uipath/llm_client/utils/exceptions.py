@@ -65,11 +65,33 @@ class UiPathError(Exception):
             backoff(e.retry_after)
         except UiPathError:                 # catch-all across every provider
             ...
+
+    Every error carries two orthogonal, consumer-facing dimensions:
+
+    * ``error_code`` — a stable, machine-readable *semantic* identifier
+      (e.g. ``"UNSUPPORTED_ATTACHMENT_FORMAT"``). Switch on it to handle the
+      error's meaning; it does not change when the underlying HTTP status does.
+    * ``status_code`` — the originating HTTP status (``int``) when the error
+      carries an HTTP response, else ``None`` for purely client-side failures.
+
+    Handle whichever axis fits::
+
+        except UiPathError as e:
+            if e.error_code == "UNSUPPORTED_ATTACHMENT_FORMAT":
+                ...                          # semantic handling
+            elif e.status_code == 429:
+                backoff()                    # HTTP-shaped handling
     """
+
+    error_code: str = "UIPATH_ERROR"
+    status_code: int | None = None
 
 
 class UiPathUnsupportedAttachmentError(UiPathError):
-    """A file attachment has a format unsupported by the selected model/provider."""
+    """A file attachment has a format unsupported by the selected model/provider.
+
+    A client-side rejection (no HTTP response), so ``status_code`` is ``None``.
+    """
 
     error_code = "UNSUPPORTED_ATTACHMENT_FORMAT"
 
@@ -101,7 +123,7 @@ class UiPathAPIError(UiPathError, HTTPStatusError):
         response: The original httpx.Response object.
     """
 
-    status_code: int
+    error_code: str = "API_ERROR"
 
     def __init__(
         self,
@@ -379,8 +401,8 @@ def _as_unsupported_attachment_error(
 _ClientSideClassifier = Callable[[BaseException], UiPathError | None]
 
 # Classifiers for provider errors raised *before* an HTTP response exists
-# (client-side request rejection). Tried in order, ahead of HTTP status mapping,
-# because a typed semantic error is more actionable than the generic status.
+# (client-side request rejection). Consulted in order, but only after the chain
+# is confirmed to carry no httpx.Response — HTTP status stays authoritative.
 # Adding a new non-HTTP error propagation = append its classifier here.
 _CLIENT_SIDE_CLASSIFIERS: list[_ClientSideClassifier] = [
     _as_unsupported_attachment_error,
@@ -390,21 +412,21 @@ _CLIENT_SIDE_CLASSIFIERS: list[_ClientSideClassifier] = [
 def as_uipath_error(exc: Exception) -> UiPathError:
     """Convert a provider/SDK exception into the matching UiPath exception.
 
-    First offers ``exc`` to each client-side classifier in
-    ``_CLIENT_SIDE_CLASSIFIERS`` (provider errors rejected before any HTTP
-    response exists, e.g. an unsupported attachment). A match yields its typed
-    :class:`UiPathError` subclass, which takes precedence over status mapping
-    because the semantic error is more actionable than the raw HTTP status.
+    HTTP status is authoritative: ``exc`` and its cause chain are walked for an
+    ``httpx.Response`` first. When one is found, its status code is mapped onto
+    the matching :class:`UiPathAPIError` subclass (a provider's 429 becomes a
+    :class:`UiPathRateLimitError`, a 400 a :class:`UiPathBadRequestError`, …) so
+    semantic handling is identical across providers; an unmapped status becomes
+    a generic :class:`UiPathAPIError`. A real response outranks any client-side
+    classifier match elsewhere in the chain, which may be incidental
+    ``__context__`` rather than the actual failure.
 
-    Otherwise, walks ``exc`` and its cause chain for an ``httpx.Response``. When one is
-    found, its status code is mapped onto the matching :class:`UiPathAPIError`
-    subclass (a provider's 429 becomes a :class:`UiPathRateLimitError`, a 400 a
-    :class:`UiPathBadRequestError`, …) so semantic handling is identical across
-    providers; an unmapped status becomes a generic :class:`UiPathAPIError`.
+    Only when no response is available anywhere in the chain (a genuinely
+    client-side rejection) is ``exc`` offered to each classifier in
+    ``_CLIENT_SIDE_CLASSIFIERS``; a match yields its typed :class:`UiPathError`
+    subclass (``status_code`` ``None``, semantic ``error_code`` set).
 
-    When no response is available anywhere in the chain (client-side validation
-    errors, connection failures, plain exceptions) we cannot claim HTTP
-    semantics, so the :class:`UiPathError` root is returned — still catchable as
+    Otherwise the :class:`UiPathError` root is returned — still catchable as
     ``UiPathError``. ``UiPathError`` instances are returned unchanged.
 
     The returned exception is a *new* object; callers should chain it to the
@@ -413,13 +435,13 @@ def as_uipath_error(exc: Exception) -> UiPathError:
     """
     if isinstance(exc, UiPathError):
         return exc
-    for classify in _CLIENT_SIDE_CLASSIFIERS:
-        if typed_error := classify(exc):
-            return typed_error
     for err in _iter_error_chain(exc):
         response = getattr(err, "response", None)
         if isinstance(response, Response):
             return UiPathAPIError.from_response(response)
+    for classify in _CLIENT_SIDE_CLASSIFIERS:
+        if typed_error := classify(exc):
+            return typed_error
     return UiPathError(str(exc))
 
 

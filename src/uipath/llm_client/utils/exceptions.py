@@ -31,12 +31,16 @@ Example:
     ...     print(f"API Error: {e.status_code} - {e.message}")
 """
 
-from collections.abc import Iterator
+import re
+from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from json import JSONDecodeError
 from typing import Literal
 
 from httpx import HTTPStatusError, Request, Response
+
+_UNSUPPORTED_MIME_MARKER = "Unsupported MIME type"
+_UNSUPPORTED_MIME_RE = re.compile(r"Unsupported MIME type:\s*(?P<mime_type>\S+)")
 
 
 class UiPathError(Exception):
@@ -61,7 +65,47 @@ class UiPathError(Exception):
             backoff(e.retry_after)
         except UiPathError:                 # catch-all across every provider
             ...
+
+    Every error carries two orthogonal, consumer-facing dimensions:
+
+    * ``error_code`` — a stable, machine-readable *semantic* identifier
+      (e.g. ``"UNSUPPORTED_ATTACHMENT_FORMAT"``). Switch on it to handle the
+      error's meaning; it does not change when the underlying HTTP status does.
+    * ``status_code`` — the originating HTTP status (``int``) when the error
+      carries an HTTP response, else ``None`` for purely client-side failures.
+
+    Handle whichever axis fits::
+
+        except UiPathError as e:
+            if e.error_code == "UNSUPPORTED_ATTACHMENT_FORMAT":
+                ...                          # semantic handling
+            elif e.status_code == 429:
+                backoff()                    # HTTP-shaped handling
     """
+
+    error_code: str = "UIPATH_ERROR"
+    status_code: int | None = None
+
+
+class UiPathUnsupportedAttachmentError(UiPathError):
+    """A file attachment has a format unsupported by the selected model/provider.
+
+    A client-side rejection (no HTTP response), so ``status_code`` is ``None``.
+    """
+
+    error_code = "UNSUPPORTED_ATTACHMENT_FORMAT"
+
+    def __init__(
+        self,
+        message: str = "Unsupported file attachment format.",
+        *,
+        mime_type: str | None = None,
+        provider_detail: str | None = None,
+    ):
+        super().__init__(message)
+        self.message = message
+        self.mime_type = mime_type
+        self.provider_detail = provider_detail
 
 
 class UiPathAPIError(UiPathError, HTTPStatusError):
@@ -79,7 +123,7 @@ class UiPathAPIError(UiPathError, HTTPStatusError):
         response: The original httpx.Response object.
     """
 
-    status_code: int
+    error_code: str = "API_ERROR"
 
     def __init__(
         self,
@@ -334,18 +378,55 @@ def _iter_error_chain(exc: BaseException) -> Iterator[BaseException]:
         current = current.__cause__ or current.__context__
 
 
+def _extract_unsupported_mime_type(message: str) -> str | None:
+    match = _UNSUPPORTED_MIME_RE.search(message)
+    if not match:
+        return None
+    return match.group("mime_type").rstrip(".,;")
+
+
+def _as_unsupported_attachment_error(
+    exc: BaseException,
+) -> UiPathUnsupportedAttachmentError | None:
+    for err in _iter_error_chain(exc):
+        message = str(err)
+        if isinstance(err, ValueError) and _UNSUPPORTED_MIME_MARKER in message:
+            return UiPathUnsupportedAttachmentError(
+                mime_type=_extract_unsupported_mime_type(message),
+                provider_detail=message,
+            )
+    return None
+
+
+_ClientSideClassifier = Callable[[BaseException], UiPathError | None]
+
+# Classifiers for provider errors raised *before* an HTTP response exists
+# (client-side request rejection). Consulted in order, but only after the chain
+# is confirmed to carry no httpx.Response — HTTP status stays authoritative.
+# Adding a new non-HTTP error propagation = append its classifier here.
+_CLIENT_SIDE_CLASSIFIERS: list[_ClientSideClassifier] = [
+    _as_unsupported_attachment_error,
+]
+
+
 def as_uipath_error(exc: Exception) -> UiPathError:
     """Convert a provider/SDK exception into the matching UiPath exception.
 
-    Walks ``exc`` and its cause chain for an ``httpx.Response``. When one is
-    found, its status code is mapped onto the matching :class:`UiPathAPIError`
-    subclass (a provider's 429 becomes a :class:`UiPathRateLimitError`, a 400 a
-    :class:`UiPathBadRequestError`, …) so semantic handling is identical across
-    providers; an unmapped status becomes a generic :class:`UiPathAPIError`.
+    HTTP status is authoritative: ``exc`` and its cause chain are walked for an
+    ``httpx.Response`` first. When one is found, its status code is mapped onto
+    the matching :class:`UiPathAPIError` subclass (a provider's 429 becomes a
+    :class:`UiPathRateLimitError`, a 400 a :class:`UiPathBadRequestError`, …) so
+    semantic handling is identical across providers; an unmapped status becomes
+    a generic :class:`UiPathAPIError`. A real response outranks any client-side
+    classifier match elsewhere in the chain, which may be incidental
+    ``__context__`` rather than the actual failure.
 
-    When no response is available anywhere in the chain (client-side validation
-    errors, connection failures, plain exceptions) we cannot claim HTTP
-    semantics, so the :class:`UiPathError` root is returned — still catchable as
+    Only when no response is available anywhere in the chain (a genuinely
+    client-side rejection) is ``exc`` offered to each classifier in
+    ``_CLIENT_SIDE_CLASSIFIERS``; a match yields its typed :class:`UiPathError`
+    subclass (``status_code`` ``None``, semantic ``error_code`` set).
+
+    Otherwise the :class:`UiPathError` root is returned — still catchable as
     ``UiPathError``. ``UiPathError`` instances are returned unchanged.
 
     The returned exception is a *new* object; callers should chain it to the
@@ -358,6 +439,9 @@ def as_uipath_error(exc: Exception) -> UiPathError:
         response = getattr(err, "response", None)
         if isinstance(response, Response):
             return UiPathAPIError.from_response(response)
+    for classify in _CLIENT_SIDE_CLASSIFIERS:
+        if typed_error := classify(exc):
+            return typed_error
     return UiPathError(str(exc))
 
 
@@ -385,6 +469,7 @@ def wrap_provider_errors() -> Iterator[None]:
 
 __all__ = [
     "UiPathError",
+    "UiPathUnsupportedAttachmentError",
     "UiPathAPIError",
     "UiPathBadRequestError",
     "UiPathAuthenticationError",

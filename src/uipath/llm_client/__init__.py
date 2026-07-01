@@ -53,6 +53,7 @@ from uipath.llm_client.utils.exceptions import (
     UiPathServiceUnavailableError,
     UiPathTooManyRequestsError,
     UiPathUnprocessableEntityError,
+    UiPathUnsupportedAttachmentError,
 )
 from uipath.llm_client.utils.retry import RetryConfig
 
@@ -86,4 +87,5 @@ __all__ = [
     "UiPathServiceUnavailableError",
     "UiPathTooManyRequestsError",
     "UiPathUnprocessableEntityError",
+    "UiPathUnsupportedAttachmentError",
 ]

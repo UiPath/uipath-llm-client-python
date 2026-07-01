@@ -2,6 +2,15 @@
 
 All notable changes to `uipath_llm_client` (core package) will be documented in this file.
 
+## [1.15.1] - 2026-07-01
+
+### Added
+- Every `UiPathError` now carries two orthogonal, consumer-facing dimensions: `error_code` (a stable machine-readable semantic identifier — `"UIPATH_ERROR"` on the root, `"API_ERROR"` on `UiPathAPIError`, specific codes on typed subclasses) and `status_code` (`int | None` — the originating HTTP status, or `None` for purely client-side failures). Consumers can dispatch on `error_code` for semantic handling or `status_code` for HTTP-shaped handling from a single `except UiPathError` block.
+- `UiPathUnsupportedAttachmentError` — a typed `UiPathError` subclass with a stable `UNSUPPORTED_ATTACHMENT_FORMAT` `error_code`, re-exported from `uipath.llm_client`. Raised when a provider rejects a file attachment before any HTTP response exists (e.g. Bedrock Converse request conversion raising a bare `ValueError("Unsupported MIME type: …")`). Preserves the offending `mime_type` and the raw `provider_detail` for downstream, agent-specific mapping; `status_code` is `None`.
+
+### Changed
+- `as_uipath_error` now resolves errors with HTTP status as authoritative: the cause chain is scanned for an `httpx.Response` first, so a real status always outranks a client-side classifier match elsewhere in the chain (which may be incidental `__context__` rather than the failure). Only when no response exists anywhere is the error offered to the `_CLIENT_SIDE_CLASSIFIERS` registry (extension point for future non-HTTP typed errors, e.g. the unsupported-attachment case). Previously client-side classifiers ran first and could mask an authenticated/rate-limited/server error carrying an unrelated marker.
+
 ## [1.15.0] - 2026-06-25
 
 ### Added

@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_langchain_client` will be documented in this file.
 
+## [1.15.2] - 2026-07-03
+
+### Changed
+- Bumped `uipath-llm-client` to `>=1.15.1`, which requires `uipath-platform>=0.1.91` (fixes a circular-import crash in 0.1.89/0.1.90).
+
 ## [1.15.1] - 2026-06-30
 
 ### Fixed

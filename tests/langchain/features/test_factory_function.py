@@ -477,28 +477,3 @@ class TestBedrockFactoryBaseModel:
         assert model.base_model_id == "anthropic.claude-sonnet-4-5-20250929-v1:0"
         assert model.provider == "anthropic"
         assert model._get_provider() == "anthropic"
-
-    def test_invoke_byo_alias_token_counting_uses_fallback(self, client_settings):
-        from langchain_core.messages import HumanMessage
-
-        self._seed(client_settings, _BYO_BEDROCK_INVOKE)
-        model = get_chat_model(
-            "AWS - Bedrock",
-            byo_connection_id="conn-x",
-            client_settings=client_settings,
-            custom_get_token_ids=lambda text: list(range(len(text.split()))),
-        )
-        assert model.get_num_tokens_from_messages([HumanMessage("hello there")]) > 0
-
-    def test_converse_byo_alias_token_counting_uses_fallback(self, client_settings, caplog):
-        from langchain_core.messages import HumanMessage
-
-        self._seed(client_settings, _BYO_BEDROCK_CONVERSE)
-        model = get_chat_model(
-            "AWS - Bedrock",
-            byo_connection_id="conn-x",
-            client_settings=client_settings,
-            custom_get_token_ids=lambda text: list(range(len(text.split()))),
-        )
-        assert model.get_num_tokens_from_messages([HumanMessage("hello there")]) > 0
-        assert "count_tokens API failed" not in caplog.text

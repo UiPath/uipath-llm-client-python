@@ -6,8 +6,6 @@ All notable changes to `uipath_langchain_client` will be documented in this file
 
 ### Fixed
 - `import uipath_langchain_client` no longer requires the `bedrock` extra (regression in 1.15.1).
-- `UiPathChatBedrock.get_num_tokens_from_messages` no longer crashes with `AttributeError` for BYO models backed by Anthropic models (regression in 1.15.1).
-- `UiPathChatBedrockConverse.get_num_tokens_from_messages` skips the count-tokens API the same way instead of logging a `count_tokens API failed` warning on every call.
 
 ## [1.16.0] - 2026-07-03
 

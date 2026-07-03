@@ -1,9 +1,6 @@
-from collections.abc import Sequence
 from functools import cached_property
 from typing import Any, Self
 
-from langchain_core.language_models import BaseLanguageModel
-from langchain_core.messages import BaseMessage
 from pydantic import Field, model_validator
 
 from uipath_langchain_client.base_client import UiPathBaseChatModel
@@ -83,12 +80,6 @@ class UiPathChatBedrockConverse(UiPathBaseChatModel, ChatBedrockConverse):  # ty
         self.client = WrappedBotoClient(self.uipath_sync_client)
         return self
 
-    def get_num_tokens_from_messages(
-        self, messages: list[BaseMessage], tools: Sequence[Any] | None = None
-    ) -> int:
-        """Skip the Bedrock count-tokens API; WrappedBotoClient does not support it."""
-        return BaseLanguageModel.get_num_tokens_from_messages(self, messages, tools)
-
 
 class UiPathChatBedrock(UiPathBaseChatModel, ChatBedrock):  # type: ignore[override]
     api_config: UiPathAPIConfig = UiPathAPIConfig(
@@ -117,12 +108,6 @@ class UiPathChatBedrock(UiPathBaseChatModel, ChatBedrock):  # type: ignore[overr
     @property
     def _as_converse(self) -> UiPathChatBedrockConverse:
         raise NotImplementedError("You must instantiate the converse client directly")
-
-    def get_num_tokens_from_messages(
-        self, messages: list[BaseMessage], tools: Sequence[Any] | None = None
-    ) -> int:
-        """Skip the Bedrock count-tokens API; WrappedBotoClient does not support it."""
-        return BaseLanguageModel.get_num_tokens_from_messages(self, messages, tools)
 
 
 class UiPathChatAnthropicBedrock(UiPathBaseChatModel, ChatAnthropicBedrock):

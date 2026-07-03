@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_langchain_client` will be documented in this file.
 
+## [1.16.1] - 2026-07-03
+
+### Fixed
+- `import uipath_langchain_client` no longer requires the `bedrock` extra (regression in 1.15.1).
+
 ## [1.16.0] - 2026-07-03
 
 ### Changed

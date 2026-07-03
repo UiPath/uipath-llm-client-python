@@ -26,9 +26,6 @@ from uipath_langchain_client.base_client import (
     UiPathBaseChatModel,
     UiPathBaseEmbeddings,
 )
-from uipath_langchain_client.clients.bedrock.model_resolution import (
-    apply_backing_model_detection_hints,
-)
 from uipath_langchain_client.settings import (
     API_FLAVOR_TO_VENDOR_TYPE,
     BYOM_TO_ROUTING_FLAVOR,
@@ -220,6 +217,10 @@ def get_chat_model(
                     model_details=model_details,
                     **model_kwargs,
                 )
+
+            from uipath_langchain_client.clients.bedrock.model_resolution import (
+                apply_backing_model_detection_hints,
+            )
 
             apply_backing_model_detection_hints(model_kwargs, model_info)
 

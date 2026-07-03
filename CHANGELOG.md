@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_llm_client` (core package) will be documented in this file.
 
+## [1.15.1] - 2026-07-03
+
+### Changed
+- Bumped `uipath-platform` to `>=0.1.91` — 0.1.89/0.1.90 crashed with a circular-import `ImportError` when importing `IdentityService` (fixed upstream in UiPath/uipath-python#1787).
+
 ## [1.15.0] - 2026-06-25
 
 ### Added

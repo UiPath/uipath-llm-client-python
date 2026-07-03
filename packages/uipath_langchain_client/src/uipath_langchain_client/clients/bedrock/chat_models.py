@@ -48,6 +48,14 @@ except ImportError as e:
     ) from e
 
 
+def _setup_model_id(values: Any) -> Any:
+    if isinstance(values, dict) and "model_id" not in values:
+        model = values.get("model") or values.get("model_name")
+        if model:
+            values = {**values, "model_id": model}
+    return values
+
+
 class UiPathChatBedrockConverse(UiPathBaseChatModel, ChatBedrockConverse):  # type: ignore[override]
     api_config: UiPathAPIConfig = UiPathAPIConfig(
         api_type=ApiType.COMPLETIONS,
@@ -65,11 +73,7 @@ class UiPathChatBedrockConverse(UiPathBaseChatModel, ChatBedrockConverse):  # ty
     @model_validator(mode="before")
     @classmethod
     def setup_model_id(cls, values: Any) -> Any:
-        if isinstance(values, dict) and "model_id" not in values:
-            model = values.get("model") or values.get("model_name")
-            if model:
-                values = {**values, "model_id": model}
-        return values
+        return _setup_model_id(values)
 
     @model_validator(mode="after")
     def setup_uipath_client(self) -> Self:
@@ -94,11 +98,7 @@ class UiPathChatBedrock(UiPathBaseChatModel, ChatBedrock):  # type: ignore[overr
     @model_validator(mode="before")
     @classmethod
     def setup_model_id(cls, values: Any) -> Any:
-        if isinstance(values, dict) and "model_id" not in values:
-            model = values.get("model") or values.get("model_name")
-            if model:
-                values = {**values, "model_id": model}
-        return values
+        return _setup_model_id(values)
 
     @model_validator(mode="after")
     def setup_uipath_client(self) -> Self:

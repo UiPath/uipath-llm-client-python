@@ -44,6 +44,7 @@ from uipath.llm_client.httpx_client import (
     UiPathHttpxAsyncClient,
     UiPathHttpxClient,
 )
+from uipath.llm_client.utils.exceptions import wrap_provider_errors
 from uipath.llm_client.utils.headers import (
     UIPATH_DEFAULT_REQUEST_HEADERS,
     get_captured_response_headers,
@@ -437,7 +438,10 @@ class UiPathBaseChatModel(UiPathBaseLLMClient, BaseChatModel):
         )
         set_captured_response_headers({})
         try:
-            result = self._uipath_generate(messages, stop=stop, run_manager=run_manager, **kwargs)
+            with wrap_provider_errors():
+                result = self._uipath_generate(
+                    messages, stop=stop, run_manager=run_manager, **kwargs
+                )
             self._inject_gateway_headers(result.generations)
             return result
         finally:
@@ -468,9 +472,10 @@ class UiPathBaseChatModel(UiPathBaseLLMClient, BaseChatModel):
         )
         set_captured_response_headers({})
         try:
-            result = await self._uipath_agenerate(
-                messages, stop=stop, run_manager=run_manager, **kwargs
-            )
+            with wrap_provider_errors():
+                result = await self._uipath_agenerate(
+                    messages, stop=stop, run_manager=run_manager, **kwargs
+                )
             self._inject_gateway_headers(result.generations)
             return result
         finally:
@@ -502,13 +507,14 @@ class UiPathBaseChatModel(UiPathBaseLLMClient, BaseChatModel):
         set_captured_response_headers({})
         try:
             first = True
-            for chunk in self._uipath_stream(
-                messages, stop=stop, run_manager=run_manager, **kwargs
-            ):
-                if first:
-                    self._inject_gateway_headers([chunk])
-                    first = False
-                yield chunk
+            with wrap_provider_errors():
+                for chunk in self._uipath_stream(
+                    messages, stop=stop, run_manager=run_manager, **kwargs
+                ):
+                    if first:
+                        self._inject_gateway_headers([chunk])
+                        first = False
+                    yield chunk
         finally:
             set_captured_response_headers({})
 
@@ -538,13 +544,14 @@ class UiPathBaseChatModel(UiPathBaseLLMClient, BaseChatModel):
         set_captured_response_headers({})
         try:
             first = True
-            async for chunk in self._uipath_astream(
-                messages, stop=stop, run_manager=run_manager, **kwargs
-            ):
-                if first:
-                    self._inject_gateway_headers([chunk])
-                    first = False
-                yield chunk
+            with wrap_provider_errors():
+                async for chunk in self._uipath_astream(
+                    messages, stop=stop, run_manager=run_manager, **kwargs
+                ):
+                    if first:
+                        self._inject_gateway_headers([chunk])
+                        first = False
+                    yield chunk
         finally:
             set_captured_response_headers({})
 

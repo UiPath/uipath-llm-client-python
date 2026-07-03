@@ -2,6 +2,19 @@
 
 All notable changes to `uipath_llm_client` (core package) will be documented in this file.
 
+## [1.15.0] - 2026-06-25
+
+### Added
+- `UiPathError` — a common root exception for everything the client can raise, re-exported from `uipath.llm_client`. `UiPathAPIError` (and therefore every status-specific subclass) now inherits from it, so `except UiPathError` is a single catch-all across all backends and providers. Fully backward compatible: `UiPathAPIError` still inherits `httpx.HTTPStatusError` and all existing handlers keep working.
+- `as_uipath_error(exc)` and the `wrap_provider_errors()` context manager (in `uipath.llm_client.utils.exceptions`). They convert a provider/SDK exception into the matching UiPath exception so callers handle one taxonomy regardless of which provider produced the error. The cause chain (`__cause__`/`__context__`) is walked for an `httpx.Response`; when found, its status code is mapped onto the corresponding `UiPathAPIError` subclass (a 429 → `UiPathRateLimitError`, a 400 → `UiPathBadRequestError`, …) so semantic handling is identical across providers — including providers (e.g. Google) that wrap the response-bearing error one level down. When no response is available anywhere in the chain (client-side validation errors, connection failures) the `UiPathError` root is returned. The original provider exception is preserved as `__cause__`.
+
+### Changed
+- `UiPathRateLimitError.retry_after` is now parsed lazily from `self.response` (via a property) instead of being cached in `__init__`. `_parse_retry_after` and the parsing behaviour are unchanged.
+- `patch_raise_for_status` now routes the httpx `HTTPStatusError` through `wrap_provider_errors`, so direct `raise_for_status()` callers and provider SDK exceptions share a single conversion path. The raised `UiPathAPIError` now carries the original `HTTPStatusError` as `__cause__` (previously `None`); status mapping is unchanged.
+
+### Note
+- Provider errors are surfaced as **pure** UiPath types: an `openai.RateLimitError` raised through a passthrough chat model becomes a `UiPathRateLimitError` and is **not** catchable as `openai.RateLimitError` (the vendor exception is kept as `__cause__`). Standardise handlers on `UiPathError` and its subclasses.
+
 ## [1.14.0] - 2026-06-15
 
 ### Added

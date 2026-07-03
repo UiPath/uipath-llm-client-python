@@ -347,3 +347,17 @@ class TestPatchRaiseForStatus:
 
         patched = patch_raise_for_status(mock_resp)
         assert patched.raise_for_status is not original
+
+    def test_patched_preserves_original_httpstatuserror_as_cause(self):
+        """Routing through wrap_provider_errors keeps the httpx error as __cause__."""
+        from httpx import HTTPStatusError, Request, Response
+
+        req = Request("GET", "https://example.com")
+        resp = Response(404, request=req, json={"error": "nope"})
+        original = MagicMock(side_effect=HTTPStatusError("err", request=req, response=resp))
+        resp.raise_for_status = original  # type: ignore[method-assign]
+
+        patch_raise_for_status(resp)
+        with pytest.raises(UiPathNotFoundError) as exc_info:
+            resp.raise_for_status()
+        assert isinstance(exc_info.value.__cause__, HTTPStatusError)

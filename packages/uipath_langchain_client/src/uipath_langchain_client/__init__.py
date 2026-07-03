@@ -32,6 +32,7 @@ Factory Functions:
     - get_embedding_model(): Create an embeddings model with auto-detected vendor
 """
 
+from uipath.llm_client.utils.exceptions import UiPathError
 from uipath_langchain_client.__version__ import __version__
 from uipath_langchain_client.callbacks import UiPathDynamicHeadersCallback
 from uipath_langchain_client.clients import UiPathChat, UiPathEmbeddings
@@ -52,4 +53,5 @@ __all__ = [
     "get_default_client_settings",
     "LLMGatewaySettings",
     "PlatformSettings",
+    "UiPathError",
 ]

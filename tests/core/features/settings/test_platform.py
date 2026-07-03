@@ -57,6 +57,40 @@ class TestPlatformSettings:
             )
             assert "agenthub_/llm/api/chat/completions" in url
 
+    def test_build_base_url_uses_service_override_when_set(
+        self, platform_env_vars, mock_platform_auth, normalized_api_config
+    ):
+        """A UIPATH_SERVICE_URL_<SERVICE> override redirects to the local server,
+        stripping the org/tenant and service prefix."""
+        env = {
+            **platform_env_vars,
+            "UIPATH_SERVICE_URL_AGENTHUB": "http://localhost:8080",
+        }
+        with patch.dict(os.environ, env, clear=True):
+            settings = PlatformSettings()
+            url = settings.build_base_url(
+                model_name="gpt-4o",
+                api_config=normalized_api_config,
+            )
+            assert url == "http://localhost:8080/llm/api/chat/completions"
+
+    def test_build_base_url_ignores_unrelated_service_override(
+        self, platform_env_vars, mock_platform_auth, normalized_api_config
+    ):
+        """An override for a different service must not affect the built URL."""
+        env = {
+            **platform_env_vars,
+            "UIPATH_SERVICE_URL_ORCHESTRATOR": "http://localhost:8080",
+        }
+        with patch.dict(os.environ, env, clear=True):
+            settings = PlatformSettings()
+            url = settings.build_base_url(
+                model_name="gpt-4o",
+                api_config=normalized_api_config,
+            )
+            assert "localhost" not in url
+            assert "agenthub_/llm/api/chat/completions" in url
+
     def test_build_auth_headers_omits_agenthub_config_by_default(
         self, platform_env_vars, mock_platform_auth
     ):

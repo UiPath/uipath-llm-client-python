@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_llm_client` (core package) will be documented in this file.
 
+## [1.16.0] - 2026-07-03
+
+### Added
+- Per-service URL overrides for local development. `build_base_url` now consults `resolve_service_url(endpoint_path)` (from `uipath.platform.common`) before constructing the final URL. When a `UIPATH_SERVICE_URL_<SERVICE>` env var is set (e.g. `UIPATH_SERVICE_URL_AGENTHUB=http://localhost:8080`), requests are redirected to that local server with the org/tenant and service prefix stripped. Without an override, behaviour is unchanged — the URL is still `{base_url}/{endpoint_path}`.
+
 ## [1.15.1] - 2026-07-03
 
 ### Changed

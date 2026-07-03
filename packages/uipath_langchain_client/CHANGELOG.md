@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_langchain_client` will be documented in this file.
 
+## [1.16.0] - 2026-07-03
+
+### Changed
+- Picks up core `uipath-llm-client` 1.16.0, which adds per-service URL overrides for local development (`UIPATH_SERVICE_URL_<SERVICE>` env vars). Bumped the `uipath-llm-client` floor to `>=1.16.0`.
+
 ## [1.15.2] - 2026-07-03
 
 ### Changed

@@ -2,6 +2,15 @@
 
 All notable changes to `uipath_llm_client` (core package) will be documented in this file.
 
+## [1.16.2] - 2026-07-06
+
+### Added
+- `UiPathLLMErrorCode` — a public string enum of stable semantic error codes independent of provider exception types or provider-specific message text. It currently includes `UNSUPPORTED_MIME_TYPE`.
+- `UiPathError` now carries optional semantic context: `error_code` (a stable machine-readable identifier, preferably from `UiPathLLMErrorCode`) and `detail` (best-effort diagnostic detail from the mapped lower-level error).
+
+### Changed
+- `as_uipath_error` now resolves errors with HTTP status as authoritative: the cause chain is scanned for an `httpx.Response` first, so a real status always outranks a client-side classifier match elsewhere in the chain (which may be incidental `__context__` rather than the failure). Only when no response exists anywhere is the error offered to the `_CLIENT_SIDE_CLASSIFIERS` registry (extension point for future non-HTTP semantic codes, e.g. the unsupported-MIME case). Previously client-side classifiers ran first and could mask an authenticated/rate-limited/server error carrying an unrelated marker.
+
 ## [1.16.0] - 2026-07-03
 
 ### Added

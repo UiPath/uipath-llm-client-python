@@ -31,12 +31,24 @@ Example:
     ...     print(f"API Error: {e.status_code} - {e.message}")
 """
 
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from contextlib import contextmanager
+from enum import StrEnum
 from json import JSONDecodeError
 from typing import Literal
 
 from httpx import HTTPStatusError, Request, Response
+
+_UNSUPPORTED_MIME_MARKER = "Unsupported MIME type"
+
+
+class UiPathLLMErrorCode(StrEnum):
+    """Stable semantic error codes surfaced by the UiPath LLM client.
+
+    Values are provider-independent and stable across supported LLM providers.
+    """
+
+    UNSUPPORTED_MIME_TYPE = "UNSUPPORTED_MIME_TYPE"
 
 
 class UiPathError(Exception):
@@ -61,7 +73,26 @@ class UiPathError(Exception):
             backoff(e.retry_after)
         except UiPathError:                 # catch-all across every provider
             ...
+
+    ``UiPathError`` carries normalized semantic context:
+
+    * ``error_code`` — a stable, machine-readable identifier, when known.
+    * ``detail`` — a best-effort diagnostic detail from the mapped lower-level
+      error.
     """
+
+    error_code: UiPathLLMErrorCode | str | None
+    detail: str | None
+
+    def __init__(
+        self,
+        detail: str | None = None,
+        *,
+        error_code: UiPathLLMErrorCode | str | None = None,
+    ) -> None:
+        Exception.__init__(self, detail or "")
+        self.error_code = error_code
+        self.detail = detail
 
 
 class UiPathAPIError(UiPathError, HTTPStatusError):
@@ -79,8 +110,6 @@ class UiPathAPIError(UiPathError, HTTPStatusError):
         response: The original httpx.Response object.
     """
 
-    status_code: int
-
     def __init__(
         self,
         message: str,
@@ -88,8 +117,11 @@ class UiPathAPIError(UiPathError, HTTPStatusError):
         request: Request,
         response: Response,
         body: str | dict | None = None,
+        error_code: UiPathLLMErrorCode | str | None = None,
+        detail: str | None = None,
     ):
-        super().__init__(message, request=request, response=response)
+        UiPathError.__init__(self, detail, error_code=error_code)
+        HTTPStatusError.__init__(self, message, request=request, response=response)
         self.status_code = response.status_code
         self.message = message
         self.body = body
@@ -334,18 +366,51 @@ def _iter_error_chain(exc: BaseException) -> Iterator[BaseException]:
         current = current.__cause__ or current.__context__
 
 
+_UNSUPPORTED_MIME_MATCHERS: tuple[Callable[[BaseException], bool], ...] = (
+    lambda err: isinstance(err, ValueError) and _UNSUPPORTED_MIME_MARKER in str(err),
+)
+
+
+def _as_unsupported_mime_type_error(
+    exc: BaseException,
+) -> UiPathError | None:
+    for err in _iter_error_chain(exc):
+        if any(matches(err) for matches in _UNSUPPORTED_MIME_MATCHERS):
+            return UiPathError(
+                error_code=UiPathLLMErrorCode.UNSUPPORTED_MIME_TYPE,
+                detail=str(err),
+            )
+    return None
+
+
+_ClientSideClassifier = Callable[[BaseException], UiPathError | None]
+
+# Classifiers for provider errors raised *before* an HTTP response exists
+# (client-side request rejection). Consulted in order, but only after the chain
+# is confirmed to carry no httpx.Response — HTTP status stays authoritative.
+_CLIENT_SIDE_CLASSIFIERS: list[_ClientSideClassifier] = [
+    _as_unsupported_mime_type_error,
+]
+
+
 def as_uipath_error(exc: Exception) -> UiPathError:
     """Convert a provider/SDK exception into the matching UiPath exception.
 
-    Walks ``exc`` and its cause chain for an ``httpx.Response``. When one is
-    found, its status code is mapped onto the matching :class:`UiPathAPIError`
-    subclass (a provider's 429 becomes a :class:`UiPathRateLimitError`, a 400 a
-    :class:`UiPathBadRequestError`, …) so semantic handling is identical across
-    providers; an unmapped status becomes a generic :class:`UiPathAPIError`.
+    HTTP status is authoritative: ``exc`` and its cause chain are walked for an
+    ``httpx.Response`` first. When one is found, its status code is mapped onto
+    the matching :class:`UiPathAPIError` subclass (a provider's 429 becomes a
+    :class:`UiPathRateLimitError`, a 400 a :class:`UiPathBadRequestError`, …) so
+    semantic handling is identical across providers; an unmapped status becomes
+    a generic :class:`UiPathAPIError`. A real response outranks any client-side
+    classifier match elsewhere in the chain, which may be incidental
+    ``__context__`` rather than the actual failure.
 
-    When no response is available anywhere in the chain (client-side validation
-    errors, connection failures, plain exceptions) we cannot claim HTTP
-    semantics, so the :class:`UiPathError` root is returned — still catchable as
+    Only when no response is available anywhere in the chain (a genuinely
+    client-side rejection) is ``exc`` offered to each classifier in
+    ``_CLIENT_SIDE_CLASSIFIERS``; a match yields :class:`UiPathError` with a
+    stable semantic ``error_code`` and diagnostic ``detail``.
+
+    Otherwise the :class:`UiPathError` root is returned — still catchable as
     ``UiPathError``. ``UiPathError`` instances are returned unchanged.
 
     The returned exception is a *new* object; callers should chain it to the
@@ -358,6 +423,9 @@ def as_uipath_error(exc: Exception) -> UiPathError:
         response = getattr(err, "response", None)
         if isinstance(response, Response):
             return UiPathAPIError.from_response(response)
+    for classify in _CLIENT_SIDE_CLASSIFIERS:
+        if typed_error := classify(exc):
+            return typed_error
     return UiPathError(str(exc))
 
 
@@ -385,6 +453,7 @@ def wrap_provider_errors() -> Iterator[None]:
 
 __all__ = [
     "UiPathError",
+    "UiPathLLMErrorCode",
     "UiPathAPIError",
     "UiPathBadRequestError",
     "UiPathAuthenticationError",

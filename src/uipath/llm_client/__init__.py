@@ -45,6 +45,7 @@ from uipath.llm_client.utils.exceptions import (
     UiPathError,
     UiPathGatewayTimeoutError,
     UiPathInternalServerError,
+    UiPathLLMErrorCode,
     UiPathNotFoundError,
     UiPathPermissionDeniedError,
     UiPathRateLimitError,
@@ -71,6 +72,7 @@ __all__ = [
     "RetryConfig",
     # Exceptions
     "UiPathError",
+    "UiPathLLMErrorCode",
     "UiPathAPIError",
     "UiPathAuthenticationError",
     "UiPathBadGatewayError",

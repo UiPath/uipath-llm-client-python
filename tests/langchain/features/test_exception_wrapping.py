@@ -30,6 +30,7 @@ from uipath.llm_client.utils.exceptions import (
     UiPathBadRequestError,
     UiPathError,
     UiPathInternalServerError,
+    UiPathLLMErrorCode,
     UiPathPermissionDeniedError,
     UiPathRateLimitError,
 )
@@ -96,6 +97,19 @@ def _bedrock_exc(status: int):
     return lambda: UiPathAPIError.from_response(_resp(status))
 
 
+def _unsupported_mime_exc():
+    def build():
+        root = ValueError(
+            "Unsupported MIME type: application/octet-stream. Please refer to the "
+            "Bedrock Converse API documentation for supported formats."
+        )
+        err = RuntimeError("model invocation failed")
+        err.__cause__ = root
+        return err
+
+    return build
+
+
 # (provider, builds the native exc, expected pure UiPath type, already_uipath)
 PROVIDER_CASES: list[tuple[str, Callable[[], Exception], type[UiPathError], bool]] = [
     ("openai", _openai_exc(openai.BadRequestError, 400), UiPathBadRequestError, False),
@@ -118,6 +132,12 @@ PROVIDER_CASES: list[tuple[str, Callable[[], Exception], type[UiPathError], bool
     ("fireworks", _openai_exc(openai.AuthenticationError, 401), UiPathAuthenticationError, False),
     # bedrock: the shim already raised a pure UiPath error
     ("bedrock", _bedrock_exc(403), UiPathPermissionDeniedError, True),
+    (
+        "bedrock-unsupported-mime",
+        _unsupported_mime_exc(),
+        UiPathError,
+        False,
+    ),
 ]
 
 CASE_IDS = [f"{name}-{exp.__name__}" for name, _, exp, _ in PROVIDER_CASES]
@@ -211,6 +231,77 @@ class TestProviderErrorConversion:
         assert type(info.value) is UiPathError
         assert not isinstance(info.value, UiPathAPIError)
         assert isinstance(info.value.__cause__, ValueError)
+
+    def test_unsupported_mime_error_uses_public_semantic_code(self, llmgw_settings):
+        native = _unsupported_mime_exc()()
+        chat = _make_chat(llmgw_settings, native)
+
+        with pytest.raises(UiPathError) as info:
+            chat.invoke("hi")
+
+        assert type(info.value) is UiPathError
+        assert info.value.error_code == UiPathLLMErrorCode.UNSUPPORTED_MIME_TYPE
+        assert info.value.detail is not None
+        assert "application/octet-stream" in info.value.detail
+        assert "Bedrock Converse API" in info.value.detail
+        assert not hasattr(info.value, "status_code")
+
+    def test_http_status_wins_over_incidental_client_side_marker(self, llmgw_settings):
+        """A response-bearing error is not masked by an unrelated MIME marker
+        elsewhere in its cause/context chain."""
+        native = openai.AuthenticationError("unauthorized", response=_resp(401), body=None)
+        native.__context__ = ValueError("Unsupported MIME type: application/octet-stream.")
+        chat = _make_chat(llmgw_settings, native)
+
+        with pytest.raises(UiPathAuthenticationError) as info:
+            chat.invoke("hi")
+
+        assert type(info.value) is UiPathAuthenticationError
+        assert info.value.status_code == 401
+
+
+def test_semantic_fields_are_optional_on_uipath_error():
+    """UiPathError exposes optional semantic fields; API errors carry status."""
+    from uipath.llm_client.utils.exceptions import as_uipath_error
+
+    http = as_uipath_error(openai.BadRequestError("bad", response=_resp(400), body=None))
+    assert isinstance(http, UiPathAPIError)
+    assert http.status_code == 400
+    assert http.error_code is None
+    assert http.detail is None
+
+    client_side = as_uipath_error(_unsupported_mime_exc()())
+    assert not isinstance(client_side, UiPathAPIError)
+    assert not hasattr(client_side, "status_code")
+    assert client_side.error_code == UiPathLLMErrorCode.UNSUPPORTED_MIME_TYPE
+    assert client_side.detail is not None
+
+    root = as_uipath_error(ValueError("nope"))
+    assert not hasattr(root, "status_code")
+    assert root.error_code is None
+    assert root.detail == "nope"
+
+
+def test_client_side_classifier_registry_is_extension_point(monkeypatch):
+    """A registered classifier fires only when the chain carries no HTTP response;
+    a real response stays authoritative."""
+    from uipath.llm_client.utils import exceptions as exc_mod
+
+    def _classify(exc):
+        return UiPathError(error_code="CUSTOM", detail="custom") if "trip me" in str(exc) else None
+
+    monkeypatch.setattr(exc_mod, "_CLIENT_SIDE_CLASSIFIERS", [_classify], raising=True)
+
+    converted = exc_mod.as_uipath_error(ValueError("trip me"))
+    assert type(converted) is UiPathError
+    assert converted.error_code == "CUSTOM"
+    assert converted.detail == "custom"
+
+    # response-bearing error is mapped by status, not by the matching classifier
+    http = openai.BadRequestError("trip me", response=_resp(400), body=None)
+    assert type(exc_mod.as_uipath_error(http)) is UiPathBadRequestError
+
+    assert type(exc_mod.as_uipath_error(ValueError("nope"))) is UiPathError
 
 
 # ============================================================================

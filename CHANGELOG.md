@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_llm_client` (core package) will be documented in this file.
 
+## [1.16.3] - 2026-07-13
+
+### Fixed
+- Request headers that differ only by casing are now merged before authentication in the shared synchronous and asynchronous HTTPX clients. This prevents provider SDKs from emitting duplicate fields such as `User-Agent` and `user-agent`, while preserving intentionally repeated values that use the winning spelling.
+
 ## [1.16.2] - 2026-07-06
 
 ### Added

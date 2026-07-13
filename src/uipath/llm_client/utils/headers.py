@@ -1,7 +1,7 @@
 import contextvars
 from collections.abc import Mapping, Sequence
 
-from httpx import Headers
+from httpx import Headers, Request
 
 from uipath.llm_client.settings.base import UiPathAPIConfig
 from uipath.llm_client.settings.constants import ApiType, RoutingMode
@@ -18,6 +18,41 @@ _CAPTURED_RESPONSE_HEADERS: contextvars.ContextVar[dict[str, str] | None] = cont
 _DYNAMIC_REQUEST_HEADERS: contextvars.ContextVar[dict[str, str] | None] = contextvars.ContextVar(
     "_dynamic_request_headers", default=None
 )
+
+
+def merge_headers_case_insensitively(headers: Headers) -> Headers:
+    """Collapse differently-cased copies of a header with later-value-wins semantics.
+
+    Header mappings are sometimes composed as plain dictionaries by provider SDKs.
+    Since dictionaries compare string keys case-sensitively, that can produce raw
+    duplicates such as ``User-Agent`` and ``user-agent`` even though HTTP field names
+    are case-insensitive. Preserve deliberately repeated fields that use the exact same
+    spelling, but merge casing variants as a dictionary merge should have done.
+    """
+    raw_headers = headers.raw
+    spellings: dict[bytes, set[bytes]] = {}
+    for name, _ in raw_headers:
+        spellings.setdefault(name.lower(), set()).add(name)
+
+    collisions = {name for name, variants in spellings.items() if len(variants) > 1}
+    if not collisions:
+        return headers
+
+    winning_spellings = {
+        name.lower(): name for name, _ in raw_headers if name.lower() in collisions
+    }
+    return Headers(
+        [
+            (name, value)
+            for name, value in raw_headers
+            if name.lower() not in collisions or winning_spellings[name.lower()] == name
+        ]
+    )
+
+
+def merge_request_headers_case_insensitively(request: Request) -> None:
+    """Merge differently-cased header copies on an HTTPX request in place."""
+    request.headers = merge_headers_case_insensitively(request.headers)
 
 
 def get_captured_response_headers() -> dict[str, str]:

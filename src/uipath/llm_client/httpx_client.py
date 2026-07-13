@@ -55,6 +55,7 @@ from uipath.llm_client.utils.headers import (
     build_routing_headers,
     extract_matching_headers,
     get_dynamic_request_headers,
+    merge_request_headers_case_insensitively,
     set_captured_response_headers,
 )
 from uipath.llm_client.utils.logging import LoggingConfig
@@ -71,40 +72,6 @@ _UNSET: Any = object()
 # Default applied when ``max_retries`` is left as ``None``. Callers can still
 # opt out by passing ``max_retries=0`` explicitly.
 _DEFAULT_MAX_RETRIES: typing.Final[int] = 3
-
-
-def _merge_headers_case_insensitively(headers: Headers) -> Headers:
-    """Collapse differently-cased copies of a header with later-value-wins semantics.
-
-    Header mappings are sometimes composed as plain dictionaries by provider SDKs.
-    Since dictionaries compare string keys case-sensitively, that can produce raw
-    duplicates such as ``User-Agent`` and ``user-agent`` even though HTTP field names
-    are case-insensitive. Preserve deliberately repeated fields that use the exact same
-    spelling, but merge casing variants as a dictionary merge should have done.
-    """
-    raw_headers = headers.raw
-    spellings: dict[bytes, set[bytes]] = {}
-    for name, _ in raw_headers:
-        spellings.setdefault(name.lower(), set()).add(name)
-
-    collisions = {name for name, variants in spellings.items() if len(variants) > 1}
-    if not collisions:
-        return headers
-
-    winning_spellings = {
-        name.lower(): name for name, _ in raw_headers if name.lower() in collisions
-    }
-    return Headers(
-        [
-            (name, value)
-            for name, value in raw_headers
-            if name.lower() not in collisions or winning_spellings[name.lower()] == name
-        ]
-    )
-
-
-def _merge_request_headers_case_insensitively(request: Request) -> None:
-    request.headers = _merge_headers_case_insensitively(request.headers)
 
 
 class UiPathHttpxClient(Client):
@@ -298,7 +265,7 @@ class UiPathHttpxClient(Client):
         dynamic_headers = get_dynamic_request_headers()
         if dynamic_headers:
             request.headers.update(dynamic_headers)
-        _merge_request_headers_case_insensitively(request)
+        merge_request_headers_case_insensitively(request)
         response = super().send(request, stream=stream, **kwargs)
         if self._captured_headers:
             captured = extract_matching_headers(response.headers, self._captured_headers)
@@ -460,7 +427,7 @@ class UiPathHttpxAsyncClient(AsyncClient):
         dynamic_headers = get_dynamic_request_headers()
         if dynamic_headers:
             request.headers.update(dynamic_headers)
-        _merge_request_headers_case_insensitively(request)
+        merge_request_headers_case_insensitively(request)
         response = await super().send(request, stream=stream, **kwargs)
         if self._captured_headers:
             captured = extract_matching_headers(response.headers, self._captured_headers)

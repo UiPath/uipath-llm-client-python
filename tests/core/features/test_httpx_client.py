@@ -23,55 +23,6 @@ class RecordingHeaderAuth(Auth):
         yield request
 
 
-def test_case_insensitive_header_merge_keeps_later_value():
-    from uipath.llm_client.httpx_client import _merge_headers_case_insensitively
-
-    headers = Headers(
-        [
-            (b"User-Agent", b"provider-sdk"),
-            (b"user-agent", b"custom-httpx-client"),
-        ]
-    )
-
-    merged = _merge_headers_case_insensitively(headers)
-
-    assert merged.raw == [(b"user-agent", b"custom-httpx-client")]
-
-
-def test_case_insensitive_header_merge_preserves_intentional_repeats():
-    from uipath.llm_client.httpx_client import _merge_headers_case_insensitively
-
-    headers = Headers(
-        [
-            (b"x-test-value", b"first"),
-            (b"x-test-value", b"second"),
-        ]
-    )
-
-    merged = _merge_headers_case_insensitively(headers)
-
-    assert merged.raw == headers.raw
-
-
-def test_case_insensitive_header_merge_preserves_repeated_winning_spelling():
-    from uipath.llm_client.httpx_client import _merge_headers_case_insensitively
-
-    headers = Headers(
-        [
-            (b"X-Test-Value", b"losing-variant"),
-            (b"x-test-value", b"first"),
-            (b"x-test-value", b"second"),
-        ]
-    )
-
-    merged = _merge_headers_case_insensitively(headers)
-
-    assert merged.raw == [
-        (b"x-test-value", b"first"),
-        (b"x-test-value", b"second"),
-    ]
-
-
 class TestUiPathHttpxClient:
     """Tests for UiPathHttpxClient."""
 

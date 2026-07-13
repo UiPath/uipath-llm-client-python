@@ -6,6 +6,55 @@ from uipath.llm_client.settings import UiPathAPIConfig
 from uipath.llm_client.settings.constants import ApiType, RoutingMode
 
 
+def test_case_insensitive_header_merge_keeps_later_value():
+    from uipath.llm_client.utils.headers import merge_headers_case_insensitively
+
+    headers = Headers(
+        [
+            (b"User-Agent", b"provider-sdk"),
+            (b"user-agent", b"custom-httpx-client"),
+        ]
+    )
+
+    merged = merge_headers_case_insensitively(headers)
+
+    assert merged.raw == [(b"user-agent", b"custom-httpx-client")]
+
+
+def test_case_insensitive_header_merge_preserves_intentional_repeats():
+    from uipath.llm_client.utils.headers import merge_headers_case_insensitively
+
+    headers = Headers(
+        [
+            (b"x-test-value", b"first"),
+            (b"x-test-value", b"second"),
+        ]
+    )
+
+    merged = merge_headers_case_insensitively(headers)
+
+    assert merged.raw == headers.raw
+
+
+def test_case_insensitive_header_merge_preserves_repeated_winning_spelling():
+    from uipath.llm_client.utils.headers import merge_headers_case_insensitively
+
+    headers = Headers(
+        [
+            (b"X-Test-Value", b"losing-variant"),
+            (b"x-test-value", b"first"),
+            (b"x-test-value", b"second"),
+        ]
+    )
+
+    merged = merge_headers_case_insensitively(headers)
+
+    assert merged.raw == [
+        (b"x-test-value", b"first"),
+        (b"x-test-value", b"second"),
+    ]
+
+
 class TestHeaderUtilities:
     """Tests for extract_matching_headers and context var functions."""
 

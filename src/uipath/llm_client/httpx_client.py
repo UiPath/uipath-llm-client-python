@@ -55,6 +55,7 @@ from uipath.llm_client.utils.headers import (
     build_routing_headers,
     extract_matching_headers,
     get_dynamic_request_headers,
+    merge_request_headers_case_insensitively,
     set_captured_response_headers,
 )
 from uipath.llm_client.utils.logging import LoggingConfig
@@ -264,6 +265,7 @@ class UiPathHttpxClient(Client):
         dynamic_headers = get_dynamic_request_headers()
         if dynamic_headers:
             request.headers.update(dynamic_headers)
+        merge_request_headers_case_insensitively(request)
         response = super().send(request, stream=stream, **kwargs)
         if self._captured_headers:
             captured = extract_matching_headers(response.headers, self._captured_headers)
@@ -425,6 +427,7 @@ class UiPathHttpxAsyncClient(AsyncClient):
         dynamic_headers = get_dynamic_request_headers()
         if dynamic_headers:
             request.headers.update(dynamic_headers)
+        merge_request_headers_case_insensitively(request)
         response = await super().send(request, stream=stream, **kwargs)
         if self._captured_headers:
             captured = extract_matching_headers(response.headers, self._captured_headers)

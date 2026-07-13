@@ -2,7 +2,8 @@
 
 from unittest.mock import MagicMock, patch
 
-from httpx import Client, Headers, Request, Response
+import pytest
+from httpx import Auth, Client, Headers, MockTransport, Request, Response
 
 from uipath.llm_client.settings import UiPathAPIConfig
 from uipath.llm_client.settings.constants import ApiType, RoutingMode
@@ -10,6 +11,65 @@ from uipath.llm_client.utils.retry import (
     RetryableAsyncHTTPTransport,
     RetryableHTTPTransport,
 )
+
+
+class RecordingHeaderAuth(Auth):
+    def __init__(self):
+        self.signed_user_agents = []
+
+    def auth_flow(self, request):
+        self.signed_user_agents = request.headers.get_list("user-agent")
+        request.headers["x-signed-user-agents"] = "|".join(self.signed_user_agents)
+        yield request
+
+
+def test_case_insensitive_header_merge_keeps_later_value():
+    from uipath.llm_client.httpx_client import _merge_headers_case_insensitively
+
+    headers = Headers(
+        [
+            (b"User-Agent", b"provider-sdk"),
+            (b"user-agent", b"custom-httpx-client"),
+        ]
+    )
+
+    merged = _merge_headers_case_insensitively(headers)
+
+    assert merged.raw == [(b"user-agent", b"custom-httpx-client")]
+
+
+def test_case_insensitive_header_merge_preserves_intentional_repeats():
+    from uipath.llm_client.httpx_client import _merge_headers_case_insensitively
+
+    headers = Headers(
+        [
+            (b"x-test-value", b"first"),
+            (b"x-test-value", b"second"),
+        ]
+    )
+
+    merged = _merge_headers_case_insensitively(headers)
+
+    assert merged.raw == headers.raw
+
+
+def test_case_insensitive_header_merge_preserves_repeated_winning_spelling():
+    from uipath.llm_client.httpx_client import _merge_headers_case_insensitively
+
+    headers = Headers(
+        [
+            (b"X-Test-Value", b"losing-variant"),
+            (b"x-test-value", b"first"),
+            (b"x-test-value", b"second"),
+        ]
+    )
+
+    merged = _merge_headers_case_insensitively(headers)
+
+    assert merged.raw == [
+        (b"x-test-value", b"first"),
+        (b"x-test-value", b"second"),
+    ]
 
 
 class TestUiPathHttpxClient:
@@ -239,6 +299,67 @@ class TestUiPathHttpxClientSend:
             assert sent_request.headers["X-UiPath-Streaming-Enabled"] == "true"
         client.close()
 
+    def test_case_variant_headers_are_merged_before_send(self):
+        from uipath.llm_client.httpx_client import UiPathHttpxClient
+
+        sent_requests = []
+
+        def handler(request: Request) -> Response:
+            sent_requests.append(request)
+            return Response(200, request=request)
+
+        client = UiPathHttpxClient(
+            base_url="https://example.com",
+            transport=MockTransport(handler),
+        )
+        request = Request(
+            "POST",
+            "https://example.com/test",
+            headers=Headers(
+                [
+                    (b"User-Agent", b"provider-sdk"),
+                    (b"user-agent", b"custom-httpx-client"),
+                ]
+            ),
+        )
+
+        client.send(request)
+
+        sent_request = sent_requests[0]
+        assert sent_request.headers.get_list("user-agent") == ["custom-httpx-client"]
+        client.close()
+
+    def test_case_variant_headers_are_merged_before_auth(self):
+        from uipath.llm_client.httpx_client import UiPathHttpxClient
+
+        auth = RecordingHeaderAuth()
+
+        def handler(request: Request) -> Response:
+            assert request.headers.get_list("user-agent") == auth.signed_user_agents
+            assert request.headers["x-signed-user-agents"] == "custom-httpx-client"
+            return Response(200, request=request)
+
+        client = UiPathHttpxClient(
+            auth=auth,
+            base_url="https://example.com",
+            transport=MockTransport(handler),
+        )
+        request = Request(
+            "POST",
+            "https://example.com/test",
+            headers=Headers(
+                [
+                    (b"User-Agent", b"provider-sdk"),
+                    (b"user-agent", b"custom-httpx-client"),
+                ]
+            ),
+        )
+
+        client.send(request)
+
+        assert auth.signed_user_agents == ["custom-httpx-client"]
+        client.close()
+
     def test_url_freezing_when_enabled(self):
         from uipath.llm_client.httpx_client import UiPathHttpxClient
 
@@ -314,3 +435,67 @@ class TestUiPathHttpxClientSend:
             # raise_for_status should have been replaced by patch_raise_for_status
             assert result.raise_for_status is not original_raise
         client.close()
+
+
+class TestUiPathHttpxAsyncClientSend:
+    @pytest.mark.asyncio
+    async def test_case_variant_headers_are_merged_before_send(self):
+        from uipath.llm_client.httpx_client import UiPathHttpxAsyncClient
+
+        sent_requests = []
+
+        async def handler(request: Request) -> Response:
+            sent_requests.append(request)
+            return Response(200, request=request)
+
+        client = UiPathHttpxAsyncClient(
+            base_url="https://example.com",
+            transport=MockTransport(handler),
+        )
+        request = Request(
+            "POST",
+            "https://example.com/test",
+            headers=Headers(
+                [
+                    (b"User-Agent", b"provider-sdk"),
+                    (b"user-agent", b"custom-httpx-client"),
+                ]
+            ),
+        )
+        await client.send(request)
+
+        sent_request = sent_requests[0]
+        assert sent_request.headers.get_list("user-agent") == ["custom-httpx-client"]
+        await client.aclose()
+
+    @pytest.mark.asyncio
+    async def test_case_variant_headers_are_merged_before_auth(self):
+        from uipath.llm_client.httpx_client import UiPathHttpxAsyncClient
+
+        auth = RecordingHeaderAuth()
+
+        async def handler(request: Request) -> Response:
+            assert request.headers.get_list("user-agent") == auth.signed_user_agents
+            assert request.headers["x-signed-user-agents"] == "custom-httpx-client"
+            return Response(200, request=request)
+
+        client = UiPathHttpxAsyncClient(
+            auth=auth,
+            base_url="https://example.com",
+            transport=MockTransport(handler),
+        )
+        request = Request(
+            "POST",
+            "https://example.com/test",
+            headers=Headers(
+                [
+                    (b"User-Agent", b"provider-sdk"),
+                    (b"user-agent", b"custom-httpx-client"),
+                ]
+            ),
+        )
+
+        await client.send(request)
+
+        assert auth.signed_user_agents == ["custom-httpx-client"]
+        await client.aclose()

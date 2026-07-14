@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_langchain_client` will be documented in this file.
 
+## [1.17.0] - 2026-07-14
+
+### Changed
+- Default `max_retries` on `UiPathBaseLLMClient` raised from 3 to 5 for parity with the legacy uipath-langchain-python chat-client retryers. Requires `uipath-llm-client>=1.17.0`, which also restores the legacy backoff window (5s initial / 120s cap), honors Retry-After on any status, and retries 524 and connection-level failures.
+
 ## [1.16.1] - 2026-07-03
 
 ### Fixed

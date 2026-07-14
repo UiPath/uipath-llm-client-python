@@ -108,6 +108,10 @@ class UiPathAPIError(UiPathError, HTTPStatusError):
         body: The response body (parsed JSON dict or raw string).
         request: The original httpx.Request object.
         response: The original httpx.Response object.
+        retry_after: Seconds to wait before retrying (from the Retry-After /
+            x-retry-after header), or None. A server can attach Retry-After to
+            any status code, so this lives on the base class — the retry layer
+            treats its presence as an explicit retry request.
     """
 
     def __init__(
@@ -125,6 +129,61 @@ class UiPathAPIError(UiPathError, HTTPStatusError):
         self.status_code = response.status_code
         self.message = message
         self.body = body
+
+    @property
+    def retry_after(self) -> float | None:
+        """Get the retry-after value in seconds, if available.
+
+        Parsed lazily from ``self.response`` (the Retry-After / x-retry-after
+        header).
+        """
+        response = getattr(self, "response", None)
+        if not isinstance(response, Response):
+            return None
+        return self._parse_retry_after(response)
+
+    @staticmethod
+    def _parse_retry_after(response: Response) -> float | None:
+        """Parse the Retry-After or x-retry-after header from the response.
+
+        The Retry-After header can be either:
+        - A number of seconds (e.g., "120")
+        - An HTTP-date (e.g., "Wed, 21 Oct 2015 07:28:00 GMT")
+
+        Args:
+            response: The httpx Response object.
+
+        Returns:
+            The number of seconds to wait, or None if not present/parseable.
+        """
+        import time
+        from datetime import datetime, timezone
+
+        # Check both header variants (case-insensitive in httpx)
+        retry_after_value = response.headers.get("retry-after")
+        if retry_after_value is None:
+            retry_after_value = response.headers.get("x-retry-after")
+
+        if retry_after_value is None:
+            return None
+
+        # Try parsing as integer (seconds)
+        try:
+            return float(retry_after_value)
+        except ValueError:
+            pass
+
+        # Try parsing as HTTP-date (RFC 7231 IMF-fixdate format)
+        # Example: "Wed, 21 Oct 2015 07:28:00 GMT"
+        try:
+            retry_date = datetime.strptime(retry_after_value, "%a, %d %b %Y %H:%M:%S GMT")
+            retry_date = retry_date.replace(tzinfo=timezone.utc)
+            delay = retry_date.timestamp() - time.time()
+            return max(0.0, delay)  # Don't return negative delays
+        except ValueError:
+            pass
+
+        return None
 
     def __str__(self) -> str:
         return (
@@ -219,65 +278,11 @@ class UiPathRateLimitError(UiPathAPIError):
     """HTTP 429 Too Many Requests error.
 
     Attributes:
-        retry_after: Seconds to wait before retrying (from Retry-After header), or None.
+        retry_after: Seconds to wait before retrying (from Retry-After header),
+            or None. Inherited from :class:`UiPathAPIError`.
     """
 
     status_code: Literal[429] = 429  # pyright: ignore[reportIncompatibleVariableOverride]
-
-    @property
-    def retry_after(self) -> float | None:
-        """Get the retry-after value in seconds, if available.
-
-        Parsed lazily from ``self.response`` (the Retry-After / x-retry-after
-        header).
-        """
-        response = getattr(self, "response", None)
-        if not isinstance(response, Response):
-            return None
-        return self._parse_retry_after(response)
-
-    @staticmethod
-    def _parse_retry_after(response: Response) -> float | None:
-        """Parse the Retry-After or x-retry-after header from the response.
-
-        The Retry-After header can be either:
-        - A number of seconds (e.g., "120")
-        - An HTTP-date (e.g., "Wed, 21 Oct 2015 07:28:00 GMT")
-
-        Args:
-            response: The httpx Response object.
-
-        Returns:
-            The number of seconds to wait, or None if not present/parseable.
-        """
-        import time
-        from datetime import datetime, timezone
-
-        # Check both header variants (case-insensitive in httpx)
-        retry_after_value = response.headers.get("retry-after")
-        if retry_after_value is None:
-            retry_after_value = response.headers.get("x-retry-after")
-
-        if retry_after_value is None:
-            return None
-
-        # Try parsing as integer (seconds)
-        try:
-            return float(retry_after_value)
-        except ValueError:
-            pass
-
-        # Try parsing as HTTP-date (RFC 7231 IMF-fixdate format)
-        # Example: "Wed, 21 Oct 2015 07:28:00 GMT"
-        try:
-            retry_date = datetime.strptime(retry_after_value, "%a, %d %b %Y %H:%M:%S GMT")
-            retry_date = retry_date.replace(tzinfo=timezone.utc)
-            delay = retry_date.timestamp() - time.time()
-            return max(0.0, delay)  # Don't return negative delays
-        except ValueError:
-            pass
-
-        return None
 
 
 class UiPathInternalServerError(UiPathAPIError):
@@ -304,6 +309,12 @@ class UiPathGatewayTimeoutError(UiPathAPIError):
     status_code: Literal[504] = 504  # pyright: ignore[reportIncompatibleVariableOverride]
 
 
+class UiPathOriginTimeoutError(UiPathAPIError):
+    """HTTP 524 A Timeout Occurred (Cloudflare origin timeout) error."""
+
+    status_code: Literal[524] = 524  # pyright: ignore[reportIncompatibleVariableOverride]
+
+
 class UiPathTooManyRequestsError(UiPathAPIError):
     """HTTP 529 Too Many Requests (Anthropic overload) error."""
 
@@ -324,6 +335,7 @@ _STATUS_CODE_TO_EXCEPTION: dict[int, type[UiPathAPIError]] = {
     502: UiPathBadGatewayError,
     503: UiPathServiceUnavailableError,
     504: UiPathGatewayTimeoutError,
+    524: UiPathOriginTimeoutError,
     529: UiPathTooManyRequestsError,
 }
 
@@ -468,6 +480,7 @@ __all__ = [
     "UiPathBadGatewayError",
     "UiPathServiceUnavailableError",
     "UiPathGatewayTimeoutError",
+    "UiPathOriginTimeoutError",
     "UiPathTooManyRequestsError",
     "as_uipath_error",
     "wrap_provider_errors",

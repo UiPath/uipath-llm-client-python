@@ -11,6 +11,7 @@ from uipath.llm_client.utils.exceptions import (
     UiPathBadGatewayError,
     UiPathGatewayTimeoutError,
     UiPathInternalServerError,
+    UiPathOriginTimeoutError,
     UiPathRateLimitError,
     UiPathRequestTimeoutError,
     UiPathServiceUnavailableError,
@@ -27,7 +28,9 @@ _NO_DELAY_CONFIG: RetryConfig = {"initial_delay": 0, "max_delay": 0, "jitter": 0
 
 
 class TestDefaultRetryOnExceptions:
-    """Pins the default retry set so HTTP 408/429/502/503/504/529 stay retryable."""
+    """Pins the default retry set: HTTP 408/429/502/503/504/524/529 plus
+    connection-level failures, matching the legacy uipath-langchain-python
+    chat-client retryers."""
 
     def test_default_set_covers_required_status_codes(self):
         assert set(_DEFAULT_RETRY_ON_EXCEPTIONS) == {
@@ -36,7 +39,11 @@ class TestDefaultRetryOnExceptions:
             UiPathBadGatewayError,
             UiPathServiceUnavailableError,
             UiPathGatewayTimeoutError,
+            UiPathOriginTimeoutError,
             UiPathTooManyRequestsError,
+            httpx.ConnectError,
+            httpx.ConnectTimeout,
+            httpx.ReadTimeout,
         }
 
     def test_internal_server_error_is_not_retried_by_default(self):
@@ -166,15 +173,33 @@ class TestWaitRetryAfterWithFallback:
         wait_time = strategy(retry_state)
         assert wait_time == 10.0  # Capped at max
 
+    def test_uses_retry_after_from_any_api_error(self):
+        """Retry-After is honored for any status error, not just 429 (legacy parity)."""
+        from uipath.llm_client.utils.retry import wait_retry_after_with_fallback
+
+        strategy = wait_retry_after_with_fallback(initial=1, max=60, exp_base=2, jitter=0)
+
+        mock_outcome = MagicMock()
+        mock_outcome.failed = True
+        exc = MagicMock(spec=UiPathServiceUnavailableError)
+        exc.retry_after = 7.0
+        mock_outcome.exception.return_value = exc
+
+        retry_state = MagicMock()
+        retry_state.outcome = mock_outcome
+
+        assert strategy(retry_state) == 7.0
+
     def test_fallback_to_exponential_backoff(self):
         from uipath.llm_client.utils.retry import wait_retry_after_with_fallback
 
         strategy = wait_retry_after_with_fallback(initial=1, max=60, exp_base=2, jitter=0)
 
-        # Non-rate-limit error
+        # Error without a Retry-After hint
         mock_outcome = MagicMock()
         mock_outcome.failed = True
         exc = MagicMock(spec=UiPathInternalServerError)
+        exc.retry_after = None
         mock_outcome.exception.return_value = exc
 
         retry_state = MagicMock()
@@ -345,3 +370,95 @@ class TestRetryOn504EndToEnd:
 
         assert calls == 3
         assert response.status_code == 504
+
+
+class TestLegacyParityEndToEnd:
+    """End-to-end coverage for the legacy-parity retry behaviors: default
+    5-attempt budget, Retry-After forcing retries on any status, 524, and
+    connection-error retries."""
+
+    @staticmethod
+    def _counting_handler(status: int, headers: dict[str, str] | None = None):
+        calls = {"n": 0}
+
+        def handler(self: httpx.HTTPTransport, request: httpx.Request) -> httpx.Response:
+            calls["n"] += 1
+            return httpx.Response(status, content=b"{}", headers=headers, request=request)
+
+        return calls, handler
+
+    def test_default_budget_is_5_attempts(self):
+        calls, handler = self._counting_handler(504)
+        client = UiPathHttpxClient(base_url="https://example.com", retry_config=_NO_DELAY_CONFIG)
+        try:
+            with patch.object(httpx.HTTPTransport, "handle_request", handler):
+                response = client.post("/anything", json={})
+        finally:
+            client.close()
+
+        assert calls["n"] == 5
+        assert response.status_code == 504
+
+    def test_retry_after_forces_retry_on_non_retryable_status(self):
+        """A 403 carrying Retry-After is an explicit server retry request."""
+        calls, handler = self._counting_handler(403, headers={"Retry-After": "0"})
+        client = UiPathHttpxClient(
+            base_url="https://example.com", max_retries=3, retry_config=_NO_DELAY_CONFIG
+        )
+        try:
+            with patch.object(httpx.HTTPTransport, "handle_request", handler):
+                response = client.post("/anything", json={})
+        finally:
+            client.close()
+
+        assert calls["n"] == 3
+        assert response.status_code == 403
+
+    def test_plain_403_is_not_retried(self):
+        calls, handler = self._counting_handler(403)
+        client = UiPathHttpxClient(
+            base_url="https://example.com", max_retries=3, retry_config=_NO_DELAY_CONFIG
+        )
+        try:
+            with patch.object(httpx.HTTPTransport, "handle_request", handler):
+                response = client.post("/anything", json={})
+        finally:
+            client.close()
+
+        assert calls["n"] == 1
+        assert response.status_code == 403
+
+    def test_524_is_retried(self):
+        calls, handler = self._counting_handler(524)
+        client = UiPathHttpxClient(
+            base_url="https://example.com", max_retries=3, retry_config=_NO_DELAY_CONFIG
+        )
+        try:
+            with patch.object(httpx.HTTPTransport, "handle_request", handler):
+                response = client.post("/anything", json={})
+        finally:
+            client.close()
+
+        assert calls["n"] == 3
+        assert response.status_code == 524
+
+    def test_connect_error_is_retried_then_raised(self):
+        calls = {"n": 0}
+
+        def raise_connect_error(
+            self: httpx.HTTPTransport, request: httpx.Request
+        ) -> httpx.Response:
+            calls["n"] += 1
+            raise httpx.ConnectError("connection refused", request=request)
+
+        client = UiPathHttpxClient(
+            base_url="https://example.com", max_retries=3, retry_config=_NO_DELAY_CONFIG
+        )
+        try:
+            with patch.object(httpx.HTTPTransport, "handle_request", raise_connect_error):
+                with pytest.raises(httpx.ConnectError):
+                    client.post("/anything", json={})
+        finally:
+            client.close()
+
+        assert calls["n"] == 3

@@ -41,9 +41,9 @@ class TestDefaultRetryOnExceptions:
             UiPathGatewayTimeoutError,
             UiPathOriginTimeoutError,
             UiPathTooManyRequestsError,
+            httpx.TimeoutException,
             httpx.ConnectError,
-            httpx.ConnectTimeout,
-            httpx.ReadTimeout,
+            httpx.RemoteProtocolError,
         }
 
     def test_internal_server_error_is_not_retried_by_default(self):
@@ -457,6 +457,49 @@ class TestLegacyParityEndToEnd:
         try:
             with patch.object(httpx.HTTPTransport, "handle_request", raise_connect_error):
                 with pytest.raises(httpx.ConnectError):
+                    client.post("/anything", json={})
+        finally:
+            client.close()
+
+        assert calls["n"] == 3
+
+    def test_remote_protocol_error_is_retried_then_raised(self):
+        """Connection reset mid-exchange (legacy Vertex retryer parity)."""
+        calls = {"n": 0}
+
+        def raise_remote_protocol_error(
+            self: httpx.HTTPTransport, request: httpx.Request
+        ) -> httpx.Response:
+            calls["n"] += 1
+            raise httpx.RemoteProtocolError("server disconnected", request=request)
+
+        client = UiPathHttpxClient(
+            base_url="https://example.com", max_retries=3, retry_config=_NO_DELAY_CONFIG
+        )
+        try:
+            with patch.object(httpx.HTTPTransport, "handle_request", raise_remote_protocol_error):
+                with pytest.raises(httpx.RemoteProtocolError):
+                    client.post("/anything", json={})
+        finally:
+            client.close()
+
+        assert calls["n"] == 3
+
+    def test_pool_timeout_is_retried_then_raised(self):
+        """PoolTimeout is covered via the TimeoutException base class
+        (legacy Vertex retryer retried all httpx timeouts)."""
+        calls = {"n": 0}
+
+        def raise_pool_timeout(self: httpx.HTTPTransport, request: httpx.Request) -> httpx.Response:
+            calls["n"] += 1
+            raise httpx.PoolTimeout("pool exhausted", request=request)
+
+        client = UiPathHttpxClient(
+            base_url="https://example.com", max_retries=3, retry_config=_NO_DELAY_CONFIG
+        )
+        try:
+            with patch.object(httpx.HTTPTransport, "handle_request", raise_pool_timeout):
+                with pytest.raises(httpx.PoolTimeout):
                     client.post("/anything", json={})
         finally:
             client.close()

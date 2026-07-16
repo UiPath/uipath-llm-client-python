@@ -37,11 +37,11 @@ from typing import Any, Callable, NotRequired
 from httpx import (
     AsyncHTTPTransport,
     ConnectError,
-    ConnectTimeout,
     HTTPTransport,
-    ReadTimeout,
+    RemoteProtocolError,
     Request,
     Response,
+    TimeoutException,
 )
 from tenacity import (
     AsyncRetrying,
@@ -71,9 +71,11 @@ from uipath.llm_client.utils.exceptions import (
 # Default retry configuration values, aligned with the legacy
 # uipath-langchain-python chat-client retryers (BedrockRetryer) they replaced.
 # Status codes retried by default: 408, 429, 502, 503, 504, 524, 529.
-# Connection-level failures (connect errors, connect/read timeouts — the httpx
-# equivalents of botocore's EndpointConnectionError / ConnectTimeoutError /
-# ReadTimeoutError) are retried too. Independently of status, any error
+# Connection-level failures are retried too, matching the union of the legacy
+# providers: httpx.TimeoutException (connect/read/write/pool timeouts — covers
+# botocore's ConnectTimeoutError / ReadTimeoutError equivalents), ConnectError
+# (botocore EndpointConnectionError equivalent), and RemoteProtocolError
+# (connection reset mid-exchange). Independently of status, any error
 # response carrying a Retry-After header is treated as an explicit server
 # request to retry (see _build_retryer).
 _DEFAULT_RETRY_ON_EXCEPTIONS: tuple[type[Exception], ...] = (
@@ -84,9 +86,9 @@ _DEFAULT_RETRY_ON_EXCEPTIONS: tuple[type[Exception], ...] = (
     UiPathGatewayTimeoutError,
     UiPathOriginTimeoutError,
     UiPathTooManyRequestsError,
+    TimeoutException,
     ConnectError,
-    ConnectTimeout,
-    ReadTimeout,
+    RemoteProtocolError,
 )
 _DEFAULT_INITIAL_DELAY: float = 5.0
 _DEFAULT_MAX_DELAY: float = 120.0
@@ -160,9 +162,9 @@ class RetryConfig(TypedDict):
     Attributes:
         retry_on_exceptions: Tuple of exception types to retry on.
             Defaults to the typed exceptions for HTTP 408, 429, 502, 503, 504,
-            524, 529 plus httpx connection failures (``ConnectError``,
-            ``ConnectTimeout``, ``ReadTimeout``). Independently of this tuple,
-            any error response carrying a Retry-After header is retried.
+            524, 529 plus httpx connection failures (``TimeoutException``,
+            ``ConnectError``, ``RemoteProtocolError``). Independently of this
+            tuple, any error response carrying a Retry-After header is retried.
         initial_delay: Initial delay in seconds before first retry.
             Defaults to 5.0.
         max_delay: Maximum delay in seconds between retries.

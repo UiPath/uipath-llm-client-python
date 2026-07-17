@@ -2,6 +2,18 @@
 
 All notable changes to `uipath_llm_client` (core package) will be documented in this file.
 
+## [1.17.0] - 2026-07-14
+
+### Changed
+- Restored retry parity with the legacy uipath-langchain-python chat-client retryers (`BedrockRetryer`) that the shared transports replaced. Under throttling that outlasted the previous budget, runs that the legacy client absorbed silently were now failing.
+  - Default retry budget is now **5 attempts** (was 3) with exponential backoff starting at **5s** (was 2s) capped at **120s** (was 60s) — waits of ~5/10/20/40s, an absorption window of roughly 75s instead of ~6s.
+  - **Retry-After / x-retry-after is honored on any error status**, not just 429: the header caps the wait for every `UiPathAPIError`, and its presence forces a retry even for otherwise non-retryable statuses (an explicit server retry request). `retry_after` moved from `UiPathRateLimitError` up to `UiPathAPIError`.
+  - **HTTP 524** (Cloudflare origin timeout) is retryable again via the new `UiPathOriginTimeoutError`; 529 remains retryable.
+  - **Connection-level failures are retried**: `httpx.TimeoutException` (connect/read/write/pool timeouts), `httpx.ConnectError`, and `httpx.RemoteProtocolError` — the union of what the legacy Bedrock (botocore timeout/connection errors) and Vertex (httpx timeouts, connect errors, remote-protocol errors) retryers handled.
+
+### Added
+- `UiPathOriginTimeoutError` (HTTP 524), exported from `uipath.llm_client`.
+
 ## [1.16.3] - 2026-07-13
 
 ### Fixed

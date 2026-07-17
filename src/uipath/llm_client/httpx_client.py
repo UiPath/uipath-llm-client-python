@@ -71,7 +71,7 @@ _UNSET: Any = object()
 
 # Default applied when ``max_retries`` is left as ``None``. Callers can still
 # opt out by passing ``max_retries=0`` explicitly.
-_DEFAULT_MAX_RETRIES: typing.Final[int] = 3
+_DEFAULT_MAX_RETRIES: typing.Final[int] = 5
 
 
 class UiPathHttpxClient(Client):
@@ -79,7 +79,7 @@ class UiPathHttpxClient(Client):
 
     Extends httpx.Client with:
     - Default UiPath headers (server timeout, full 4xx responses)
-    - Automatic retry on transient failures (429, 5xx)
+    - Automatic retry on transient failures (429, 5xx, Retry-After hints, connection errors)
     - Request/response duration logging
     - Streaming header injection (X-UiPath-Streaming-Enabled)
     - Optional URL freezing to prevent vendor SDK mutations
@@ -140,7 +140,7 @@ class UiPathHttpxClient(Client):
             captured_headers: Case-insensitive header name prefixes to capture from
                 responses. Captured headers are stored in a ContextVar and can be
                 retrieved with get_captured_response_headers(). Defaults to ("x-uipath-",).
-            max_retries: Maximum retry attempts for failed requests. Defaults to 3
+            max_retries: Maximum retry attempts for failed requests. Defaults to 5
                 when left as ``None``. Pass ``0`` to disable retries explicitly.
             retry_config: Custom retry configuration (backoff, retryable status codes).
             logger: Logger instance for request/response logging.
@@ -279,7 +279,7 @@ class UiPathHttpxAsyncClient(AsyncClient):
 
     Extends httpx.AsyncClient with:
     - Default UiPath headers (server timeout, full 4xx responses)
-    - Automatic retry on transient failures (429, 5xx)
+    - Automatic retry on transient failures (429, 5xx, Retry-After hints, connection errors)
     - Request/response duration logging
     - Streaming header injection (X-UiPath-Streaming-Enabled)
     - Optional URL freezing to prevent vendor SDK mutations

@@ -1,9 +1,10 @@
 """Tests pinning the default ``max_retries`` value on ``UiPathBaseLLMClient``.
 
-The default must stay at 3 so that every LangChain chat/embedding client built
-on top of ``UiPathBaseLLMClient`` (OpenAI, Anthropic, Bedrock, Vertex AI, etc.)
-retries transient HTTP failures by default. Callers can still opt out by
-passing ``max_retries=0`` explicitly.
+The default must stay at 5 (legacy uipath-langchain-python chat-client parity)
+so that every LangChain
+chat/embedding client built on top of ``UiPathBaseLLMClient`` (OpenAI,
+Anthropic, Bedrock, Vertex AI, etc.) retries transient HTTP failures by
+default. Callers can still opt out by passing ``max_retries=0`` explicitly.
 """
 
 import os
@@ -32,10 +33,10 @@ class TestDefaultMaxRetries:
     def teardown_method(self):
         SingletonMeta._instances.clear()
 
-    def test_default_max_retries_is_three(self):
+    def test_default_max_retries_is_five(self):
         with patch.dict(os.environ, LLMGW_ENV, clear=True):
             chat = UiPathChat(model="gpt-4o", settings=LLMGatewaySettings())
-            assert chat.max_retries == 3
+            assert chat.max_retries == 5
             transport = chat.uipath_sync_client._transport
             assert isinstance(transport, RetryableHTTPTransport)
             assert transport.retryer is not None

@@ -34,12 +34,22 @@ Example:
 import logging
 from typing import Any, Callable, NotRequired
 
-from httpx import AsyncHTTPTransport, HTTPTransport, Request, Response
+from httpx import (
+    AsyncHTTPTransport,
+    ConnectError,
+    HTTPTransport,
+    RemoteProtocolError,
+    Request,
+    Response,
+    TimeoutException,
+)
 from tenacity import (
     AsyncRetrying,
     RetryCallState,
     Retrying,
     before_sleep_log,
+    retry_any,
+    retry_if_exception,
     retry_if_exception_type,
     stop_after_attempt,
     wait_exponential_jitter,
@@ -51,24 +61,37 @@ from uipath.llm_client.utils.exceptions import (
     UiPathAPIError,
     UiPathBadGatewayError,
     UiPathGatewayTimeoutError,
+    UiPathOriginTimeoutError,
     UiPathRateLimitError,
     UiPathRequestTimeoutError,
     UiPathServiceUnavailableError,
     UiPathTooManyRequestsError,
 )
 
-# Default retry configuration values
-# Status codes retried by default: 408, 429, 502, 503, 504, 529.
+# Default retry configuration values, aligned with the legacy
+# uipath-langchain-python chat-client retryers (BedrockRetryer) they replaced.
+# Status codes retried by default: 408, 429, 502, 503, 504, 524, 529.
+# Connection-level failures are retried too, matching the union of the legacy
+# providers: httpx.TimeoutException (connect/read/write/pool timeouts — covers
+# botocore's ConnectTimeoutError / ReadTimeoutError equivalents), ConnectError
+# (botocore EndpointConnectionError equivalent), and RemoteProtocolError
+# (connection reset mid-exchange). Independently of status, any error
+# response carrying a Retry-After header is treated as an explicit server
+# request to retry (see _build_retryer).
 _DEFAULT_RETRY_ON_EXCEPTIONS: tuple[type[Exception], ...] = (
     UiPathRequestTimeoutError,
     UiPathRateLimitError,
     UiPathBadGatewayError,
     UiPathServiceUnavailableError,
     UiPathGatewayTimeoutError,
+    UiPathOriginTimeoutError,
     UiPathTooManyRequestsError,
+    TimeoutException,
+    ConnectError,
+    RemoteProtocolError,
 )
-_DEFAULT_INITIAL_DELAY: float = 2.0
-_DEFAULT_MAX_DELAY: float = 60.0
+_DEFAULT_INITIAL_DELAY: float = 5.0
+_DEFAULT_MAX_DELAY: float = 120.0
 _DEFAULT_EXP_BASE: float = 2.0
 _DEFAULT_JITTER: float = 1.0
 
@@ -76,9 +99,10 @@ _DEFAULT_JITTER: float = 1.0
 class wait_retry_after_with_fallback(wait_base):
     """Custom wait strategy that uses Retry-After header when available.
 
-    This wait strategy checks if the exception has a retry_after attribute
-    (from the Retry-After or x-retry-after HTTP headers) and uses that value.
-    If not available, falls back to exponential backoff with jitter.
+    This wait strategy checks if the exception is a ``UiPathAPIError`` whose
+    response carried a Retry-After / x-retry-after header (any status code)
+    and uses that value. If not available, falls back to exponential backoff
+    with jitter.
 
     Attributes:
         fallback_wait: The fallback wait strategy (exponential backoff with jitter).
@@ -118,10 +142,11 @@ class wait_retry_after_with_fallback(wait_base):
         Returns:
             The number of seconds to wait before the next retry.
         """
-        # Check if we have a rate limit exception with retry_after
+        # Honor Retry-After from any API error, not just 429 — servers attach
+        # it to 5xx (and occasionally other) responses as an explicit wait hint.
         if retry_state.outcome is not None and retry_state.outcome.failed:
             exception = retry_state.outcome.exception()
-            if isinstance(exception, UiPathRateLimitError) and exception.retry_after is not None:
+            if isinstance(exception, UiPathAPIError) and exception.retry_after is not None:
                 # Use retry-after value, but cap at max_delay
                 return min(exception.retry_after, self.max_delay)
 
@@ -136,11 +161,14 @@ class RetryConfig(TypedDict):
 
     Attributes:
         retry_on_exceptions: Tuple of exception types to retry on.
-            Defaults to the typed exceptions for HTTP 408, 429, 502, 503, 504, 529.
+            Defaults to the typed exceptions for HTTP 408, 429, 502, 503, 504,
+            524, 529 plus httpx connection failures (``TimeoutException``,
+            ``ConnectError``, ``RemoteProtocolError``). Independently of this
+            tuple, any error response carrying a Retry-After header is retried.
         initial_delay: Initial delay in seconds before first retry.
-            Defaults to 2.0.
+            Defaults to 5.0.
         max_delay: Maximum delay in seconds between retries.
-            Defaults to 60.0.
+            Defaults to 120.0.
         exp_base: Exponential backoff base multiplier.
             Defaults to 2.0.
         jitter: Random jitter in seconds to add to delay.
@@ -204,10 +232,21 @@ def _build_retryer(
             exp_base=exp_base,
             jitter=jitter,
         ),
-        retry=retry_if_exception_type(retry_on),
+        # Retry on the configured exception types, and additionally on ANY
+        # error response carrying a Retry-After header — the server explicitly
+        # asked for a retry, regardless of status code (legacy-client parity).
+        retry=retry_any(
+            retry_if_exception_type(retry_on),
+            retry_if_exception(_server_requested_retry),
+        ),
         reraise=True,
         before_sleep=before_sleep,
     )
+
+
+def _server_requested_retry(exception: BaseException) -> bool:
+    """True when an error response carries a Retry-After / x-retry-after hint."""
+    return isinstance(exception, UiPathAPIError) and exception.retry_after is not None
 
 
 class RetryableHTTPTransport(HTTPTransport):

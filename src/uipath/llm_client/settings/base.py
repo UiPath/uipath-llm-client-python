@@ -14,6 +14,7 @@ from pydantic import BaseModel, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from uipath.llm_client.settings.constants import ApiFlavor, ApiType, RoutingMode, VendorType
+from uipath.llm_client.utils.exceptions import ModelNotFoundError
 
 
 class UiPathAPIConfig(BaseModel):
@@ -204,7 +205,7 @@ class UiPathBaseSettings(BaseSettings, ABC):
             The first matching model info dictionary.
 
         Raises:
-            ValueError: If no matching model is found.
+            ModelNotFoundError: If no matching model is found.
         """
         available_models = self.get_available_models()
 
@@ -239,7 +240,7 @@ class UiPathBaseSettings(BaseSettings, ABC):
             ]
 
         if not matching_models:
-            raise ValueError(
+            raise ModelNotFoundError(
                 f"Model {model_name} not found. "
                 f"Available models are: {[m['modelName'] for m in available_models]}"
             )

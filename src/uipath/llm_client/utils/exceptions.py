@@ -49,6 +49,7 @@ class UiPathLLMErrorCode(StrEnum):
     """
 
     UNSUPPORTED_MIME_TYPE = "UNSUPPORTED_MIME_TYPE"
+    MODEL_NOT_FOUND = "MODEL_NOT_FOUND"
 
 
 class UiPathError(Exception):
@@ -93,6 +94,24 @@ class UiPathError(Exception):
         Exception.__init__(self, detail or "")
         self.error_code = error_code
         self.detail = detail
+
+
+class ModelNotFoundError(UiPathError, ValueError):
+    """Raised when a model name is absent from the discovery API response.
+
+    This is a client-side lookup failure — the model was never returned by the
+    discovery endpoint — and is therefore distinct from the HTTP-status
+    ``UiPath*Error`` classes (e.g. :class:`UiPathNotFoundError`, which is an
+    actual HTTP 404 carrying a response).
+
+    Subclasses ``ValueError`` so existing ``except ValueError`` handlers keep
+    working, and :class:`UiPathError` so it is catchable alongside every other
+    UiPath LLM error and carries the stable
+    :attr:`UiPathLLMErrorCode.MODEL_NOT_FOUND` code.
+    """
+
+    def __init__(self, detail: str | None = None) -> None:
+        UiPathError.__init__(self, detail, error_code=UiPathLLMErrorCode.MODEL_NOT_FOUND)
 
 
 class UiPathAPIError(UiPathError, HTTPStatusError):
@@ -466,6 +485,7 @@ def wrap_provider_errors() -> Iterator[None]:
 __all__ = [
     "UiPathError",
     "UiPathLLMErrorCode",
+    "ModelNotFoundError",
     "UiPathAPIError",
     "UiPathBadRequestError",
     "UiPathAuthenticationError",

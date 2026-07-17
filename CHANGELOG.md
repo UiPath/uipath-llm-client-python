@@ -2,6 +2,12 @@
 
 All notable changes to `uipath_llm_client` (core package) will be documented in this file.
 
+## [1.17.1] - 2026-07-17
+
+### Added
+- `ModelNotFoundError` — raised by `UiPathBaseSettings.get_model_info` when a model name is absent from the discovery API response. It subclasses both `ValueError` (so existing `except ValueError` handlers are unaffected) and `UiPathError` (so it is catchable across the UiPath LLM error taxonomy), and carries the new `UiPathLLMErrorCode.MODEL_NOT_FOUND` code. This lets callers distinguish a genuine discovery-miss from the other `ValueError`s the factory/settings code can raise (unsupported vendor, missing `agenthub_config`, invalid kwargs) instead of matching on message text.
+- `UiPathLLMErrorCode.MODEL_NOT_FOUND` semantic error code.
+
 ## [1.17.0] - 2026-07-14
 
 ### Changed

@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_langchain_client` will be documented in this file.
 
+## [1.17.1] - 2026-07-17
+
+### Changed
+- Picks up core `uipath-llm-client` 1.17.1, which adds `ModelNotFoundError` (raised by `get_model_info` on a discovery-miss) and the `UiPathLLMErrorCode.MODEL_NOT_FOUND` code. Bumped the `uipath-llm-client` floor to `>=1.17.1`.
+
 ## [1.17.0] - 2026-07-14
 
 ### Changed

@@ -423,6 +423,45 @@ class UiPathBaseChatModel(UiPathBaseLLMClient, BaseChatModel):
     so that headers are captured transparently.
     """
 
+    model_settings: Mapping[str, Any] | None = Field(
+        default=None,
+        description="Provider-native model settings from agent.json "
+        "(settings.modelSettings), applied verbatim — no per-provider mapping.",
+    )
+
+    @model_validator(mode="after")
+    def apply_model_settings(self) -> Self:
+        self._apply_model_settings()
+        return self
+
+    def _apply_model_settings(self) -> None:
+        """Apply each ``model_settings`` key onto the model.
+
+        Set directly when it's a native field, else routed to ``model_kwargs``;
+        keys in ``disabled_params`` are skipped.
+        """
+        if not self.model_settings:
+            return
+        fields = type(self).model_fields
+        disabled = self.disabled_params or {}
+        extra: dict[str, Any] = {}
+        for key, value in self.model_settings.items():
+            if key in disabled:
+                continue
+            if key in fields:
+                setattr(self, key, value)
+            else:
+                extra[key] = value
+        if extra:
+            if "model_kwargs" in fields:
+                self.model_kwargs = {**(self.model_kwargs or {}), **extra}
+            else:
+                (self.logger or logging.getLogger(__name__)).debug(
+                    "Dropping unsupported model settings %s for %s",
+                    list(extra),
+                    type(self).__name__,
+                )
+
     def _generate(
         self,
         messages: list[BaseMessage],

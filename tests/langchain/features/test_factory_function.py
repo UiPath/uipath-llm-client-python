@@ -477,3 +477,129 @@ class TestBedrockFactoryBaseModel:
         assert model.base_model_id == "anthropic.claude-sonnet-4-5-20250929-v1:0"
         assert model.provider == "anthropic"
         assert model._get_provider() == "anthropic"
+
+
+class TestModelSettingsForwarding:
+    """get_chat_model forwards model_settings into the chosen client's constructor."""
+
+    def test_factory_forwards_model_settings_to_constructor(self, monkeypatch: pytest.MonkeyPatch):
+        settings = MagicMock()
+        settings.get_model_info.return_value = {
+            "modelName": "gpt-4o",
+            "vendor": "OpenAi",
+            "apiFlavor": "responses",
+            "modelFamily": "OpenAi",
+        }
+        captured: dict = {}
+
+        class _StubModel:
+            def __init__(self, **kwargs):
+                captured.update(kwargs)
+
+        monkeypatch.setattr(
+            "uipath_langchain_client.clients.openai.chat_models.UiPathAzureChatOpenAI",
+            _StubModel,
+        )
+        get_chat_model(
+            model_name="gpt-4o",
+            client_settings=settings,
+            model_settings={"reasoning_effort": "high", "temperature": 1.0},
+        )
+        assert captured["model_settings"] == {
+            "reasoning_effort": "high",
+            "temperature": 1.0,
+        }
+
+
+class TestModelSettingsApplied:
+    """model_settings is applied during real construction (via the model_validator).
+
+    Native provider keys land as real fields (no per-provider mapping); unknown keys
+    route to model_kwargs; keys named in disabled_params are skipped.
+    """
+
+    @pytest.fixture()
+    def settings(self) -> UiPathBaseSettings:
+        import os
+        from unittest.mock import patch
+
+        from uipath.llm_client.settings.llmgateway import LLMGatewaySettings
+
+        env = {
+            "LLMGW_URL": "http://test",
+            "LLMGW_SEMANTIC_ORG_ID": "org",
+            "LLMGW_SEMANTIC_TENANT_ID": "tenant",
+            "LLMGW_REQUESTING_PRODUCT": "test",
+            "LLMGW_REQUESTING_FEATURE": "test",
+            "LLMGW_ACCESS_TOKEN": "dummy-token",
+        }
+        with patch.dict(os.environ, env, clear=True):
+            return LLMGatewaySettings()
+
+    def test_openai_native_key_set_unknown_key_to_model_kwargs(self, settings: UiPathBaseSettings):
+        from uipath_langchain_client.clients.openai.chat_models import UiPathChatOpenAI
+
+        model = UiPathChatOpenAI(
+            model="some-openai-model",
+            settings=settings,
+            model_details={},
+            model_settings={"reasoning_effort": "high", "made_up_key": 1},
+        )
+        assert model.reasoning_effort == "high"
+        assert model.model_kwargs == {"made_up_key": 1}
+
+    def test_anthropic_native_keys_set_verbatim(self, settings: UiPathBaseSettings):
+        from uipath_langchain_client.clients.anthropic.chat_models import (
+            UiPathChatAnthropic,
+        )
+
+        model = UiPathChatAnthropic(
+            model="anthropic.claude-sonnet-4-6",
+            settings=settings,
+            model_details={},
+            model_settings={
+                "thinking": {"type": "adaptive"},
+                "output_config": {"effort": "high"},
+            },
+        )
+        assert model.thinking == {"type": "adaptive"}
+        assert model.output_config == {"effort": "high"}
+
+    def test_bedrock_additional_model_request_fields_set_verbatim(
+        self, settings: UiPathBaseSettings
+    ):
+        UiPathBaseSettings._discovery_cache.clear()
+        settings._discovery_cache[settings._discovery_cache_key()] = [
+            {
+                "modelName": "AWS - Bedrock",
+                "vendor": "Bedrock",
+                "apiFlavor": "AwsBedrockConverse",
+                "modelFamily": "Anthropic",
+                "modelDetails": {"customerModelName": "anthropic.claude-sonnet-4-5-20250929-v1:0"},
+            }
+        ]
+        amrf = {"thinking": {"type": "enabled", "budget_tokens": 4096}}
+        try:
+            model = UiPathChatBedrockConverse(
+                model="AWS - Bedrock",
+                settings=settings,
+                byo_connection_id="conn-x",
+                base_model="anthropic.claude-sonnet-4-5-20250929-v1:0",
+                provider="anthropic",
+                model_settings={"additional_model_request_fields": amrf},
+            )
+        finally:
+            UiPathBaseSettings._discovery_cache.clear()
+        assert model.additional_model_request_fields == amrf
+
+    def test_disabled_key_is_skipped(self, settings: UiPathBaseSettings):
+        from uipath_langchain_client.clients.openai.chat_models import UiPathChatOpenAI
+
+        model = UiPathChatOpenAI(
+            model="some-openai-model",
+            settings=settings,
+            model_details={},
+            disabled_params={"temperature": None},
+            model_settings={"temperature": 0.2},
+        )
+        assert model.temperature is None

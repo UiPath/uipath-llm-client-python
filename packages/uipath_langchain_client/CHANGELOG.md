@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_langchain_client` will be documented in this file.
 
+## [1.18.3] - 2026-09-02
+
+### Added
+- `model_settings` field on `UiPathBaseChatModel` and a matching `model_settings` param on `get_chat_model`. Provider-native settings from agent.json's `settings.modelSettings` are applied verbatim: a key matching a native field is set directly on the model, anything else routes to `model_kwargs`, and keys listed in `disabled_params` are skipped. No per-provider mapping — discovery is the source of truth for the shape.
+
 ## [1.18.2] - 2026-09-01
 
 ### Fixed

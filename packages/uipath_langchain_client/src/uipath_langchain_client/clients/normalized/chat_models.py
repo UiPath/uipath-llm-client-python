@@ -26,6 +26,7 @@ Example:
 import json
 from collections.abc import AsyncGenerator, Callable, Generator, Sequence
 from functools import partial
+from operator import itemgetter
 from typing import Any, Literal, Union, cast
 
 from langchain_core.callbacks import (
@@ -55,7 +56,7 @@ from langchain_core.outputs import (
     ChatGenerationChunk,
     ChatResult,
 )
-from langchain_core.runnables import Runnable, RunnableLambda, RunnablePassthrough
+from langchain_core.runnables import Runnable, RunnableLambda, RunnableMap, RunnablePassthrough
 from langchain_core.tools import BaseTool
 from langchain_core.utils.function_calling import (
     convert_to_openai_function,
@@ -309,7 +310,9 @@ class UiPathChat(UiPathBaseChatModel):
         self,
         schema: _DictOrPydanticClass | None = None,
         *,
-        method: Literal["function_calling", "json_mode", "json_schema"] = "function_calling",
+        method: Literal["auto", "function_calling", "json_mode", "json_schema"] = (
+            "function_calling"
+        ),
         include_raw: bool = False,
         strict: bool | None = None,
         **kwargs: Any,
@@ -319,8 +322,9 @@ class UiPathChat(UiPathBaseChatModel):
         Args:
             schema: The output schema as a Pydantic class, TypedDict, JSON Schema dict,
                 or OpenAI function schema.
-            method: Either "json_schema" (uses response_format) or "function_calling"
-                (uses tool calling to force the schema).
+            method: "auto" selects a provider-compatible method. Anthropic models use
+                "json_mode"; other models use "function_calling". Explicit methods retain
+                their existing behavior.
             include_raw: If True, returns dict with 'raw', 'parsed', and 'parsing_error'.
             strict: If True, model output is guaranteed to match the schema exactly.
             **kwargs: Additional arguments passed to bind().
@@ -331,9 +335,19 @@ class UiPathChat(UiPathBaseChatModel):
         if schema is None:
             raise ValueError("schema must be specified.")
 
+        auto_method = method == "auto"
+        if auto_method:
+            method = (
+                "json_mode"
+                if self.model_name and is_anthropic_model_name(self.model_name)
+                else "function_calling"
+            )
+
         is_pydantic = isinstance(schema, type) and is_basemodel_subclass(schema)
 
         if method == "function_calling":
+            if auto_method:
+                kwargs.setdefault("parallel_tool_calls", False)
             tool_name = convert_to_openai_tool(schema)["function"]["name"]
             llm = self.bind_tools(
                 [schema],
@@ -386,12 +400,12 @@ class UiPathChat(UiPathBaseChatModel):
         else:
             raise ValueError(
                 f"Unrecognized method: '{method}'. "
-                "Expected 'function_calling', 'json_mode', or 'json_schema'."
+                "Expected 'auto', 'function_calling', 'json_mode', or 'json_schema'."
             )
 
         if include_raw:
             parser_assign = RunnablePassthrough.assign(
-                parsed=lambda x: output_parser.invoke(x["raw"]),
+                parsed=itemgetter("raw") | output_parser,
                 parsing_error=lambda _: None,
             )
             parser_none = RunnablePassthrough.assign(
@@ -400,7 +414,7 @@ class UiPathChat(UiPathBaseChatModel):
             parser_with_fallback = parser_assign.with_fallbacks(
                 [parser_none], exception_key="parsing_error"
             )
-            return RunnablePassthrough.assign(raw=llm) | parser_with_fallback  # type: ignore[return-value]
+            return RunnableMap(raw=llm) | parser_with_fallback  # type: ignore[return-value]
         return llm | output_parser  # type: ignore[return-value]
 
     def _preprocess_request(

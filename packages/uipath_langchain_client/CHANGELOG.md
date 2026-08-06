@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_langchain_client` will be documented in this file.
 
+## [1.17.3] - 2026-08-06
+
+### Fixed
+- Preserve provider-specific tool-call metadata across OpenAI-compatible Chat Completions message round trips, including streaming and updated tool calls.
+
 ## [1.17.2] - 2026-08-06
 
 ### Added

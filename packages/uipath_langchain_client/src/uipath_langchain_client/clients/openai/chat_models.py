@@ -5,6 +5,9 @@ from httpx import Request
 from pydantic import Field, SecretStr, model_validator
 
 from uipath_langchain_client.base_client import UiPathBaseChatModel
+from uipath_langchain_client.clients.openai.tool_call_extras import (
+    OpenAIToolCallExtrasMixin,
+)
 from uipath_langchain_client.clients.openai.utils import fix_url_and_api_flavor_header
 from uipath_langchain_client.settings import (
     ApiFlavor,
@@ -24,7 +27,7 @@ except ImportError as e:
     ) from e
 
 
-class UiPathChatOpenAI(UiPathBaseChatModel, ChatOpenAI):  # type: ignore[override]
+class UiPathChatOpenAI(UiPathBaseChatModel, OpenAIToolCallExtrasMixin, ChatOpenAI):  # type: ignore[override]
     api_config: UiPathAPIConfig = UiPathAPIConfig(
         api_type=ApiType.COMPLETIONS,
         routing_mode=RoutingMode.PASSTHROUGH,

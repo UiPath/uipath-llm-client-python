@@ -2,6 +2,14 @@
 
 All notable changes to `uipath_langchain_client` will be documented in this file.
 
+## [1.17.2] - 2026-08-06
+
+### Added
+- `UiPathChat.with_structured_output(method="auto")` selects JSON mode for Anthropic models and function calling for other providers, avoiding provider-specific response-format behavior in callers.
+
+### Fixed
+- `include_raw=True` now accepts standard LangChain message-list inputs and returns `raw`, `parsed`, and `parsing_error` as documented.
+
 ## [1.17.1] - 2026-07-17
 
 ### Changed

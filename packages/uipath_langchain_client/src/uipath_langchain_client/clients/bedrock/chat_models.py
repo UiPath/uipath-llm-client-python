@@ -1,3 +1,4 @@
+from collections.abc import Container, Mapping
 from functools import cached_property
 from typing import Any, Self
 
@@ -56,6 +57,33 @@ def _setup_model_id(values: Any) -> Any:
     return values
 
 
+_CONVERSE_PASSTHROUGH_KEYS = frozenset({"output_config"})
+
+
+def _partition_converse_settings(
+    model_settings: Mapping[str, Any],
+    native_fields: Container[str],
+    disabled_params: Container[str],
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Split model settings into (direct, passthrough) for ChatBedrockConverse.
+
+    Converse only takes provider params via additional_model_request_fields, not
+    model_kwargs. Keys that aren't native fields go to passthrough; so does output_config
+    (a field, but it must be nested anyway). Real fields are set directly, disabled
+    dropped. Returns (setattr these, merge these into additional_model_request_fields).
+    """
+    direct: dict[str, Any] = {}
+    passthrough: dict[str, Any] = {}
+    for key, value in model_settings.items():
+        if key in disabled_params:
+            continue
+        if key in native_fields and key not in _CONVERSE_PASSTHROUGH_KEYS:
+            direct[key] = value
+        else:
+            passthrough[key] = value
+    return direct, passthrough
+
+
 class UiPathChatBedrockConverse(UiPathBaseChatModel, ChatBedrockConverse):  # type: ignore[override]
     api_config: UiPathAPIConfig = UiPathAPIConfig(
         api_type=ApiType.COMPLETIONS,
@@ -79,6 +107,22 @@ class UiPathChatBedrockConverse(UiPathBaseChatModel, ChatBedrockConverse):  # ty
     def setup_uipath_client(self) -> Self:
         self.client = WrappedBotoClient(self.uipath_sync_client)
         return self
+
+    def _apply_model_settings(self) -> None:
+        if not self.model_settings:
+            return
+        direct, passthrough = _partition_converse_settings(
+            self.model_settings,
+            native_fields=type(self).model_fields,
+            disabled_params=self.disabled_params or {},
+        )
+        for key, value in direct.items():
+            setattr(self, key, value)
+        if passthrough:
+            self.additional_model_request_fields = {
+                **(self.additional_model_request_fields or {}),
+                **passthrough,
+            }
 
 
 class UiPathChatBedrock(UiPathBaseChatModel, ChatBedrock):  # type: ignore[override]

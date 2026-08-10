@@ -117,7 +117,7 @@ class UiPathChatBedrockConverse(UiPathBaseChatModel, ChatBedrockConverse):  # ty
             disabled_params=self.disabled_params or {},
         )
         for key, value in direct.items():
-            setattr(self, key, value)
+            self._assign_validated(key, value)
         if passthrough:
             self.additional_model_request_fields = {
                 **(self.additional_model_request_fields or {}),

@@ -603,3 +603,64 @@ class TestModelSettingsApplied:
             model_settings={"temperature": 0.2},
         )
         assert model.temperature is None
+
+    def test_string_value_coerced_to_field_type(self, settings: UiPathBaseSettings):
+        """Values arrive as untyped JSON (UI forms, gateway data); a field key must go
+        through pydantic assignment validation, not raw setattr, so '8192' becomes 8192
+        instead of a string serialized into the request body."""
+        from uipath_langchain_client.clients.openai.chat_models import UiPathChatOpenAI
+
+        model = UiPathChatOpenAI(
+            model="some-openai-model",
+            settings=settings,
+            model_details={},
+            model_settings={"max_tokens": "8192"},
+        )
+        assert model.max_tokens == 8192
+        assert isinstance(model.max_tokens, int)
+
+    def test_alias_key_sets_field_not_model_kwargs(self, settings: UiPathBaseSettings):
+        """A key matching only a field alias ('timeout' -> request_timeout) must set the
+        field instead of leaking into model_kwargs as an unknown completion parameter."""
+        from uipath_langchain_client.clients.openai.chat_models import UiPathChatOpenAI
+
+        model = UiPathChatOpenAI(
+            model="some-openai-model",
+            settings=settings,
+            model_details={},
+            model_settings={"timeout": 42.0},
+        )
+        assert model.request_timeout == 42.0
+        assert "timeout" not in (model.model_kwargs or {})
+
+    def test_multiple_field_keys_do_not_pollute_model_kwargs(self, settings: UiPathBaseSettings):
+        """Regression: applying settings via pydantic assignment validation re-ran
+        LangChain's ``build_extra`` validator, which swept the cached uipath httpx
+        clients out of ``__dict__`` into ``model_kwargs`` — from where they would
+        be sent as completion parameters."""
+        from uipath_langchain_client.clients.openai.chat_models import UiPathChatOpenAI
+
+        model = UiPathChatOpenAI(
+            model="some-openai-model",
+            settings=settings,
+            model_details={},
+            model_settings={"max_tokens": "8192", "timeout": 30},
+        )
+        assert model.max_tokens == 8192
+        assert model.request_timeout == 30
+        assert "uipath_sync_client" not in (model.model_kwargs or {})
+        assert "uipath_async_client" not in (model.model_kwargs or {})
+
+    def test_invalid_field_value_raises_at_construction(self, settings: UiPathBaseSettings):
+        """A value pydantic can't coerce fails fast with a clear error instead of being
+        stored raw and rejected by the provider at request time."""
+        from pydantic import ValidationError
+        from uipath_langchain_client.clients.openai.chat_models import UiPathChatOpenAI
+
+        with pytest.raises(ValidationError):
+            UiPathChatOpenAI(
+                model="some-openai-model",
+                settings=settings,
+                model_details={},
+                model_settings={"max_tokens": "not-a-number"},
+            )

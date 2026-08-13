@@ -2,6 +2,7 @@ import contextvars
 from collections.abc import Mapping, Sequence
 
 from httpx import Headers, Request
+from uipath.platform.common import resource_override
 
 from uipath.llm_client.settings.base import UiPathAPIConfig
 from uipath.llm_client.settings.constants import ApiType, RoutingMode
@@ -101,6 +102,7 @@ def extract_matching_headers(
     return result
 
 
+@resource_override(resource_type="connection", resource_identifier="byo_connection_id")
 def build_routing_headers(
     *,
     model_name: str | None = None,

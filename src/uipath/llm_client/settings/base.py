@@ -12,6 +12,7 @@ from typing import Any, ClassVar, Self
 from httpx import Auth
 from pydantic import BaseModel, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from uipath.platform.common import resource_override
 
 from uipath.llm_client.settings.constants import ApiFlavor, ApiType, RoutingMode, VendorType
 from uipath.llm_client.utils.exceptions import ModelNotFoundError
@@ -183,6 +184,7 @@ class UiPathBaseSettings(BaseSettings, ABC):
         """Validate that the model is a BYOM model."""
         return
 
+    @resource_override(resource_type="connection", resource_identifier="byo_connection_id")
     def get_model_info(
         self,
         model_name: str,

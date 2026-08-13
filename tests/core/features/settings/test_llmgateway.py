@@ -619,3 +619,33 @@ class TestGetModelInfo:
         with patch.object(settings, "validate_byo_model") as mock_validate:
             settings.get_model_info("claude-3-opus")
             mock_validate.assert_not_called()
+
+    def test_remaps_byo_connection_id_from_resource_overwrite(
+        self, llmgw_env_vars, activate_connection_overwrite
+    ):
+        """A design-time connection id resolves to the one bound in the target folder."""
+        activate_connection_overwrite("design-time-conn", "conn-123")
+        settings = self._make_settings(llmgw_env_vars)
+
+        info = settings.get_model_info("gpt-4o", byo_connection_id="design-time-conn")
+
+        assert info["byomDetails"]["integrationServiceConnectionId"] == "conn-123"
+
+    def test_keeps_byo_connection_id_when_no_overwrite_matches(
+        self, llmgw_env_vars, activate_connection_overwrite
+    ):
+        activate_connection_overwrite("other-conn", "conn-123")
+        settings = self._make_settings(llmgw_env_vars)
+
+        with pytest.raises(ValueError, match="not found"):
+            settings.get_model_info("gpt-4o", byo_connection_id="design-time-conn")
+
+    def test_ignores_overwrites_for_uipath_owned_models(
+        self, llmgw_env_vars, activate_connection_overwrite
+    ):
+        activate_connection_overwrite("design-time-conn", "conn-123")
+        settings = self._make_settings(llmgw_env_vars)
+
+        info = settings.get_model_info("gpt-4o")
+
+        assert info["modelSubscriptionType"] == "UiPathOwned"

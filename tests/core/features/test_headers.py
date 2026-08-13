@@ -134,3 +134,30 @@ class TestHeaderUtilities:
         )
         headers = build_routing_headers(model_name=None, api_config=api_config)
         assert "X-UiPath-LlmGateway-NormalizedApi-ModelName" not in headers
+
+    def test_byo_connection_id_header(self):
+        from uipath.llm_client.utils.headers import build_routing_headers
+
+        headers = build_routing_headers(byo_connection_id="conn-123")
+        assert headers["X-UiPath-LlmGateway-ByoIsConnectionId"] == "conn-123"
+
+    def test_byo_connection_id_header_uses_resource_overwrite(self, activate_connection_overwrite):
+        """The bound connection id must reach the gateway, not the design-time one."""
+        from uipath.llm_client.utils.headers import build_routing_headers
+
+        activate_connection_overwrite("design-time-conn", "conn-123")
+
+        headers = build_routing_headers(byo_connection_id="design-time-conn")
+
+        assert headers["X-UiPath-LlmGateway-ByoIsConnectionId"] == "conn-123"
+
+    def test_byo_connection_id_header_kept_when_no_overwrite_matches(
+        self, activate_connection_overwrite
+    ):
+        from uipath.llm_client.utils.headers import build_routing_headers
+
+        activate_connection_overwrite("other-conn", "conn-123")
+
+        headers = build_routing_headers(byo_connection_id="design-time-conn")
+
+        assert headers["X-UiPath-LlmGateway-ByoIsConnectionId"] == "design-time-conn"

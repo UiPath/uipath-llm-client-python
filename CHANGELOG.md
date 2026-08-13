@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_llm_client` (core package) will be documented in this file.
 
+## [1.17.2] - 2026-08-13
+
+### Fixed
+- Resource binding overwrites are now applied to `byo_connection_id`, in both the `get_model_info` discovery lookup and the `X-UiPath-LlmGateway-ByoIsConnectionId` routing header.
+
 ## [1.17.1] - 2026-07-17
 
 ### Added

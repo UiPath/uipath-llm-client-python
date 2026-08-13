@@ -38,9 +38,7 @@ def test_reasoning_bundle_goes_to_passthrough() -> None:
 def test_output_config_is_a_field_but_still_nested() -> None:
     # Guards the regression: output_config IS a field, yet must go to passthrough.
     assert "output_config" in FIELDS
-    _, passthrough = _partition_converse_settings(
-        {"output_config": {"effort": "high"}}, FIELDS, {}
-    )
+    _, passthrough = _partition_converse_settings({"output_config": {"effort": "high"}}, FIELDS, {})
     assert passthrough == {"output_config": {"effort": "high"}}
 
 

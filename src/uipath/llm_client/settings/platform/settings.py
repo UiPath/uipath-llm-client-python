@@ -29,11 +29,29 @@ from uipath.platform.common.constants import (
 )
 
 from uipath.llm_client.settings.base import UiPathAPIConfig, UiPathBaseSettings
-from uipath.llm_client.settings.constants import ApiType, RoutingMode
+from uipath.llm_client.settings.constants import (
+    AGENTHUB_CONFIG_CODED_AGENTS_PLAYGROUND,
+    ApiType,
+    RoutingMode,
+)
 from uipath.llm_client.settings.platform.utils import (
     is_token_expired,
     try_parse_access_token,
 )
+
+
+def _is_deployed_execution() -> bool:
+    """Whether the current process is a deployed (production) run.
+
+    A deployed coded agent is a real Orchestrator job that is neither a Studio Web
+    project nor rooted to a debug session. Everything else — local runs, Studio Web,
+    and debug sessions (e.g. Maestro solution debug) — is treated as design-time.
+    """
+    return (
+        bool(UiPathConfig.job_key)
+        and not UiPathConfig.is_studio_project
+        and not UiPathConfig.is_rooted_to_debug_job
+    )
 
 
 class PlatformBaseSettings(UiPathBaseSettings):
@@ -89,6 +107,25 @@ class PlatformBaseSettings(UiPathBaseSettings):
         parsed_token_data = try_parse_access_token(access_token)
         if parsed_token_data is not None:
             self.client_id = parsed_token_data.get("client_id")
+        return self
+
+    @model_validator(mode="after")
+    def default_agenthub_config_for_design_time(self) -> Self:
+        """Default ``agenthub_config`` to the coded-agent playground marker at design time.
+
+        When no explicit ``agenthub_config`` was supplied (env ``UIPATH_AGENTHUB_CONFIG``
+        unset and no caller override), a design-time run — local, Studio Web, or a debug
+        session — sends ``codedagentsplayground`` so its LLM calls draw the
+        CodedAgents.Playground licensing pool. A deployed run keeps ``agenthub_config``
+        None, which the gateway resolves to AgentHub.LLM.
+
+        Callers that pass an explicit value — low-code agents and evaluators go through
+        ``get_chat_model(agenthub_config=...)``, which overrides via ``model_copy`` (that
+        does not re-run this validator) — are unaffected. An explicit empty string is left
+        as an intentional opt-out.
+        """
+        if self.agenthub_config is None and not _is_deployed_execution():
+            self.agenthub_config = AGENTHUB_CONFIG_CODED_AGENTS_PLAYGROUND
         return self
 
     @staticmethod

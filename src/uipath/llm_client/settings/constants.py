@@ -1,5 +1,12 @@
 from enum import StrEnum
 
+# AgentHub config header value that maps to the CodedAgents.Playground licensing
+# operation code (matches AgentHubService ``AgentHubConfigValues.CodedAgentsPlayground``).
+# Sent for design-time coded-agent runs (local, Studio Web, or debug session) so their
+# LLM calls draw the CodedAgents.Playground pool; deployed runs send no config header
+# and fall back to AgentHub.LLM.
+AGENTHUB_CONFIG_CODED_AGENTS_PLAYGROUND = "codedagentsplayground"
+
 
 class ApiType(StrEnum):
     COMPLETIONS = "completions"

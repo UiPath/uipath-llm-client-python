@@ -91,18 +91,50 @@ class TestPlatformSettings:
             assert "localhost" not in url
             assert "agenthub_/llm/api/chat/completions" in url
 
-    def test_build_auth_headers_omits_agenthub_config_by_default(
+    def test_build_auth_headers_omits_agenthub_config_when_deployed(
         self, platform_env_vars, mock_platform_auth
     ):
-        """``agenthub_config`` defaults to None and the header is omitted unless
-        the caller (or ``UIPATH_AGENTHUB_CONFIG``) sets it explicitly."""
+        """A deployed run (real job, not a Studio Web project, not a debug session)
+        keeps ``agenthub_config`` None, so the header is omitted -> AgentHub.LLM."""
+        env = {**platform_env_vars, "UIPATH_JOB_KEY": "deployed-job"}
+        with patch.dict(os.environ, env, clear=True):
+            settings = PlatformSettings()
+            assert settings.agenthub_config is None
+            headers = settings.build_auth_headers()
+            assert "x-uipath-agenthub-config" not in headers
+            assert headers["x-uipath-jobkey"] == "deployed-job"
+
+    def test_agenthub_config_defaults_to_coded_playground_at_design_time(
+        self, platform_env_vars, mock_platform_auth
+    ):
+        """A design-time run (no job key) defaults ``agenthub_config`` to the coded
+        playground marker so LLM calls draw the CodedAgents.Playground pool."""
         with patch.dict(os.environ, platform_env_vars, clear=True):
             settings = PlatformSettings()
+            assert settings.agenthub_config == "codedagentsplayground"
             headers = settings.build_auth_headers()
-            assert headers == {
-                "x-uipath-internal-accountid": "test-org-id",
-                "x-uipath-internal-tenantid": "test-tenant-id",
-            }
+            assert headers["x-uipath-agenthub-config"] == "codedagentsplayground"
+
+    def test_studio_web_run_is_design_time(self, platform_env_vars, mock_platform_auth):
+        """A Studio Web run (job key present but a studio project) is design-time,
+        not deployed -> coded playground marker."""
+        env = {
+            **platform_env_vars,
+            "UIPATH_JOB_KEY": "sw-debug-job",
+            "UIPATH_PROJECT_ID": "some-project-id",
+        }
+        with patch.dict(os.environ, env, clear=True):
+            settings = PlatformSettings()
+            assert settings.agenthub_config == "codedagentsplayground"
+
+    def test_explicit_agenthub_config_env_overrides_design_time_default(
+        self, platform_env_vars, mock_platform_auth
+    ):
+        """An explicit ``UIPATH_AGENTHUB_CONFIG`` wins over the design-time default."""
+        env = {**platform_env_vars, "UIPATH_AGENTHUB_CONFIG": "agentsplayground"}
+        with patch.dict(os.environ, env, clear=True):
+            settings = PlatformSettings()
+            assert settings.agenthub_config == "agentsplayground"
 
     def test_build_auth_headers_with_tracing(self, platform_env_vars, mock_platform_auth):
         """Test build_auth_headers includes tracing headers when set."""

@@ -1,7 +1,30 @@
 import pytest
+from uipath.platform.common import ResourceOverwriteParser
+from uipath.platform.common._bindings import _resource_overwrites
 
 from uipath.llm_client.settings import UiPathBaseSettings
 from uipath.llm_client.settings.llmgateway import LLMGatewaySettings
+
+
+@pytest.fixture
+def activate_connection_overwrite():
+    """Activate a ``connection.<design_time_id>`` resource overwrite for one test."""
+    tokens = []
+
+    def _activate(design_time_id: str, connection_id: str, folder_key: str = "test-folder-key"):
+        key = f"connection.{design_time_id}"
+        overwrites = {
+            key: ResourceOverwriteParser.parse(
+                key=key,
+                value={"connectionId": connection_id, "folderKey": folder_key},
+            )
+        }
+        tokens.append(_resource_overwrites.set(overwrites))
+
+    yield _activate
+
+    for token in reversed(tokens):
+        _resource_overwrites.reset(token)
 
 
 @pytest.fixture(autouse=True, scope="session")

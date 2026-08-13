@@ -7,7 +7,11 @@ from urllib.parse import quote
 from pydantic import Field, SecretStr, model_validator
 from typing_extensions import override
 from uipath.platform import UiPath
-from uipath.platform.common import EndpointManager, resolve_service_url
+from uipath.platform.common import (
+    EndpointManager,
+    resolve_coded_agenthub_config,
+    resolve_service_url,
+)
 from uipath.platform.common._config import UiPathConfig
 from uipath.platform.common.constants import (
     ENV_BASE_URL,
@@ -29,29 +33,11 @@ from uipath.platform.common.constants import (
 )
 
 from uipath.llm_client.settings.base import UiPathAPIConfig, UiPathBaseSettings
-from uipath.llm_client.settings.constants import (
-    AGENTHUB_CONFIG_CODED_AGENTS_PLAYGROUND,
-    ApiType,
-    RoutingMode,
-)
+from uipath.llm_client.settings.constants import ApiType, RoutingMode
 from uipath.llm_client.settings.platform.utils import (
     is_token_expired,
     try_parse_access_token,
 )
-
-
-def _is_deployed_execution() -> bool:
-    """Whether the current process is a deployed (production) run.
-
-    A deployed coded agent is a real Orchestrator job that is neither a Studio Web
-    project nor rooted to a debug session. Everything else — local runs, Studio Web,
-    and debug sessions (e.g. Maestro solution debug) — is treated as design-time.
-    """
-    return (
-        bool(UiPathConfig.job_key)
-        and not UiPathConfig.is_studio_project
-        and not UiPathConfig.is_rooted_to_debug_job
-    )
 
 
 class PlatformBaseSettings(UiPathBaseSettings):
@@ -123,9 +109,12 @@ class PlatformBaseSettings(UiPathBaseSettings):
         ``get_chat_model(agenthub_config=...)``, which overrides via ``model_copy`` (that
         does not re-run this validator) — are unaffected. An explicit empty string is left
         as an intentional opt-out.
+
+        The design-time-vs-deployed decision is the shared ``resolve_coded_agenthub_config``
+        helper from ``uipath.platform`` so all coded frameworks classify runs identically.
         """
-        if self.agenthub_config is None and not _is_deployed_execution():
-            self.agenthub_config = AGENTHUB_CONFIG_CODED_AGENTS_PLAYGROUND
+        if self.agenthub_config is None:
+            self.agenthub_config = resolve_coded_agenthub_config()
         return self
 
     @staticmethod

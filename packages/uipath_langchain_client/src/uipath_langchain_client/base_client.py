@@ -447,14 +447,15 @@ class UiPathBaseChatModel(UiPathBaseLLMClient, BaseChatModel):
 
         Values arrive as untyped JSON (agent.json / discovery data), so a plain
         ``setattr`` would store e.g. ``"8192"`` on an ``int`` field. Coercion
-        runs through a ``TypeAdapter`` for the field annotation rather than
-        pydantic assignment validation: ``validate_assignment`` re-runs the
-        model's validator chain, and LangChain's ``build_extra`` (a before
-        validator) then sweeps cached non-field entries from ``__dict__`` into
-        ``model_kwargs``. Fields whose annotations can't produce a schema
+        runs through a ``TypeAdapter`` for the field's rebuilt annotation (its
+        type plus any ``Field`` constraints such as ``ge``/``le``/``pattern``)
+        rather than pydantic assignment validation: ``validate_assignment``
+        re-runs the model's validator chain, and LangChain's ``build_extra`` (a
+        before validator) then sweeps cached non-field entries from ``__dict__``
+        into ``model_kwargs``. Fields whose annotations can't produce a schema
         (arbitrary types) are set as-is.
         """
-        annotation = type(self).model_fields[field_name].annotation
+        annotation = type(self).model_fields[field_name].rebuild_annotation()
         if annotation is not None:
             try:
                 adapter = TypeAdapter(annotation)

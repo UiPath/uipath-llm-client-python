@@ -592,6 +592,33 @@ class TestModelSettingsApplied:
             UiPathBaseSettings._discovery_cache.clear()
         assert model.additional_model_request_fields == amrf
 
+    def test_bedrock_explicit_amrf_wins_over_model_settings(self, settings: UiPathBaseSettings):
+        """An explicitly-passed additional_model_request_fields key wins over a
+        colliding model_settings passthrough key."""
+        UiPathBaseSettings._discovery_cache.clear()
+        settings._discovery_cache[settings._discovery_cache_key()] = [
+            {
+                "modelName": "AWS - Bedrock",
+                "vendor": "Bedrock",
+                "apiFlavor": "AwsBedrockConverse",
+                "modelFamily": "Anthropic",
+                "modelDetails": {"customerModelName": "anthropic.claude-sonnet-4-5-20250929-v1:0"},
+            }
+        ]
+        try:
+            model = UiPathChatBedrockConverse(
+                model="AWS - Bedrock",
+                settings=settings,
+                byo_connection_id="conn-x",
+                base_model="anthropic.claude-sonnet-4-5-20250929-v1:0",
+                provider="anthropic",
+                additional_model_request_fields={"anthropic_beta": ["explicit"]},
+                model_settings={"anthropic_beta": ["from-settings"]},
+            )
+        finally:
+            UiPathBaseSettings._discovery_cache.clear()
+        assert model.additional_model_request_fields["anthropic_beta"] == ["explicit"]
+
     def test_disabled_key_is_skipped(self, settings: UiPathBaseSettings):
         from uipath_langchain_client.clients.openai.chat_models import UiPathChatOpenAI
 

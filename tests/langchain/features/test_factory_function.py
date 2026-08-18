@@ -617,7 +617,9 @@ class TestModelSettingsApplied:
             )
         finally:
             UiPathBaseSettings._discovery_cache.clear()
-        assert model.additional_model_request_fields["anthropic_beta"] == ["explicit"]
+        amrf = model.additional_model_request_fields
+        assert amrf is not None
+        assert amrf["anthropic_beta"] == ["explicit"]
 
     def test_disabled_key_is_skipped(self, settings: UiPathBaseSettings):
         from uipath_langchain_client.clients.openai.chat_models import UiPathChatOpenAI

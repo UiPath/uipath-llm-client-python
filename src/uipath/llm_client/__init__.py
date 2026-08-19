@@ -36,6 +36,12 @@ from uipath.llm_client.settings import (
     PlatformSettings,
     get_default_client_settings,
 )
+from uipath.llm_client.utils.deadline import (
+    clear_execution_deadline,
+    get_execution_deadline,
+    remaining_time_budget,
+    set_execution_deadline,
+)
 from uipath.llm_client.utils.exceptions import (
     UiPathAPIError,
     UiPathAuthenticationError,
@@ -43,6 +49,7 @@ from uipath.llm_client.utils.exceptions import (
     UiPathBadRequestError,
     UiPathConflictError,
     UiPathError,
+    UiPathExecutionDeadlineError,
     UiPathGatewayTimeoutError,
     UiPathInternalServerError,
     UiPathLLMErrorCode,
@@ -71,8 +78,14 @@ __all__ = [
     "UiPathHttpxAsyncClient",
     # Retry
     "RetryConfig",
+    # Execution deadline
+    "set_execution_deadline",
+    "clear_execution_deadline",
+    "get_execution_deadline",
+    "remaining_time_budget",
     # Exceptions
     "UiPathError",
+    "UiPathExecutionDeadlineError",
     "UiPathLLMErrorCode",
     "UiPathAPIError",
     "UiPathAuthenticationError",

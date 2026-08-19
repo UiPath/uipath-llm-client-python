@@ -3707,16 +3707,16 @@ wheels = [
 
 [[package]]
 name = "uipath-core"
-version = "0.5.28"
+version = "0.5.31"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "opentelemetry-instrumentation" },
     { name = "opentelemetry-sdk" },
     { name = "pydantic" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/4c/f9/8d2f1d98cbebbcf059cf4561f38f34ad4cd58423e4f15cad22bd297a2563/uipath_core-0.5.28.tar.gz", hash = "sha256:942987f6b612c64f93d612ad7b242276ed75f129fdd8f25bc71c24ec8887e388", size = 130578, upload-time = "2026-06-30T14:04:48.841Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/1d/b2/518fcb7d466a39c675194c492e8accbffdc7fd6b280d89b21ed11700a7bd/uipath_core-0.5.31.tar.gz", hash = "sha256:6abb443582d9a8ab6a504791296d49f524fb430f66d8dfaf6d6d1849958700bb", size = 130979, upload-time = "2026-07-15T06:56:03.867Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/e8/1e/385bb166232a57ebe938cc57ad2717f350bc922bb5d2ce31af84306b7569/uipath_core-0.5.28-py3-none-any.whl", hash = "sha256:b952a46a21710073cbc16d6d5684e9aa645c107f57a636b778cfb94aa81a1e48", size = 54980, upload-time = "2026-06-30T14:04:47.374Z" },
+    { url = "https://files.pythonhosted.org/packages/1a/37/47a4e12bc7bdcfab4bd4e8e1f2a5c083bd59fca42fd431026a3f14c642a3/uipath_core-0.5.31-py3-none-any.whl", hash = "sha256:3dff5ecb236bf46af683c34d79bb2cf458a942ec041e1cbf7b4825ae246ff00c", size = 55040, upload-time = "2026-07-15T06:56:02.446Z" },
 ]
 
 [[package]]
@@ -3852,7 +3852,7 @@ requires-dist = [
     { name = "pydantic", specifier = ">=2.12.5,<3.0.0" },
     { name = "pydantic-settings", specifier = ">=2.14.0,<3.0.0" },
     { name = "tenacity", specifier = ">=9.1.4,<10.0.0" },
-    { name = "uipath-platform", specifier = ">=0.1.91,<1.0.0" },
+    { name = "uipath-platform", specifier = ">=0.2.19,<1.0.0" },
 ]
 provides-extras = ["all", "anthropic", "google", "litellm", "openai"]
 
@@ -3875,9 +3875,10 @@ dev = [
 
 [[package]]
 name = "uipath-platform"
-version = "0.1.91"
+version = "0.2.19"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
+    { name = "anyio" },
     { name = "httpx" },
     { name = "pydantic-function-models" },
     { name = "sqlparse" },
@@ -3885,9 +3886,9 @@ dependencies = [
     { name = "truststore" },
     { name = "uipath-core" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/cb/f8/79f903c2989de964a6d533d21df53efb7163688f2e424a829017e348b5f0/uipath_platform-0.1.91.tar.gz", hash = "sha256:f3da83f26497de72dad42b86e01cacd602e92019c7f82076522d7c0df7eb871e", size = 411818, upload-time = "2026-07-03T10:37:55.377Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/41/e0/4504c94f3f508e1bf208a4d210bd090ca881409c3ced216463ed0a92719a/uipath_platform-0.2.19.tar.gz", hash = "sha256:bbfffc2399ac013ca4fe65d6d499732e8eda341c6940dd812822e1e0260d7e7a", size = 436813, upload-time = "2026-08-19T10:36:03.08Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/50/6b/56ecc5232e4423db60669e8becb2fcee8077e41f3de1d603635939e704e6/uipath_platform-0.1.91-py3-none-any.whl", hash = "sha256:593e2542c4fe6e670f98d68cf49fe6e885ff2c7ad659bf232ea667e766403e4f", size = 271450, upload-time = "2026-07-03T10:37:53.884Z" },
+    { url = "https://files.pythonhosted.org/packages/46/67/6d9fc57dd628a8ea95d2af7bebba23f6436c01e8a9a4b91ee238e82e1eff/uipath_platform-0.2.19-py3-none-any.whl", hash = "sha256:34f7bb73df57d1d651b302530a91a3d2c0e48fe5f29ecaa4d47345cb29be8b4a", size = 286371, upload-time = "2026-08-19T10:36:01.502Z" },
 ]
 
 [[package]]

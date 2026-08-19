@@ -52,11 +52,17 @@ from tenacity import (
     retry_if_exception,
     retry_if_exception_type,
     stop_after_attempt,
+    stop_any,
     wait_exponential_jitter,
 )
+from tenacity.stop import stop_base
 from tenacity.wait import wait_base
 from typing_extensions import TypedDict
 
+from uipath.llm_client.utils.deadline import (
+    apply_execution_deadline,
+    remaining_time_budget,
+)
 from uipath.llm_client.utils.exceptions import (
     UiPathAPIError,
     UiPathBadGatewayError,
@@ -94,6 +100,19 @@ _DEFAULT_INITIAL_DELAY: float = 5.0
 _DEFAULT_MAX_DELAY: float = 120.0
 _DEFAULT_EXP_BASE: float = 2.0
 _DEFAULT_JITTER: float = 1.0
+
+
+class stop_when_deadline_exhausted(stop_base):
+    """Tenacity stop strategy that ends the retry loop at the execution deadline.
+
+    Stops once the execution deadline has passed, so the retry loop is bounded
+    by the wall-clock time left in the run rather than only by attempt count.
+    Inactive when no deadline is declared.
+    """
+
+    def __call__(self, retry_state: RetryCallState) -> bool:
+        remaining = remaining_time_budget()
+        return remaining is not None and remaining <= 0
 
 
 class wait_retry_after_with_fallback(wait_base):
@@ -144,14 +163,24 @@ class wait_retry_after_with_fallback(wait_base):
         """
         # Honor Retry-After from any API error, not just 429 — servers attach
         # it to 5xx (and occasionally other) responses as an explicit wait hint.
+        wait: float | None = None
         if retry_state.outcome is not None and retry_state.outcome.failed:
             exception = retry_state.outcome.exception()
             if isinstance(exception, UiPathAPIError) and exception.retry_after is not None:
                 # Use retry-after value, but cap at max_delay
-                return min(exception.retry_after, self.max_delay)
+                wait = min(exception.retry_after, self.max_delay)
 
-        # Fall back to exponential backoff with jitter
-        return self.fallback_wait(retry_state)
+        if wait is None:
+            # Fall back to exponential backoff with jitter
+            wait = self.fallback_wait(retry_state)
+
+        # Never sleep through the execution deadline: if the backoff outlives
+        # the remaining budget, wake at the deadline (the next attempt then
+        # fails fast with UiPathExecutionDeadlineError).
+        remaining = remaining_time_budget()
+        if remaining is not None:
+            wait = min(wait, remaining)
+        return wait
 
 
 class RetryConfig(TypedDict):
@@ -225,7 +254,7 @@ def _build_retryer(
 
     retryer_class = AsyncRetrying if async_mode else Retrying
     return retryer_class(
-        stop=stop_after_attempt(max_retries),
+        stop=stop_any(stop_after_attempt(max_retries), stop_when_deadline_exhausted()),
         wait=wait_retry_after_with_fallback(
             initial=initial_delay,
             max=max_delay,
@@ -297,11 +326,13 @@ class RetryableHTTPTransport(HTTPTransport):
             instead of raising exceptions.
         """
         if self.retryer is None:
+            apply_execution_deadline(request)
             return super().handle_request(request)
 
         parent_handle = super().handle_request
 
         def _send() -> Response:
+            apply_execution_deadline(request)
             response = parent_handle(request)
             if response.is_error:
                 raise UiPathAPIError.from_response(response, request)
@@ -361,11 +392,13 @@ class RetryableAsyncHTTPTransport(AsyncHTTPTransport):
             instead of raising exceptions.
         """
         if self.retryer is None:
+            apply_execution_deadline(request)
             return await super().handle_async_request(request)
 
         parent_handle = super().handle_async_request
 
         async def _send() -> Response:
+            apply_execution_deadline(request)
             response = await parent_handle(request)
             if response.is_error:
                 raise UiPathAPIError.from_response(response, request)

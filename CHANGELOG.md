@@ -2,6 +2,16 @@
 
 All notable changes to `uipath_llm_client` (core package) will be documented in this file.
 
+## [1.18.0] - 2026-08-19
+
+### Added
+- **Execution-deadline support for LLM calls** (PC-4871). Serverless agent runs are force-killed by the control plane after a fixed execution window (15 minutes today); a single LLM call plus its retries could outlast that window, so the process died mid-call with no logs and no timeout recorded on spans. The host runtime can now declare the run's hard deadline once at startup via `set_execution_deadline(seconds_from_now)` (new `uipath.llm_client.utils.deadline` module, exported from `uipath.llm_client`). When a deadline is set, the shared retryable transports enforce it per attempt:
+  - the server-side `X-UiPath-LLMGateway-TimeoutSeconds` request header is lowered to the remaining budget (never raised above its configured value) so the gateway ends an in-flight attempt at the deadline with a 504;
+  - backoff sleeps are capped to the remaining budget and the retry loop stops once the deadline has passed (`stop_when_deadline_exhausted`, OR-ed with the existing attempt-count stop);
+  - once the deadline has passed, the call fails fast with the new `UiPathExecutionDeadlineError` (error code `EXECUTION_DEADLINE_EXCEEDED`) instead of starting an attempt with no budget.
+
+  When no deadline is set (the default), behaviour is unchanged. Note: for streaming responses the httpx read timeout applies per chunk, so a slowly-trickling stream can still outlast the deadline.
+
 ## [1.17.2] - 2026-08-13
 
 ### Fixed

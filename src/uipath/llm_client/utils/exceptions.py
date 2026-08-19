@@ -50,6 +50,7 @@ class UiPathLLMErrorCode(StrEnum):
 
     UNSUPPORTED_MIME_TYPE = "UNSUPPORTED_MIME_TYPE"
     MODEL_NOT_FOUND = "MODEL_NOT_FOUND"
+    EXECUTION_DEADLINE_EXCEEDED = "EXECUTION_DEADLINE_EXCEEDED"
 
 
 class UiPathError(Exception):
@@ -112,6 +113,24 @@ class ModelNotFoundError(UiPathError, ValueError):
 
     def __init__(self, detail: str | None = None) -> None:
         UiPathError.__init__(self, detail, error_code=UiPathLLMErrorCode.MODEL_NOT_FOUND)
+
+
+class UiPathExecutionDeadlineError(UiPathError):
+    """Raised when the run's execution deadline has passed before an LLM call.
+
+    Raised by the retryable transports before a request attempt (initial or
+    retry) when the time budget declared via
+    :func:`uipath.llm_client.utils.deadline.set_execution_deadline` is
+    exhausted. Deliberately not retryable: the run is out of time and must
+    fail cleanly inside its execution window instead of being force-killed by
+    the control plane.
+    """
+
+    def __init__(self) -> None:
+        super().__init__(
+            "The run's execution deadline has passed; no time budget remains for this LLM call.",
+            error_code=UiPathLLMErrorCode.EXECUTION_DEADLINE_EXCEEDED,
+        )
 
 
 class UiPathAPIError(UiPathError, HTTPStatusError):

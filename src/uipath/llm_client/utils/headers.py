@@ -6,9 +6,10 @@ from uipath.platform.common import resource_override
 
 from uipath.llm_client.settings.base import UiPathAPIConfig
 from uipath.llm_client.settings.constants import ApiType, RoutingMode
+from uipath.llm_client.utils.deadline import LLM_GATEWAY_TIMEOUT_SECONDS_HEADER
 
 UIPATH_DEFAULT_REQUEST_HEADERS: dict[str, str] = {
-    "X-UiPath-LLMGateway-TimeoutSeconds": "895",  # server side timeout
+    LLM_GATEWAY_TIMEOUT_SECONDS_HEADER: "895",  # server side timeout; lowered per-request when an execution deadline is set
     "X-UiPath-LLMGateway-AllowFull4xxResponse": "false",  # allow full 4xx responses (default is false) — kept false to avoid PII leakage in logs
 }
 

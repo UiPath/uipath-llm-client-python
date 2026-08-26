@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_langchain_client` will be documented in this file.
 
+## [1.18.0] - 2026-08-13
+
+### Changed
+- Picks up core `uipath-llm-client` 1.18.0: directly-constructed chat/embedding clients now default `client_settings.agenthub_config` to `codedagentsplayground` for design-time runs (local / Studio Web / debug) so coded-agent LLM calls draw the `CodedAgents.Playground` pool; deployed runs stay `None` (→ `AgentHub.LLM`). Explicit `agenthub_config` (e.g. from low-code via `get_chat_model`) and `UIPATH_AGENTHUB_CONFIG` still take precedence. Bumped the `uipath-llm-client` floor to `>=1.18.0`.
+
 ## [1.17.3] - 2026-08-06
 
 ### Fixed

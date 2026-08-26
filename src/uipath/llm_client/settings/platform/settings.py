@@ -7,7 +7,11 @@ from urllib.parse import quote
 from pydantic import Field, SecretStr, model_validator
 from typing_extensions import override
 from uipath.platform import UiPath
-from uipath.platform.common import EndpointManager, resolve_service_url
+from uipath.platform.common import (
+    EndpointManager,
+    resolve_coded_agenthub_config,
+    resolve_service_url,
+)
 from uipath.platform.common._config import UiPathConfig
 from uipath.platform.common.constants import (
     ENV_BASE_URL,
@@ -89,6 +93,28 @@ class PlatformBaseSettings(UiPathBaseSettings):
         parsed_token_data = try_parse_access_token(access_token)
         if parsed_token_data is not None:
             self.client_id = parsed_token_data.get("client_id")
+        return self
+
+    @model_validator(mode="after")
+    def default_agenthub_config_for_design_time(self) -> Self:
+        """Default ``agenthub_config`` to the coded-agent playground marker at design time.
+
+        When no explicit ``agenthub_config`` was supplied (env ``UIPATH_AGENTHUB_CONFIG``
+        unset and no caller override), a design-time run — local, Studio Web, or a debug
+        session — sends ``codedagentsplayground`` so its LLM calls draw the
+        CodedAgents.Playground licensing pool. A deployed run keeps ``agenthub_config``
+        None, which the gateway resolves to AgentHub.LLM.
+
+        Callers that pass an explicit value — low-code agents and evaluators go through
+        ``get_chat_model(agenthub_config=...)``, which overrides via ``model_copy`` (that
+        does not re-run this validator) — are unaffected. An explicit empty string is left
+        as an intentional opt-out.
+
+        The design-time-vs-deployed decision is the shared ``resolve_coded_agenthub_config``
+        helper from ``uipath.platform`` so all coded frameworks classify runs identically.
+        """
+        if self.agenthub_config is None:
+            self.agenthub_config = resolve_coded_agenthub_config()
         return self
 
     @staticmethod

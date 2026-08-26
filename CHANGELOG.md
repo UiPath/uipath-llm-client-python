@@ -2,6 +2,12 @@
 
 All notable changes to `uipath_llm_client` (core package) will be documented in this file.
 
+## [1.18.0] - 2026-08-13
+
+### Changed
+- `PlatformBaseSettings.agenthub_config` now defaults to `codedagentsplayground` for design-time runs (local, Studio Web, or a debug session) instead of `None`, so coded-agent LLM calls draw the `CodedAgents.Playground` licensing pool. A deployed run — a real Orchestrator job that is neither a Studio Web project nor rooted to a debug session — still resolves to `None` (→ `AgentHub.LLM`). Callers that pass an explicit `agenthub_config` (low-code agents, evaluators via `get_chat_model(agenthub_config=...)`) override this default via `model_copy` and are unaffected; an explicit empty string is left as an opt-out. Setting `UIPATH_AGENTHUB_CONFIG` still wins over the computed default.
+- The design-time-vs-deployed decision uses the shared `resolve_coded_agenthub_config` helper from `uipath.platform` (bumped floor to `uipath-platform>=0.2.19`) so all coded frameworks (langchain / llamaindex / openai-agents) classify runs identically.
+
 ## [1.17.2] - 2026-08-13
 
 ### Fixed

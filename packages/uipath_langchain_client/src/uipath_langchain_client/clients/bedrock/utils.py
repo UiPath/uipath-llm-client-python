@@ -1,6 +1,7 @@
 import base64
 import json
-from collections.abc import Generator
+import logging
+from collections.abc import Generator, Iterable
 from typing import Any
 
 from httpx import Client
@@ -12,6 +13,68 @@ except ImportError as e:
         "The 'bedrock' extra is required to use WrappedBotoClient. "
         "Install it with: uv add uipath-langchain-client[bedrock]"
     ) from e
+
+logger = logging.getLogger(__name__)
+
+CONVERSE_STREAM_EVENT_TYPES = frozenset(
+    {
+        "messageStart",
+        "contentBlockStart",
+        "contentBlockDelta",
+        "contentBlockStop",
+        "messageStop",
+        "metadata",
+    }
+)
+"""Converse stream event types `langchain_aws` can parse.
+
+It also turns AWS `*Exception` events into errors and raises on everything else.
+"""
+
+GATEWAY_COST_EVENT_TYPE = "costMetadata"
+"""Per-call cost frame the LLM Gateway appends after the terminal AWS frame."""
+
+
+def reconcile_converse_stream_events(
+    events: Iterable[dict[str, Any]],
+) -> Generator[dict[str, Any], None, None]:
+    """Keep gateway-only event-stream frames out of an AWS-shaped stream.
+
+    AWS events pass through untouched and in order. The cost frame's payload is
+    folded into the terminal `metadata` event, so it reaches `response_metadata`
+    under the same keys the gateway uses on non-streamed responses, and AWS keys
+    win a collision. Every other unrecognized event is dropped.
+
+    Only `metadata` is buffered, so content events are still yielded as they
+    arrive.
+    """
+    pending_metadata: dict[str, Any] | None = None
+    cost: dict[str, Any] = {}
+
+    for event in events:
+        event_type = next(iter(event), "")
+        if event_type in CONVERSE_STREAM_EVENT_TYPES or "Exception" in event_type:
+            if pending_metadata is not None:
+                yield pending_metadata
+                pending_metadata = None
+            if event_type == "metadata":
+                pending_metadata = event
+                continue
+            yield event
+        elif event_type == GATEWAY_COST_EVENT_TYPE:
+            payload = event[event_type]
+            if isinstance(payload, dict):
+                cost.update(payload)
+        else:
+            logger.debug("Dropping unrecognized Bedrock stream event %r", event_type)
+
+    if pending_metadata is not None:
+        metadata = pending_metadata["metadata"]
+        for key, value in cost.items():
+            metadata.setdefault(key, value)
+        yield pending_metadata
+    elif cost:
+        logger.debug("No metadata event to carry gateway cost %r", cost)
 
 
 class _MockEventHooks:
@@ -117,11 +180,13 @@ class WrappedBotoClient:
         **params: Any,
     ) -> Any:
         return {
-            "stream": self._stream_generator(
-                {
-                    "messages": messages,
-                    "system": system,
-                    **params,
-                }
+            "stream": reconcile_converse_stream_events(
+                self._stream_generator(
+                    {
+                        "messages": messages,
+                        "system": system,
+                        **params,
+                    }
+                )
             ),
         }

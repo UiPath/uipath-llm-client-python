@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_langchain_client` will be documented in this file.
 
+## [1.18.1] - 2026-08-27
+
+### Fixed
+- Streamed `UiPathChatBedrockConverse` runs no longer fail when the LLM Gateway is configured to report per-call cost. The gateway appends a `costMetadata` event-stream frame that AWS does not define, and `langchain_aws` raises `ValueError` on any stream event it does not recognize, so the run died mid-stream after the model had already produced text. Gateway-only frames are now kept out of the AWS-shaped stream, and the cost payload is folded into the terminal `metadata` event so it reaches `response_metadata` (for example `associated_dollar_cost`), which is where the gateway already puts it on non-streamed responses.
+
 ## [1.18.0] - 2026-08-13
 
 ### Changed

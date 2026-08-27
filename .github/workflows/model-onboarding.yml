@@ -3,7 +3,8 @@
 # product, against the LLM Gateway environment held in a GitHub environment of this repo.
 #
 # Dispatched by hand, or by UiPath/llm-gateway-config when a model is routed for agents/agenthub
-# in prod. The model is injected into the per-provider conftest matrix for this run only.
+# in prod. The model is injected into the per-provider conftest matrix for this run only, and only
+# into the vendor clients whose API flavor the gateway declares for it (SupportedApiFlavors).
 #
 # target_environment: LLMGW_SETTINGS (alpha, exists) or a prod-tier environment such as
 # LLMGW_SETTINGS_PROD — same variable/secret names as ci.yml's test job.
@@ -31,6 +32,15 @@ on:
         required: true
         type: choice
         options: [agents, agenthub, agent-gym, testproduct]
+      api_flavors:
+        description: comma-separated LLM Gateway SupportedApiFlavors (selects which vendor clients run)
+        required: true
+        type: string
+      operations:
+        description: comma-separated SupportedNormalizedOperations
+        required: false
+        default: NormalizedChat
+        type: string
       target_environment:
         description: GitHub environment holding the LLMGW_* settings
         required: false
@@ -79,7 +89,8 @@ jobs:
         id: inject
         run: |
           out=$(python scripts/inject_model_into_matrix.py --repo . \
-                  --model "${{ inputs.model }}" --family "${{ inputs.family }}" --vendor "${{ inputs.vendor }}")
+                  --model "${{ inputs.model }}" --family "${{ inputs.family }}" --vendor "${{ inputs.vendor }}" \
+                  --flavors "${{ inputs.api_flavors }}" --operations "${{ inputs.operations }}")
           echo "$out"
           echo "dirs=$(echo "$out" | tail -1)" >> "$GITHUB_OUTPUT"
 

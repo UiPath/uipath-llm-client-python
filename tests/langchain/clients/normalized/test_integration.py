@@ -17,7 +17,6 @@ from tests.langchain.integration_tests import UiPathChatModelIntegrationTests
 from uipath.llm_client.settings import PlatformSettings
 
 
-@pytest.mark.asyncio
 @pytest.mark.vcr
 class TestNormalizedIntegrationChatModel(UiPathChatModelIntegrationTests):
     @pytest.fixture(autouse=True)
@@ -172,7 +171,6 @@ class TestNormalizedIntegrationChatModel(UiPathChatModelIntegrationTests):
         pytest.skip("Parallel tool calling is not supported for normalized API")
 
 
-@pytest.mark.asyncio
 @pytest.mark.vcr
 class TestNormalizedIntegrationEmbeddings(EmbeddingsIntegrationTests):
     @pytest.fixture(autouse=True)

@@ -15,7 +15,6 @@ from uipath_langchain_client.clients.bedrock.chat_models import (
 from tests.langchain.integration_tests import UiPathChatModelIntegrationTests
 
 
-@pytest.mark.asyncio
 @pytest.mark.vcr
 class TestBedrockIntegrationChatModel(UiPathChatModelIntegrationTests):
     @pytest.fixture(autouse=True)

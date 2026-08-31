@@ -14,7 +14,6 @@ from tests.langchain.file_fixtures import IMAGE_FORMATS, PDF_FORMATS
 from tests.langchain.integration_tests import UiPathChatModelIntegrationTests
 
 
-@pytest.mark.asyncio
 @pytest.mark.vcr
 class TestAnthropicIntegrationChatModel(UiPathChatModelIntegrationTests):
     @pytest.fixture(autouse=True)

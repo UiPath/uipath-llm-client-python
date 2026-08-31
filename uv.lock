@@ -3747,6 +3747,7 @@ azure = [
     { name = "langchain-azure-ai" },
 ]
 bedrock = [
+    { name = "anthropic", extra = ["bedrock"] },
     { name = "langchain-aws", extra = ["anthropic"] },
 ]
 fireworks = [
@@ -3767,6 +3768,8 @@ vertexai = [
 
 [package.metadata]
 requires-dist = [
+    { name = "anthropic", extras = ["bedrock"], marker = "extra == 'all'", specifier = ">=0.96.0,<1.0.0" },
+    { name = "anthropic", extras = ["bedrock"], marker = "extra == 'bedrock'", specifier = ">=0.96.0,<1.0.0" },
     { name = "anthropic", extras = ["bedrock", "vertex"], marker = "extra == 'all'", specifier = ">=0.96.0,<1.0.0" },
     { name = "anthropic", extras = ["bedrock", "vertex"], marker = "extra == 'anthropic'", specifier = ">=0.96.0,<1.0.0" },
     { name = "langchain", specifier = ">=1.2.15,<2.0.0" },

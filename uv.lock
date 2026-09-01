@@ -3748,6 +3748,7 @@ azure = [
 ]
 bedrock = [
     { name = "anthropic", extra = ["bedrock"] },
+    { name = "langchain-anthropic" },
     { name = "langchain-aws", extra = ["anthropic"] },
 ]
 fireworks = [
@@ -3773,8 +3774,9 @@ requires-dist = [
     { name = "anthropic", extras = ["bedrock", "vertex"], marker = "extra == 'all'", specifier = ">=0.96.0,<1.0.0" },
     { name = "anthropic", extras = ["bedrock", "vertex"], marker = "extra == 'anthropic'", specifier = ">=0.96.0,<1.0.0" },
     { name = "langchain", specifier = ">=1.2.15,<2.0.0" },
-    { name = "langchain-anthropic", marker = "extra == 'all'", specifier = ">=1.4.1,<2.0.0" },
-    { name = "langchain-anthropic", marker = "extra == 'anthropic'", specifier = ">=1.4.1,<2.0.0" },
+    { name = "langchain-anthropic", marker = "extra == 'all'", specifier = ">=1.4.1,<1.7.0" },
+    { name = "langchain-anthropic", marker = "extra == 'anthropic'", specifier = ">=1.4.1,<1.7.0" },
+    { name = "langchain-anthropic", marker = "extra == 'bedrock'", specifier = ">=1.4.1,<1.7.0" },
     { name = "langchain-aws", extras = ["anthropic"], marker = "extra == 'all'", specifier = ">=1.4.5,<2.0.0" },
     { name = "langchain-aws", extras = ["anthropic"], marker = "extra == 'bedrock'", specifier = ">=1.4.5,<2.0.0" },
     { name = "langchain-azure-ai", marker = "extra == 'all'", specifier = ">=1.2.2,<2.0.0" },

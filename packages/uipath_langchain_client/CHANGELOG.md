@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_langchain_client` will be documented in this file.
 
+## [1.18.2] - 2026-09-01
+
+### Fixed
+- Bound `langchain-anthropic>=1.4.1,<1.7.0` on the `anthropic` and `bedrock` extras; 1.7.0 changed the private `_create`/`_acreate` contract, breaking `UiPathChatAnthropic`.
+
 ## [1.18.1] - 2026-08-31
 
 ### Fixed

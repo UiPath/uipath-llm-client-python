@@ -83,6 +83,17 @@ class UiPathChatLiteLLM(UiPathBaseChatModel, ChatLiteLLM):  # type: ignore[overr
     vendor_type: VendorType | str | None = Field(default=None, exclude=True)
     api_flavor: ApiFlavor | str | None = Field(default=None, exclude=True)
 
+    def __init__(self, **kwargs: Any) -> None:
+        streaming_explicitly_set = "streaming" in kwargs
+        super().__init__(**kwargs)
+        # ChatLiteLLM's before-validator materializes a value for every field,
+        # which marks `streaming` as explicitly set. langchain-core >= 1.4
+        # treats an explicitly-set streaming=False as a hard opt-out, silently
+        # downgrading .stream()/.astream() to non-streaming invoke calls.
+        # Un-mark the field unless the caller actually passed it.
+        if not streaming_explicitly_set:
+            self.__pydantic_fields_set__.discard("streaming")
+
     # Internal core client — handles discovery, HTTPHandler lifecycle, provider resolution
     _core: UiPathLiteLLM | None = None
 

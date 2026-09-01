@@ -179,14 +179,18 @@ class UiPathChatAnthropic(UiPathBaseChatModel, ChatAnthropic):
             case _:
                 raise ValueError("Anthropic models are currently not hosted on any other provider")
 
+    # langchain-anthropic >= 1.7.0 expects _create/_acreate to return a raw-response
+    # wrapper (it calls .parse() on the result), so route through with_raw_response.
     @override
     def _create(self, payload: dict[str, Any]) -> Any:
         if "betas" in payload:
-            return self._anthropic_client.beta.messages.create(**payload)
-        return self._anthropic_client.messages.create(**payload)
+            return self._anthropic_client.beta.messages.with_raw_response.create(**payload)
+        return self._anthropic_client.messages.with_raw_response.create(**payload)
 
     @override
     async def _acreate(self, payload: dict[str, Any]) -> Any:
         if "betas" in payload:
-            return await self._async_anthropic_client.beta.messages.create(**payload)
-        return await self._async_anthropic_client.messages.create(**payload)
+            return await self._async_anthropic_client.beta.messages.with_raw_response.create(
+                **payload
+            )
+        return await self._async_anthropic_client.messages.with_raw_response.create(**payload)

@@ -11,7 +11,6 @@ from tests.langchain.file_fixtures import PDF_FORMATS
 from tests.langchain.integration_tests import UiPathChatModelIntegrationTests
 
 
-@pytest.mark.asyncio
 @pytest.mark.vcr
 class TestOpenAIIntegrationChatModel(UiPathChatModelIntegrationTests):
     @pytest.fixture(autouse=True)
@@ -49,7 +48,6 @@ class TestOpenAIIntegrationChatModel(UiPathChatModelIntegrationTests):
             pytest.skip("PDF inputs require the OpenAI Responses API")
 
 
-@pytest.mark.asyncio
 @pytest.mark.vcr
 class TestOpenAIIntegrationEmbeddings(EmbeddingsIntegrationTests):
     @pytest.fixture(autouse=True)

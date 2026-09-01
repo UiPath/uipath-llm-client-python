@@ -13,7 +13,6 @@ from langchain_tests.integration_tests import EmbeddingsIntegrationTests
 from tests.langchain.integration_tests import UiPathChatModelIntegrationTests
 
 
-@pytest.mark.asyncio
 @pytest.mark.vcr
 class TestLiteLLMIntegrationChatModel(UiPathChatModelIntegrationTests):
     @property
@@ -125,7 +124,6 @@ class TestLiteLLMIntegrationChatModel(UiPathChatModelIntegrationTests):
             )
 
 
-@pytest.mark.asyncio
 @pytest.mark.vcr
 class TestLiteLLMIntegrationEmbeddings(EmbeddingsIntegrationTests):
     @pytest.fixture(autouse=True)

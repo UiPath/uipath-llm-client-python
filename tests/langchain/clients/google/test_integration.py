@@ -11,7 +11,6 @@ from tests.langchain.integration_tests import UiPathChatModelIntegrationTests
 from uipath.llm_client.settings import PlatformSettings
 
 
-@pytest.mark.asyncio
 @pytest.mark.vcr
 class TestGoogleIntegrationChatModel(UiPathChatModelIntegrationTests):
     @pytest.fixture(autouse=True)
@@ -48,7 +47,6 @@ class TestGoogleIntegrationChatModel(UiPathChatModelIntegrationTests):
             pytest.skip(f"Skipping {test_name}: not supported for Gemini models")
 
 
-@pytest.mark.asyncio
 @pytest.mark.vcr
 class TestGoogleIntegrationEmbeddings(EmbeddingsIntegrationTests):
     @pytest.fixture(autouse=True)

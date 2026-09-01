@@ -10,7 +10,6 @@ from langchain_core.runnables import Runnable
 from tests.langchain.integration_tests import UiPathChatModelIntegrationTests
 
 
-@pytest.mark.asyncio
 @pytest.mark.vcr
 class TestVertexAIIntegrationChatModel(UiPathChatModelIntegrationTests):
     @pytest.fixture(autouse=True)

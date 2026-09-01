@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_langchain_client` will be documented in this file.
 
+## [1.18.1] - 2026-08-31
+
+### Fixed
+- Bound `anthropic[bedrock]>=0.96.0,<1.0.0` explicitly on the `bedrock` extra, which previously admitted anthropic 1.x transitively; the 1.x SDK rejects UiPath's httpx clients.
+
 ## [1.18.0] - 2026-08-13
 
 ### Changed

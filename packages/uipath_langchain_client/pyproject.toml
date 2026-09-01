@@ -22,6 +22,7 @@ anthropic = [
 ]
 bedrock = [
     "langchain-aws[anthropic]>=1.4.5,<2.0.0",
+    "anthropic[bedrock]>=0.96.0,<1.0.0",
 ]
 vertexai = [
     "langchain-google-vertexai>=3.2.2,<4.0.0",

@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_langchain_client` will be documented in this file.
 
+## [1.18.3] - 2026-09-02
+
+### Added
+- `model_settings` field on `UiPathBaseChatModel` and a matching `model_settings` param on `get_chat_model`. Provider-native settings from agent.json's `settings.modelSettings` are applied verbatim: a key matching a native field (by name or alias, e.g. `timeout` -> `request_timeout`) is coerced against the field's declared type and set, anything else routes to `model_kwargs`, and keys listed in `disabled_params` are skipped. A value the field can't coerce fails at construction instead of surfacing as a provider 400. Coercion deliberately avoids pydantic assignment validation: re-running the validator chain lets LangChain's `build_extra` sweep cached non-field entries into `model_kwargs`. No per-provider mapping — discovery is the source of truth for the shape.
+
 ## [1.18.2] - 2026-09-01
 
 ### Fixed

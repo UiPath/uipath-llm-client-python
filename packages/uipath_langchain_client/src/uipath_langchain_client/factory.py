@@ -20,6 +20,7 @@ Example:
     >>> embeddings = get_embedding_model(model_name="text-embedding-3-large", client_settings=settings)
 """
 
+from collections.abc import Mapping
 from typing import Any
 
 from uipath_langchain_client.base_client import (
@@ -48,6 +49,7 @@ def get_chat_model(
     api_flavor: ApiFlavor | str | None = None,
     custom_class: type[UiPathBaseChatModel] | None = None,
     agenthub_config: str | None = None,
+    model_settings: Mapping[str, Any] | None = None,
     **model_kwargs: Any,
 ) -> UiPathBaseChatModel:
     """Factory function to create the appropriate LangChain chat model for a given model name.
@@ -92,6 +94,9 @@ def get_chat_model(
     )
     model_family = model_info.get("modelFamily", None)
     model_details = model_info.get("modelDetails") or {}
+
+    if model_settings is not None:
+        model_kwargs["model_settings"] = model_settings
 
     if custom_class is not None:
         return custom_class(

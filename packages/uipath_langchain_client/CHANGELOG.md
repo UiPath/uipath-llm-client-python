@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_langchain_client` will be documented in this file.
 
+## [1.18.4] - 2026-09-04
+
+### Fixed
+- `temperature` now reaches the dotted gpt-5 variants (`gpt-5.2`, `gpt-5.4`) instead of being silently dropped. langchain-openai strips it for every `gpt-5*` model unless reasoning effort is explicitly `"none"`, but the dotted variants default to effort `none` and do accept it. `Gpt5TemperatureMixin` on `UiPathChatOpenAI` and `UiPathAzureChatOpenAI` overrides both strip sites and defers to langchain elsewhere, so base `gpt-5`, `pro` variants, reasoning-enabled models, and `shouldSkipTemperature` models are unaffected. Remove once langchain-ai/langchain#35424 ships.
+
 ## [1.18.3] - 2026-09-02
 
 ### Added

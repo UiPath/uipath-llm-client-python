@@ -205,10 +205,10 @@ class UiPathAPIError(UiPathError, HTTPStatusError):
         return None
 
     def __str__(self) -> str:
-        return (
-            f"{self.__class__.__name__}: {self.message} "
-            f"(Status Code: {self.status_code}) {self.body}"
-        )
+        # ``self.body`` is deliberately absent. The traceback module renders the
+        # final exception line with str(), so anything here is copied verbatim
+        # into every printed stacktrace -- potentially including PII
+        return f"{self.__class__.__name__}: {self.message} (Status Code: {self.status_code})"
 
     def __repr__(self) -> str:
         return (

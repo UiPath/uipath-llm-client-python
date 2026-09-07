@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_llm_client` (core package) will be documented in this file.
 
+## [1.18.5] - 2026-09-07
+
+### Fixed
+- `UiPathAPIError.__str__` no longer includes the response body. The `traceback` module renders the final exception line with `str()`, so a relayed provider error body was copied verbatim into every printed stacktrace — including the one shipped as `AgentRun.Failed.ErrorTraceback` — regardless of what the consuming runtime chose to put in its own customer-facing error. The body is content of unknown sensitivity and may carry PII, so it now stays on the `body` attribute (unchanged, for callers that classify on it) and out of the serialized form. `__repr__` is unchanged. (PC-5002)
+
 ## [1.18.0] - 2026-08-13
 
 ### Changed

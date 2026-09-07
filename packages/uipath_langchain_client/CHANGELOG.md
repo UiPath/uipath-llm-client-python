@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_langchain_client` will be documented in this file.
 
+## [1.18.5] - 2026-09-07
+
+### Changed
+- Bumped the `uipath-llm-client` floor to `>=1.18.5`, which stops `UiPathAPIError.__str__` from copying the response body into printed stacktraces. (PC-5002)
+
 ## [1.18.4] - 2026-09-02
 
 ### Fixed

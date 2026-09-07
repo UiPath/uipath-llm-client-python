@@ -182,11 +182,13 @@ class UiPathChatAnthropic(UiPathBaseChatModel, ChatAnthropic):
     @override
     def _create(self, payload: dict[str, Any]) -> Any:
         if "betas" in payload:
-            return self._anthropic_client.beta.messages.create(**payload)
-        return self._anthropic_client.messages.create(**payload)
+            return self._anthropic_client.beta.messages.with_raw_response.create(**payload)
+        return self._anthropic_client.messages.with_raw_response.create(**payload)
 
     @override
     async def _acreate(self, payload: dict[str, Any]) -> Any:
         if "betas" in payload:
-            return await self._async_anthropic_client.beta.messages.create(**payload)
-        return await self._async_anthropic_client.messages.create(**payload)
+            return await self._async_anthropic_client.beta.messages.with_raw_response.create(
+                **payload
+            )
+        return await self._async_anthropic_client.messages.with_raw_response.create(**payload)

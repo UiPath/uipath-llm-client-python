@@ -2,6 +2,12 @@
 
 All notable changes to `uipath_langchain_client` will be documented in this file.
 
+## [1.18.4] - 2026-09-02
+
+### Fixed
+- `UiPathChatAnthropic._create`/`._acreate` now return raw responses (`with_raw_response`) to match langchain-anthropic 1.7.0, which calls `.parse()` on the result. Lifts the interim `<1.7.0` pin from 1.18.2: the `langchain-anthropic` bound on the `anthropic` and `bedrock` extras is now `>=1.7.0,<2.0.0`.
+- `UiPathChatLiteLLM.stream()`/`.astream()` no longer silently fall back to non-streaming calls on langchain-core >= 1.4, which treats the `streaming=False` that ChatLiteLLM's validator marks as explicitly set as a hard streaming opt-out.
+
 ## [1.18.3] - 2026-09-02
 
 ### Added

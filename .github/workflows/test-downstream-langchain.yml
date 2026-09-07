@@ -1,0 +1,148 @@
+# Downstream gate: run uipath-langchain-python's tests against wheels built
+# from this PR, so a client change that breaks the downstream repo cannot merge
+# (and therefore cannot auto-publish to PyPI via cd.yml / cd-langchain.yml).
+#
+# Requires repo secrets ALPHA_TEST_CLIENT_ID / ALPHA_TEST_CLIENT_SECRET /
+# ALPHA_BASE_URL (same values as uipath-langchain-python's integration tests).
+# The `skip:downstream` label bypasses the gate for emergencies (e.g. the
+# downstream main is broken for unrelated reasons).
+name: Downstream integration
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: downstream-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOWNSTREAM_REPO: UiPath/uipath-langchain-python
+  DOWNSTREAM_REF: main
+
+jobs:
+  detect-changes:
+    runs-on: uipath-ubuntu-latest
+    outputs:
+      run_downstream: ${{ steps.detect.outputs.changed }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803  # v6.1.0
+        with:
+          fetch-depth: 0
+
+      - name: Detect package source changes
+        id: detect
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          changed=$(git diff --name-only "$BASE_SHA...$HEAD_SHA" \
+            | grep -cE '^(src/|packages/uipath_langchain_client/(src/|pyproject\.toml)|pyproject\.toml|uv\.lock)' \
+            || true)
+          echo "changed=$([ "$changed" -gt 0 ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+          echo "Package source files changed: $changed"
+
+  build-wheels:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.run_downstream == 'true' && !contains(github.event.pull_request.labels.*.name, 'skip:downstream')
+    runs-on: uipath-ubuntu-latest
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803  # v6.1.0
+
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78  # v7.6.0
+        with:
+          version: "0.9.27"
+
+      - name: Build wheels from the PR
+        run: |
+          uv build --out-dir wheels
+          uv build --package uipath-langchain-client --out-dir wheels
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4.6.2
+        with:
+          name: client-wheels
+          path: wheels/*.whl
+
+  integration-tests:
+    needs: build-wheels
+    runs-on: uipath-ubuntu-latest
+    timeout-minutes: 10
+    container:
+      image: ghcr.io/astral-sh/uv:python3.12-bookworm
+      env:
+        UIPATH_JOB_KEY: "3a03d5cb-fa21-4021-894d-a8e2eda0afe0"
+        UIPATH_TRACING_ENABLED: false
+    strategy:
+      fail-fast: false
+      matrix:
+        # Only the testcases that exercise the LLM client; the downstream repo's
+        # own CI covers the SDK-scaffolding testcases and the full env matrix.
+        testcase: [chat-models, multimodal-invoke]
+        environment: [alpha]
+
+    name: "${{ matrix.testcase }} / ${{ matrix.environment }}"
+
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803  # v6.1.0
+        with:
+          path: client
+          sparse-checkout: .github/scripts
+
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803  # v6.1.0
+        with:
+          repository: ${{ env.DOWNSTREAM_REPO }}
+          ref: ${{ env.DOWNSTREAM_REF }}
+          path: downstream
+
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093  # v4.3.0
+        with:
+          name: client-wheels
+          path: wheels
+
+      - name: Point testcase at the PR wheels
+        run: |
+          python3 client/.github/scripts/inject_uv_overrides.py \
+            "downstream/testcases/${{ matrix.testcase }}/pyproject.toml"
+
+      - name: Run testcase
+        working-directory: downstream/testcases/${{ matrix.testcase }}
+        env:
+          CLIENT_ID: ${{ secrets.ALPHA_TEST_CLIENT_ID }}
+          CLIENT_SECRET: ${{ secrets.ALPHA_TEST_CLIENT_SECRET }}
+          BASE_URL: ${{ secrets.ALPHA_BASE_URL }}
+        run: |
+          # With empty credentials `uipath auth` falls back to the interactive
+          # browser flow and hangs until the job timeout - fail fast instead.
+          # POSIX sh, not bash: container-job steps run under `sh -e`.
+          if [ -z "$CLIENT_ID" ] || [ -z "$CLIENT_SECRET" ] || [ -z "$BASE_URL" ]; then
+            echo "::error::ALPHA_TEST_CLIENT_ID / ALPHA_TEST_CLIENT_SECRET / ALPHA_BASE_URL secrets are not configured on this repository. Copy them from uipath-langchain-python's integration setup."
+            exit 1
+          fi
+          echo "Running testcase: ${{ matrix.testcase }} against ${{ matrix.environment }}"
+          bash run.sh
+          bash ../common/validate_output.sh
+
+  downstream-gate:
+    needs: [detect-changes, integration-tests]
+    if: always()
+    runs-on: uipath-ubuntu-latest
+    steps:
+      - name: Evaluate gate
+        run: |
+          if [[ "${{ needs.detect-changes.outputs.run_downstream }}" != "true" ]]; then
+            echo "No package source changed - downstream tests not required."
+            exit 0
+          fi
+          if [[ "${{ contains(github.event.pull_request.labels.*.name, 'skip:downstream') }}" == "true" ]]; then
+            echo "skip:downstream label present - gate bypassed."
+            exit 0
+          fi
+          if [[ "${{ needs.integration-tests.result }}" == "success" ]]; then
+            echo "Downstream green."
+            exit 0
+          fi
+          echo "Downstream tests failed - this PR would break uipath-langchain-python."
+          exit 1

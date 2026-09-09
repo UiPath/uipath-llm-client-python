@@ -36,7 +36,7 @@ from langchain_core.callbacks import (
 )
 from langchain_core.embeddings import Embeddings
 from langchain_core.language_models.chat_models import BaseChatModel
-from langchain_core.messages import BaseMessage
+from langchain_core.messages import AIMessageChunk, BaseMessage
 from langchain_core.outputs import ChatGeneration, ChatGenerationChunk, ChatResult
 from pydantic import (
     AliasChoices,
@@ -51,6 +51,10 @@ from pydantic.errors import PydanticSchemaGenerationError
 from uipath.llm_client.httpx_client import (
     UiPathHttpxAsyncClient,
     UiPathHttpxClient,
+)
+from uipath.llm_client.utils.dollar_cost import (
+    get_captured_dollar_cost,
+    set_captured_dollar_cost,
 )
 from uipath.llm_client.utils.exceptions import wrap_provider_errors
 from uipath.llm_client.utils.headers import (
@@ -524,15 +528,18 @@ class UiPathBaseChatModel(UiPathBaseLLMClient, BaseChatModel):
             logger=self.logger,
         )
         set_captured_response_headers({})
+        set_captured_dollar_cost(None)
         try:
             with wrap_provider_errors():
                 result = self._uipath_generate(
                     messages, stop=stop, run_manager=run_manager, **kwargs
                 )
             self._inject_gateway_headers(result.generations)
+            self._inject_dollar_cost(result.generations)
             return result
         finally:
             set_captured_response_headers({})
+            set_captured_dollar_cost(None)
 
     def _uipath_generate(
         self,
@@ -558,15 +565,18 @@ class UiPathBaseChatModel(UiPathBaseLLMClient, BaseChatModel):
             logger=self.logger,
         )
         set_captured_response_headers({})
+        set_captured_dollar_cost(None)
         try:
             with wrap_provider_errors():
                 result = await self._uipath_agenerate(
                     messages, stop=stop, run_manager=run_manager, **kwargs
                 )
             self._inject_gateway_headers(result.generations)
+            self._inject_dollar_cost(result.generations)
             return result
         finally:
             set_captured_response_headers({})
+            set_captured_dollar_cost(None)
 
     async def _uipath_agenerate(
         self,
@@ -592,6 +602,7 @@ class UiPathBaseChatModel(UiPathBaseLLMClient, BaseChatModel):
             logger=self.logger,
         )
         set_captured_response_headers({})
+        set_captured_dollar_cost(None)
         try:
             first = True
             with wrap_provider_errors():
@@ -602,8 +613,12 @@ class UiPathBaseChatModel(UiPathBaseLLMClient, BaseChatModel):
                         self._inject_gateway_headers([chunk])
                         first = False
                     yield chunk
+            cost_chunk = self._dollar_cost_chunk()
+            if cost_chunk is not None:
+                yield cost_chunk
         finally:
             set_captured_response_headers({})
+            set_captured_dollar_cost(None)
 
     def _uipath_stream(
         self,
@@ -629,6 +644,7 @@ class UiPathBaseChatModel(UiPathBaseLLMClient, BaseChatModel):
             logger=self.logger,
         )
         set_captured_response_headers({})
+        set_captured_dollar_cost(None)
         try:
             first = True
             with wrap_provider_errors():
@@ -639,8 +655,12 @@ class UiPathBaseChatModel(UiPathBaseLLMClient, BaseChatModel):
                         self._inject_gateway_headers([chunk])
                         first = False
                     yield chunk
+            cost_chunk = self._dollar_cost_chunk()
+            if cost_chunk is not None:
+                yield cost_chunk
         finally:
             set_captured_response_headers({})
+            set_captured_dollar_cost(None)
 
     async def _uipath_astream(
         self,
@@ -662,6 +682,28 @@ class UiPathBaseChatModel(UiPathBaseLLMClient, BaseChatModel):
             return
         for generation in generations:
             generation.message.response_metadata["headers"] = headers
+
+    def _inject_dollar_cost(self, generations: Sequence[ChatGeneration]) -> None:
+        """Absent (None) means "not priced" and is never injected as $0."""
+        cost = get_captured_dollar_cost()
+        if cost is None:
+            return
+        for generation in generations:
+            generation.message.response_metadata["associated_dollar_cost"] = cost
+
+    def _dollar_cost_chunk(self) -> ChatGenerationChunk | None:
+        """Trailing empty chunk carrying the cost, or None if not priced.
+
+        The cost is only known after the last content chunk was yielded. Holding
+        chunks back would delay every token, so it rides on an extra empty chunk
+        (like langchain-openai's usage chunk); merging folds it into response_metadata.
+        """
+        cost = get_captured_dollar_cost()
+        if cost is None:
+            return None
+        return ChatGenerationChunk(
+            message=AIMessageChunk(content="", response_metadata={"associated_dollar_cost": cost})
+        )
 
 
 class UiPathBaseEmbeddings(UiPathBaseLLMClient, Embeddings):

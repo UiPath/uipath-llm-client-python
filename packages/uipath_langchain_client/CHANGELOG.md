@@ -2,6 +2,14 @@
 
 All notable changes to `uipath_langchain_client` will be documented in this file.
 
+## [1.19.0] - 2026-09-09
+
+### Added
+- `UiPathBaseChatModel` now surfaces the LLM Gateway's per-request dollar cost as `response_metadata["associated_dollar_cost"]` when the caller opted in by sending `X-UiPath-LlmGateway-IncludeAssociatedDollarCost: true` (e.g. via `default_headers`) on a passthrough model. `invoke()` / `ainvoke()` set it on the result message. `stream()` / `astream()` (and `invoke()` routed through streaming) yield one extra empty chunk carrying it after the vendor's last chunk, since the gateway only reports the cost after the terminal event; merging the chunks folds it into `response_metadata`. Covers all passthrough chat models, including the Bedrock ones: the gateway's trailing `costMetadata` event is decoded by the core client and hidden from langchain-aws. Opted-in Gemini streams additionally log langchain-google-genai's "Gemini produced an empty response" warning for the gateway's trailing frame; the cost is still surfaced. The key is absent when the gateway did not price the call — absence means "not priced", never $0.
+
+### Changed
+- Requires `uipath-llm-client>=1.19.0`.
+
 ## [1.18.5] - 2026-09-07
 
 ### Changed

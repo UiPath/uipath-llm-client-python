@@ -49,6 +49,12 @@ from httpx._types import (
 )
 
 from uipath.llm_client.settings.base import UiPathAPIConfig, UiPathBaseSettings
+from uipath.llm_client.utils.dollar_cost import (
+    attach_streaming_dollar_cost_capture,
+    extract_associated_dollar_cost,
+    requests_dollar_cost,
+    set_captured_dollar_cost,
+)
 from uipath.llm_client.utils.exceptions import patch_raise_for_status
 from uipath.llm_client.utils.headers import (
     UIPATH_DEFAULT_REQUEST_HEADERS,
@@ -72,6 +78,24 @@ _UNSET: Any = object()
 # Default applied when ``max_retries`` is left as ``None``. Callers can still
 # opt out by passing ``max_retries=0`` explicitly.
 _DEFAULT_MAX_RETRIES: typing.Final[int] = 5
+
+
+def _capture_dollar_cost(request: Request, response: Response, stream: bool) -> None:
+    """Record the gateway-reported dollar cost of this exchange in the current context.
+
+    Gated on the opt-in header: the field can only exist when asked for, and
+    re-parsing large (embeddings) bodies on every call is not free. Streaming
+    bodies are not received yet and carry the cost as a trailing frame, so the
+    stream is wrapped instead. Reset first so an unpriced response reads as None,
+    not as the previous request's cost.
+    """
+    set_captured_dollar_cost(None)
+    if not requests_dollar_cost(request):
+        return
+    if stream:
+        attach_streaming_dollar_cost_capture(response)
+    else:
+        set_captured_dollar_cost(extract_associated_dollar_cost(response))
 
 
 class UiPathHttpxClient(Client):
@@ -271,6 +295,7 @@ class UiPathHttpxClient(Client):
             captured = extract_matching_headers(response.headers, self._captured_headers)
             if captured:
                 set_captured_response_headers(captured)
+        _capture_dollar_cost(request, response, stream)
         return patch_raise_for_status(response)
 
 
@@ -433,4 +458,5 @@ class UiPathHttpxAsyncClient(AsyncClient):
             captured = extract_matching_headers(response.headers, self._captured_headers)
             if captured:
                 set_captured_response_headers(captured)
+        _capture_dollar_cost(request, response, stream)
         return patch_raise_for_status(response)

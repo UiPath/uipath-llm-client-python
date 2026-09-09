@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_llm_client` (core package) will be documented in this file.
 
+## [1.19.0] - 2026-09-09
+
+### Added
+- `UiPathHttpxClient` / `UiPathHttpxAsyncClient` now capture the per-request dollar cost the LLM Gateway reports for opted-in calls instead of dropping it. When a request carries `X-UiPath-LlmGateway-IncludeAssociatedDollarCost: true` (Passthrough API only), the value is exposed via `uipath.llm_client.utils.dollar_cost.get_captured_dollar_cost()` for the duration of the calling context. Non-streaming JSON responses are read from the top-level `associated_dollar_cost` field. Streaming responses are wrapped so the trailing frame the gateway appends after the vendor's terminal event — an SSE `data: {"associated_dollar_cost": ...}` event, or a `costMetadata` message on AWS event streams (Bedrock) — is picked up once the consumer finishes reading (including when the vendor SDK stops at `data: [DONE]` and closes the response without reading further). `None` means "not priced" and must never be read as $0; when a cost was requested but could not be read (compressed stream, lost event-stream framing, non-numeric value) a warning is logged so the gap is visible. Known residual: the gateway's SSE frame also reaches google-genai as a candidate-less chunk, so opted-in Gemini streams log langchain-google-genai's "Gemini produced an empty response" warning; the cost is still captured.
+
 ## [1.18.5] - 2026-09-07
 
 ### Fixed

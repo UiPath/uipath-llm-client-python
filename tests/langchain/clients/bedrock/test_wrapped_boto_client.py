@@ -13,6 +13,8 @@ import httpx
 import pytest
 from uipath_langchain_client.clients.bedrock.utils import WrappedBotoClient
 
+from tests.aws_event_stream import event_frame, event_stream_response
+
 _ERROR_BODY = {
     "title": "License not available",
     "status": 403,
@@ -58,3 +60,18 @@ def test_invoke_model_with_response_stream_raises_on_http_error() -> None:
     stream = client.invoke_model_with_response_stream(body=json.dumps({"prompt": "hi"}))["body"]
     with pytest.raises(httpx.HTTPStatusError):
         list(stream)
+
+
+def test_converse_stream_hides_gateway_cost_event_from_langchain_aws() -> None:
+    # langchain-aws raises on unknown events; the httpx client captures the cost itself.
+    body = event_stream_response(
+        event_frame("messageStart", {"role": "assistant"}),
+        event_frame("messageStop", {"stopReason": "end_turn"}),
+        event_frame("costMetadata", {"associated_dollar_cost": 0.002145}),
+    )
+    client = _wrapped(lambda request: body)
+    events = list(client.converse_stream(messages=[])["stream"])
+    assert events == [
+        {"messageStart": {"role": "assistant"}},
+        {"messageStop": {"stopReason": "end_turn"}},
+    ]

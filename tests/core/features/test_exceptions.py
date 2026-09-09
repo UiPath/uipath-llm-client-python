@@ -124,6 +124,34 @@ class TestExceptionDetails:
         assert "Bad Request" in s
         assert "400" in s
 
+    @pytest.mark.parametrize(
+        "body_json,body_text",
+        [
+            ({"error": {"message": "PROVIDER_SECRET_MSG"}}, None),
+            (None, "PROVIDER_SECRET_MSG"),
+        ],
+        ids=["json-body", "text-body"],
+    )
+    def test_str_omits_the_response_body(self, body_json, body_text):
+        """The body may relay provider content of unknown sensitivity (PC-5002).
+
+        str() is what the traceback module prints as the final exception line, so
+        anything here reaches every serialized stacktrace.
+        """
+        resp = self._make_response(400, "Bad Request", body_json=body_json, body_text=body_text)
+        exc = UiPathAPIError.from_response(resp)
+
+        assert "PROVIDER_SECRET_MSG" not in str(exc)
+        assert str(exc) == "UiPathBadRequestError: Bad Request (Status Code: 400)"
+
+    def test_str_omission_does_not_drop_the_body_attribute(self):
+        """Callers classify on .body -- it must survive the __str__ redaction."""
+        body = {"error": {"message": "PROVIDER_SECRET_MSG", "param": "max_tokens"}}
+        resp = self._make_response(400, "Bad Request", body_json=body)
+        exc = UiPathAPIError.from_response(resp)
+
+        assert exc.body == body
+
     def test_repr_format(self):
         resp = self._make_response(404, "Not Found", body_json={"error": "missing"})
         exc = UiPathAPIError.from_response(resp)

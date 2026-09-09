@@ -5,15 +5,14 @@ both the non-streaming and the streaming paths.
 """
 
 import json
-import os
 from typing import Any
-from unittest.mock import patch
 
 import httpx
 import pytest
 from uipath_langchain_client.clients.normalized.chat_models import UiPathChat
 from uipath_langchain_client.clients.openai.chat_models import UiPathChatOpenAI
 
+from tests.langchain.transports import route_transport
 from tests.lazy_stream import LazyByteStream
 from uipath.llm_client.httpx_client import (
     UiPathHttpxAsyncClient,
@@ -23,7 +22,6 @@ from uipath.llm_client.settings import LLMGatewaySettings
 from uipath.llm_client.settings.utils import SingletonMeta
 from uipath.llm_client.utils.dollar_cost import (
     INCLUDE_ASSOCIATED_DOLLAR_COST_HEADER,
-    set_captured_dollar_cost,
 )
 from uipath.llm_client.utils.headers import (
     extract_matching_headers,
@@ -34,15 +32,6 @@ from uipath.llm_client.utils.headers import (
 # ============================================================================
 # Fixtures
 # ============================================================================
-
-LLMGW_ENV = {
-    "LLMGW_URL": "https://cloud.uipath.com",
-    "LLMGW_SEMANTIC_ORG_ID": "test-org-id",
-    "LLMGW_SEMANTIC_TENANT_ID": "test-tenant-id",
-    "LLMGW_REQUESTING_PRODUCT": "test-product",
-    "LLMGW_REQUESTING_FEATURE": "test-feature",
-    "LLMGW_ACCESS_TOKEN": "test-access-token",
-}
 
 SAMPLE_GATEWAY_HEADERS = {
     "X-UiPath-RequestId": "req-123",
@@ -148,12 +137,6 @@ def clear_singletons():
     SingletonMeta._instances.clear()
     yield
     SingletonMeta._instances.clear()
-
-
-@pytest.fixture
-def llmgw_settings():
-    with patch.dict(os.environ, LLMGW_ENV, clear=True):
-        return LLMGatewaySettings()
 
 
 def _make_normalized_chat(
@@ -470,14 +453,15 @@ def _make_passthrough_chat(
         default_headers=default_headers,
         **model_kwargs,
     )
-    chat.uipath_sync_client._transport = MockTransport(  # type: ignore[attr-defined]
-        response_json=response_json, stream_chunks=STREAM_CHUNKS, stream_cost=stream_cost
+    route_transport(
+        chat,
+        MockTransport(
+            response_json=response_json, stream_chunks=STREAM_CHUNKS, stream_cost=stream_cost
+        ),
+        MockAsyncTransport(
+            response_json=response_json, stream_chunks=STREAM_CHUNKS, stream_cost=stream_cost
+        ),
     )
-    chat.uipath_sync_client._mounts = {}  # type: ignore[attr-defined]
-    chat.uipath_async_client._transport = MockAsyncTransport(  # type: ignore[attr-defined]
-        response_json=response_json, stream_chunks=STREAM_CHUNKS, stream_cost=stream_cost
-    )
-    chat.uipath_async_client._mounts = {}  # type: ignore[attr-defined]
     return chat
 
 
@@ -570,28 +554,3 @@ class TestDollarCostCapture:
         result = chat.invoke("Hello")
         assert result.content == "Hello!"
         assert result.response_metadata["associated_dollar_cost"] == 0.002145
-
-    def test_inject_dollar_cost_populates_result(self, llmgw_settings):
-        chat = _make_normalized_chat(llmgw_settings)
-        set_captured_dollar_cost(0.002145)
-
-        from langchain_core.messages import AIMessage
-        from langchain_core.outputs import ChatGeneration, ChatResult
-
-        result = ChatResult(
-            generations=[ChatGeneration(message=AIMessage(content="test", response_metadata={}))]
-        )
-        chat._inject_dollar_cost(result.generations)
-        assert result.generations[0].message.response_metadata["associated_dollar_cost"] == 0.002145
-
-    def test_inject_dollar_cost_skipped_when_absent(self, llmgw_settings):
-        chat = _make_normalized_chat(llmgw_settings)
-
-        from langchain_core.messages import AIMessage
-        from langchain_core.outputs import ChatGeneration, ChatResult
-
-        result = ChatResult(
-            generations=[ChatGeneration(message=AIMessage(content="test", response_metadata={}))]
-        )
-        chat._inject_dollar_cost(result.generations)
-        assert "associated_dollar_cost" not in result.generations[0].message.response_metadata

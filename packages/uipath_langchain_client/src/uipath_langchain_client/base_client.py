@@ -528,6 +528,8 @@ class UiPathBaseChatModel(UiPathBaseLLMClient, BaseChatModel):
             logger=self.logger,
         )
         set_captured_response_headers({})
+        # Models that bypass the UiPath httpx client (litellm) would otherwise
+        # inherit the value a previous request left in this context.
         set_captured_dollar_cost(None)
         try:
             with wrap_provider_errors():

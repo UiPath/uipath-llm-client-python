@@ -133,9 +133,7 @@ class SseCostFrames:
 
     def dollar_cost(self) -> float | None:
         data = self._last_complete_event_data()
-        if data is None or data == _SSE_DONE_DATA:
-            return None
-        return _dollar_cost_from_json_bytes(data)
+        return None if data is None else _dollar_cost_from_json_bytes(data)
 
 
 # AWS event-stream frame: 12-byte prelude (total length, headers length, CRC),

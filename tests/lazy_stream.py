@@ -12,16 +12,21 @@ from httpx import AsyncByteStream, SyncByteStream
 class LazyByteStream(SyncByteStream, AsyncByteStream):
     def __init__(self, chunks: list[bytes]):
         self._chunks = chunks
+        self.pulled = 0
+        self.closed = False
 
     def __iter__(self) -> Iterator[bytes]:
-        yield from self._chunks
+        for chunk in self._chunks:
+            self.pulled += 1
+            yield chunk
 
     async def __aiter__(self) -> AsyncIterator[bytes]:
         for chunk in self._chunks:
+            self.pulled += 1
             yield chunk
 
     def close(self) -> None:
-        pass
+        self.closed = True
 
     async def aclose(self) -> None:
-        pass
+        self.closed = True

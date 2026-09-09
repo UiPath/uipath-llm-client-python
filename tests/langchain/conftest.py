@@ -4,6 +4,10 @@ Model configurations and completions_config/embeddings_config fixtures have been
 distributed to per-provider conftest files under tests/langchain/clients/.
 """
 
+import os
+from unittest.mock import patch
+
+import pytest
 from uipath_langchain_client.clients.anthropic.chat_models import UiPathChatAnthropic
 from uipath_langchain_client.clients.bedrock.chat_models import (
     UiPathChatAnthropicBedrock,
@@ -26,6 +30,24 @@ from uipath_langchain_client.clients.openai.embeddings import (
     UiPathOpenAIEmbeddings,
 )
 from uipath_langchain_client.clients.vertexai.chat_models import UiPathChatAnthropicVertex
+
+from uipath.llm_client.settings import LLMGatewaySettings
+
+LLMGW_ENV = {
+    "LLMGW_URL": "https://cloud.uipath.com",
+    "LLMGW_SEMANTIC_ORG_ID": "test-org-id",
+    "LLMGW_SEMANTIC_TENANT_ID": "test-tenant-id",
+    "LLMGW_REQUESTING_PRODUCT": "test-product",
+    "LLMGW_REQUESTING_FEATURE": "test-feature",
+    "LLMGW_ACCESS_TOKEN": "test-access-token",
+}
+
+
+@pytest.fixture
+def llmgw_settings():
+    with patch.dict(os.environ, LLMGW_ENV, clear=True):
+        return LLMGatewaySettings()
+
 
 COMPLETION_CLIENTS_CLASSES = [
     UiPathChat,

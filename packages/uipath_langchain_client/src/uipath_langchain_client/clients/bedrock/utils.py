@@ -5,6 +5,8 @@ from typing import Any
 
 from httpx import Client
 
+from uipath.llm_client.utils.dollar_cost import COST_METADATA_EVENT_TYPE
+
 try:
     from botocore.eventstream import EventStreamBuffer
 except ImportError as e:
@@ -70,6 +72,10 @@ class WrappedBotoClient:
                     event_as_dict = event.to_response_dict()
                     dict_key = event_as_dict["headers"][":event-type"]
                     dict_value = json.loads(event_as_dict["body"].decode("utf-8"))
+                    if dict_key == COST_METADATA_EVENT_TYPE:
+                        # Gateway cost frame, already captured from the raw bytes by the
+                        # httpx client; langchain-aws raises on unknown events.
+                        continue
                     if "bytes" in dict_value:
                         dict_value["bytes"] = base64.b64decode(dict_value["bytes"])
                     yield {dict_key: dict_value}

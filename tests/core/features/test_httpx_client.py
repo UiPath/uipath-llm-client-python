@@ -1,12 +1,15 @@
 """Tests for HTTPX client functionality."""
 
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
 from httpx import Auth, Client, Headers, MockTransport, Request, Response
 
+from tests.lazy_stream import LazyByteStream
 from uipath.llm_client.settings import UiPathAPIConfig
 from uipath.llm_client.settings.constants import ApiType, RoutingMode
+from uipath.llm_client.utils.dollar_cost import INCLUDE_ASSOCIATED_DOLLAR_COST_HEADER
 from uipath.llm_client.utils.retry import (
     RetryableAsyncHTTPTransport,
     RetryableHTTPTransport,
@@ -387,6 +390,131 @@ class TestUiPathHttpxClientSend:
             assert result.raise_for_status is not original_raise
         client.close()
 
+    def _opted_in_request(self) -> Request:
+        return Request(
+            "POST",
+            "https://example.com/test",
+            headers={INCLUDE_ASSOCIATED_DOLLAR_COST_HEADER: "true"},
+        )
+
+    def _json_response(self, body: dict[str, Any]) -> MagicMock:
+        mock_response = MagicMock(spec=Response)
+        mock_response.headers = Headers({"content-type": "application/json"})
+        mock_response.json.return_value = body
+        mock_response.is_error = False
+        mock_response.raise_for_status = MagicMock(return_value=mock_response)
+        return mock_response
+
+    def test_dollar_cost_captured_when_opted_in(self):
+        from uipath.llm_client.httpx_client import UiPathHttpxClient
+        from uipath.llm_client.utils.dollar_cost import get_captured_dollar_cost
+
+        client = UiPathHttpxClient(base_url="https://example.com")
+        mock_response = self._json_response({"associated_dollar_cost": 0.002145})
+
+        with patch.object(Client, "send", return_value=mock_response):
+            client.send(self._opted_in_request(), stream=False)
+            assert get_captured_dollar_cost() == 0.002145
+        client.close()
+
+    def test_dollar_cost_body_not_parsed_when_not_opted_in(self):
+        """Without the opt-in header the field cannot exist, so the body is not re-parsed."""
+        from uipath.llm_client.httpx_client import UiPathHttpxClient
+        from uipath.llm_client.utils.dollar_cost import get_captured_dollar_cost
+
+        client = UiPathHttpxClient(base_url="https://example.com")
+        mock_response = self._json_response({"associated_dollar_cost": 0.002145})
+        mock_response.json.side_effect = AssertionError("body must not be parsed without opt-in")
+
+        with patch.object(Client, "send", return_value=mock_response):
+            client.send(Request("POST", "https://example.com/test"), stream=False)
+            assert get_captured_dollar_cost() is None
+        client.close()
+
+    def test_dollar_cost_json_body_not_read_for_streaming_response(self):
+        """A streamed body is not buffered yet; a non-SSE stream reads as None."""
+        from uipath.llm_client.httpx_client import UiPathHttpxClient
+        from uipath.llm_client.utils.dollar_cost import (
+            get_captured_dollar_cost,
+            set_captured_dollar_cost,
+        )
+
+        client = UiPathHttpxClient(base_url="https://example.com")
+        mock_response = self._json_response({})
+        mock_response.json.side_effect = AssertionError("must not be read on a streamed response")
+
+        set_captured_dollar_cost(0.5)  # stale value from an earlier request
+        with patch.object(Client, "send", return_value=mock_response):
+            client.send(self._opted_in_request(), stream=True)
+            assert get_captured_dollar_cost() is None
+        client.close()
+
+    def test_dollar_cost_captured_from_trailing_sse_frame(self):
+        from uipath.llm_client.httpx_client import UiPathHttpxClient
+        from uipath.llm_client.utils.dollar_cost import get_captured_dollar_cost
+
+        events = [
+            b'data: {"id": "1"}\n\n',
+            b"data: [DONE]\n\n",
+            b'data: {"associated_dollar_cost": 0.002145}\n\n',
+        ]
+
+        def handler(request: Request) -> Response:
+            return Response(
+                200,
+                request=request,
+                headers={"content-type": "text/event-stream"},
+                stream=LazyByteStream(events),
+            )
+
+        client = UiPathHttpxClient(base_url="https://example.com", transport=MockTransport(handler))
+        with client.stream(
+            "POST", "/test", headers={INCLUDE_ASSOCIATED_DOLLAR_COST_HEADER: "true"}
+        ) as response:
+            assert b"".join(response.iter_bytes()) == b"".join(events)
+        assert get_captured_dollar_cost() == 0.002145
+        client.close()
+
+    def test_streaming_body_untouched_when_not_opted_in(self):
+        from uipath.llm_client.httpx_client import UiPathHttpxClient
+        from uipath.llm_client.utils.dollar_cost import (
+            DollarCostSyncStream,
+            get_captured_dollar_cost,
+        )
+
+        events = [b"data: [DONE]\n\n", b'data: {"associated_dollar_cost": 0.002145}\n\n']
+
+        def handler(request: Request) -> Response:
+            return Response(
+                200,
+                request=request,
+                headers={"content-type": "text/event-stream"},
+                stream=LazyByteStream(events),
+            )
+
+        client = UiPathHttpxClient(base_url="https://example.com", transport=MockTransport(handler))
+        with client.stream("POST", "/test") as response:
+            assert not isinstance(response.stream, DollarCostSyncStream)
+            response.read()
+        assert get_captured_dollar_cost() is None
+        client.close()
+
+    def test_unpriced_response_resets_previous_dollar_cost(self):
+        """An unpriced response must not read as the previous request's cost."""
+        from uipath.llm_client.httpx_client import UiPathHttpxClient
+        from uipath.llm_client.utils.dollar_cost import get_captured_dollar_cost
+
+        client = UiPathHttpxClient(base_url="https://example.com")
+        priced = self._json_response({"associated_dollar_cost": 0.002145})
+        unpriced = self._json_response({"choices": []})
+
+        with patch.object(Client, "send", side_effect=[priced, unpriced]):
+            client.send(self._opted_in_request(), stream=False)
+            assert get_captured_dollar_cost() == 0.002145
+            client.send(self._opted_in_request(), stream=False)
+            assert get_captured_dollar_cost() is None
+        client.close()
+
 
 class TestUiPathHttpxAsyncClientSend:
     @pytest.mark.asyncio
@@ -449,4 +577,58 @@ class TestUiPathHttpxAsyncClientSend:
         await client.send(request)
 
         assert auth.signed_user_agents == ["custom-httpx-client"]
+        await client.aclose()
+
+    @pytest.mark.asyncio
+    async def test_dollar_cost_captured_when_opted_in(self):
+        from uipath.llm_client.httpx_client import UiPathHttpxAsyncClient
+        from uipath.llm_client.utils.dollar_cost import get_captured_dollar_cost
+
+        client = UiPathHttpxAsyncClient(base_url="https://example.com")
+        request = Request(
+            "POST",
+            "https://example.com/test",
+            headers={INCLUDE_ASSOCIATED_DOLLAR_COST_HEADER: "true"},
+        )
+
+        async def handler(request: Request) -> Response:
+            return Response(
+                200,
+                request=request,
+                headers={"content-type": "application/json"},
+                content=b'{"associated_dollar_cost": 0.002145}',
+            )
+
+        client._transport = MockTransport(handler)
+        await client.send(request, stream=False)
+        assert get_captured_dollar_cost() == 0.002145
+        await client.aclose()
+
+    @pytest.mark.asyncio
+    async def test_dollar_cost_captured_from_trailing_sse_frame(self):
+        from uipath.llm_client.httpx_client import UiPathHttpxAsyncClient
+        from uipath.llm_client.utils.dollar_cost import get_captured_dollar_cost
+
+        events = [
+            b'data: {"id": "1"}\n\n',
+            b"data: [DONE]\n\n",
+            b'data: {"associated_dollar_cost": 0.002145}\n\n',
+        ]
+
+        async def handler(request: Request) -> Response:
+            return Response(
+                200,
+                request=request,
+                headers={"content-type": "text/event-stream"},
+                stream=LazyByteStream(events),
+            )
+
+        client = UiPathHttpxAsyncClient(
+            base_url="https://example.com", transport=MockTransport(handler)
+        )
+        async with client.stream(
+            "POST", "/test", headers={INCLUDE_ASSOCIATED_DOLLAR_COST_HEADER: "true"}
+        ) as response:
+            assert b"".join([chunk async for chunk in response.aiter_bytes()]) == b"".join(events)
+        assert get_captured_dollar_cost() == 0.002145
         await client.aclose()

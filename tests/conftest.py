@@ -4,6 +4,7 @@ from uipath.platform.common._bindings import _resource_overwrites
 
 from uipath.llm_client.settings import UiPathBaseSettings
 from uipath.llm_client.settings.llmgateway import LLMGatewaySettings
+from uipath.llm_client.utils.dollar_cost import set_captured_dollar_cost
 
 
 @pytest.fixture
@@ -25,6 +26,14 @@ def activate_connection_overwrite():
 
     for token in reversed(tokens):
         _resource_overwrites.reset(token)
+
+
+@pytest.fixture(autouse=True)
+def reset_captured_dollar_cost():
+    """The cost ContextVar would otherwise leak between tests."""
+    set_captured_dollar_cost(None)
+    yield
+    set_captured_dollar_cost(None)
 
 
 @pytest.fixture(autouse=True, scope="session")

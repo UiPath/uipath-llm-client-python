@@ -5,6 +5,7 @@ from typing import Any, Self
 from httpx import Client
 from pydantic import Field, SecretStr, model_validator
 from typing_extensions import override
+from uipath.platform.common import resolve_service_url
 
 from uipath.llm_client.settings.base import UiPathAPIConfig, UiPathBaseSettings
 from uipath.llm_client.settings.constants import ApiType, RoutingMode
@@ -59,6 +60,17 @@ class LLMGatewayBaseSettings(UiPathBaseSettings):
         default_factory=dict, validation_alias="LLMGW_ADDITIONAL_HEADERS"
     )
 
+    def _build_gateway_url(self, path: str) -> str:
+        """Build a gateway URL, honouring ``UIPATH_SERVICE_URL_LLMGATEWAY``.
+
+        The ``{org}/{tenant}/llmgateway_`` prefix is added by the cloud front door,
+        so a standalone gateway serves ``/api/...`` directly.
+        """
+        override_url = resolve_service_url(path)
+        if override_url:
+            return override_url
+        return f"{self.base_url}/{self.org_id}/{self.tenant_id}/{path}"
+
     @model_validator(mode="after")
     def validate_auth_settings(self) -> Self:
         """Validate that either access_token or S2S credentials are provided."""
@@ -81,14 +93,19 @@ class LLMGatewayBaseSettings(UiPathBaseSettings):
             raise ValueError(
                 "api_config.routing_mode is required for LLMGatewaySettings.build_base_url"
             )
-        base_url = f"{self.base_url}/{self.org_id}/{self.tenant_id}"
         if api_config.routing_mode == RoutingMode.NORMALIZED:
-            url = f"{base_url}/{LLMGatewayEndpoints.NORMALIZED_ENDPOINT.value.format(api_type='chat/completions' if api_config.api_type == ApiType.COMPLETIONS else 'embeddings')}"
+            path = LLMGatewayEndpoints.NORMALIZED_ENDPOINT.value.format(
+                api_type="chat/completions"
+                if api_config.api_type == ApiType.COMPLETIONS
+                else "embeddings"
+            )
         elif api_config.routing_mode == RoutingMode.PASSTHROUGH:
-            url = f"{base_url}/{LLMGatewayEndpoints.PASSTHROUGH_ENDPOINT.value.format(vendor=api_config.vendor_type, model=model_name, api_type=api_config.api_type)}"
+            path = LLMGatewayEndpoints.PASSTHROUGH_ENDPOINT.value.format(
+                vendor=api_config.vendor_type, model=model_name, api_type=api_config.api_type
+            )
         else:
             raise ValueError(f"Unsupported routing_mode: {api_config.routing_mode}")
-        return url
+        return self._build_gateway_url(path)
 
     @override
     def build_auth_headers(
@@ -115,11 +132,17 @@ class LLMGatewayBaseSettings(UiPathBaseSettings):
 
     @override
     def _discovery_cache_key(self) -> tuple[str, ...]:
-        return (self.base_url, self.org_id, self.tenant_id, self.requesting_product)
+        # Effective URL, so an active service override gets its own cache entry.
+        return (
+            self._build_gateway_url(LLMGatewayEndpoints.DISCOVERY_ENDPOINT.value),
+            self.org_id,
+            self.tenant_id,
+            self.requesting_product,
+        )
 
     @override
     def _fetch_available_models(self) -> list[dict[str, Any]]:
-        discovery_url = f"{self.base_url}/{self.org_id}/{self.tenant_id}/{LLMGatewayEndpoints.DISCOVERY_ENDPOINT.value}"
+        discovery_url = self._build_gateway_url(LLMGatewayEndpoints.DISCOVERY_ENDPOINT.value)
         with Client(
             auth=self.build_auth_pipeline(),
             headers=self.build_auth_headers(),

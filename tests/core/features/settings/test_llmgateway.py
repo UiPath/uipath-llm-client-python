@@ -158,6 +158,96 @@ class TestLLMGatewaySettings:
                 assert exc_info.value.status_code == 401
 
 
+class TestLLMGatewayServiceUrlOverride:
+    """Tests for UIPATH_SERVICE_URL_LLMGATEWAY."""
+
+    LOCAL = "http://localhost:7091"
+
+    def test_urls_unchanged_without_override(self, llmgw_env_vars, passthrough_api_config):
+        with patch.dict(os.environ, llmgw_env_vars, clear=True):
+            settings = LLMGatewaySettings()
+            url = settings.build_base_url(model_name="gpt-4o", api_config=passthrough_api_config)
+
+        assert url == (
+            "https://cloud.uipath.com/test-org-id/test-tenant-id/"
+            "llmgateway_/api/raw/vendor/openai/model/gpt-4o/completions"
+        )
+
+    def test_override_redirects_passthrough_url(self, llmgw_env_vars, passthrough_api_config):
+        env = {**llmgw_env_vars, "UIPATH_SERVICE_URL_LLMGATEWAY": self.LOCAL}
+        with patch.dict(os.environ, env, clear=True):
+            settings = LLMGatewaySettings()
+            url = settings.build_base_url(model_name="gpt-4o", api_config=passthrough_api_config)
+
+        assert url == f"{self.LOCAL}/api/raw/vendor/openai/model/gpt-4o/completions"
+
+    def test_override_redirects_normalized_url(self, llmgw_env_vars, normalized_api_config):
+        env = {**llmgw_env_vars, "UIPATH_SERVICE_URL_LLMGATEWAY": self.LOCAL}
+        with patch.dict(os.environ, env, clear=True):
+            settings = LLMGatewaySettings()
+            url = settings.build_base_url(model_name="gpt-4o", api_config=normalized_api_config)
+
+        assert url == f"{self.LOCAL}/api/chat/completions"
+
+    def test_override_redirects_discovery_url(self, llmgw_env_vars):
+        UiPathBaseSettings._discovery_cache.clear()
+        env = {**llmgw_env_vars, "UIPATH_SERVICE_URL_LLMGATEWAY": self.LOCAL}
+        mock_response = MagicMock()
+        mock_response.is_error = False
+        mock_response.json.return_value = []
+
+        with patch.dict(os.environ, env, clear=True):
+            settings = LLMGatewaySettings()
+            with patch.object(Client, "get", return_value=mock_response) as mock_get:
+                settings.get_available_models(refresh=True)
+
+        assert mock_get.call_args.args[0] == f"{self.LOCAL}/api/discovery"
+
+    def test_override_and_cloud_do_not_share_discovery_cache(self, llmgw_env_vars):
+        UiPathBaseSettings._discovery_cache.clear()
+        mock_response = MagicMock()
+        mock_response.is_error = False
+        mock_response.json.return_value = []
+
+        with patch.object(Client, "get", return_value=mock_response) as mock_get:
+            with patch.dict(os.environ, llmgw_env_vars, clear=True):
+                LLMGatewaySettings().get_available_models()
+            env = {**llmgw_env_vars, "UIPATH_SERVICE_URL_LLMGATEWAY": self.LOCAL}
+            with patch.dict(os.environ, env, clear=True):
+                LLMGatewaySettings().get_available_models()
+
+        assert [c.args[0] for c in mock_get.call_args_list] == [
+            "https://cloud.uipath.com/test-org-id/test-tenant-id/llmgateway_/api/discovery",
+            f"{self.LOCAL}/api/discovery",
+        ]
+
+    def test_unrelated_service_override_is_ignored(self, llmgw_env_vars, passthrough_api_config):
+        env = {**llmgw_env_vars, "UIPATH_SERVICE_URL_AGENTHUB": self.LOCAL}
+        with patch.dict(os.environ, env, clear=True):
+            settings = LLMGatewaySettings()
+            url = settings.build_base_url(model_name="gpt-4o", api_config=passthrough_api_config)
+
+        assert "localhost" not in url
+        assert url.startswith("https://cloud.uipath.com/test-org-id/test-tenant-id/llmgateway_/")
+
+    def test_s2s_token_is_still_minted_at_base_url(self, llmgw_s2s_env_vars):
+        """A standalone gateway has no identity_ endpoint."""
+        from uipath.llm_client.settings.llmgateway.auth import LLMGatewayS2SAuth
+
+        env = {**llmgw_s2s_env_vars, "UIPATH_SERVICE_URL_LLMGATEWAY": self.LOCAL}
+        mock_response = MagicMock()
+        mock_response.is_error = False
+        mock_response.json.return_value = {"access_token": "s2s-token-value"}
+
+        with patch.dict(os.environ, env, clear=True):
+            settings = LLMGatewaySettings()
+            with patch.object(Client, "post", return_value=mock_response) as mock_post:
+                auth = LLMGatewayS2SAuth(settings=settings)
+
+        assert auth.access_token == "s2s-token-value"
+        assert mock_post.call_args.args[0] == "https://cloud.uipath.com/identity_/connect/token"
+
+
 class TestLLMGatewayAuthRefresh:
     """Tests for LLMGatewayS2SAuth token refresh logic."""
 

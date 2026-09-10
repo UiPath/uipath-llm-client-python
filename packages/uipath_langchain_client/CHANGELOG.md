@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_langchain_client` will be documented in this file.
 
+## [1.20.0] - 2026-09-10
+
+### Changed
+- Bumped the `uipath-llm-client` floor to `>=1.20.0`, which adds `UIPATH_SERVICE_URL_LLMGATEWAY` for pointing `LLMGatewaySettings` at a standalone (e.g. local) gateway.
+
 ## [1.19.0] - 2026-09-09
 
 ### Added

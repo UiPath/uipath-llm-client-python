@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_llm_client` (core package) will be documented in this file.
 
+## [1.20.0] - 2026-09-10
+
+### Added
+- `LLMGatewaySettings` honours `UIPATH_SERVICE_URL_LLMGATEWAY`, the per-service local override the Platform backend already uses. Request and discovery URLs go to that host as `/api/...`, without the `{org}/{tenant}/llmgateway_` prefix the cloud front door adds; the S2S token is still minted at `LLMGW_URL`. Unset, URLs are unchanged.
+
 ## [1.19.0] - 2026-09-09
 
 ### Added

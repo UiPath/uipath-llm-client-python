@@ -237,6 +237,9 @@ settings = LLMGatewaySettings(
 - Either `access_token` OR both `client_id` and `client_secret` must be provided
 - S2S authentication uses `client_id`/`client_secret` to obtain tokens automatically
 
+**Local development:**
+- `UIPATH_SERVICE_URL_LLMGATEWAY=http://localhost:7091` sends request and discovery URLs to a standalone gateway as `/api/...`, without the `{org}/{tenant}/llmgateway_` prefix the cloud front door adds. The S2S token is still minted at `LLMGW_URL`.
+
 ## Usage Examples
 
 ### Quick Start with Direct Client Classes

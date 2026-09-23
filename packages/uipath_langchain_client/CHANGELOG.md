@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_langchain_client` will be documented in this file.
 
+## [1.20.1] - 2026-09-23
+
+### Fixed
+- Models the gateway flags with `modelDetails.shouldSkipForcedToolChoice` (e.g. Claude Opus 5.5, which rejects `tool_choice` `any` / `tool` with a 400) now get a forced tool choice relaxed to the vendor's `auto` on every request path (`invoke` / `ainvoke` / `stream` / `astream`), in the shape the vendor SDK produced (Anthropic `{"type": "auto"}`, Bedrock Converse `{"auto": {}}`, OpenAI / normalized `"auto"`). Applies to `bind_tools(tool_choice=...)` and to tool-calling `with_structured_output` (which forces the schema tool): the request no longer 400s, but the model is asked rather than forced to call the tool, so callers must tolerate a tool-less reply. A warning is logged per relaxation when a logger is set.
+
 ## [1.20.0] - 2026-09-10
 
 ### Changed

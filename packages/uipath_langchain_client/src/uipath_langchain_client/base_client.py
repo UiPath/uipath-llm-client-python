@@ -72,6 +72,7 @@ from uipath_langchain_client.settings import (
     UiPathBaseSettings,
     get_default_client_settings,
 )
+from uipath_langchain_client.tool_choice import relax_forced_tool_choice_kwargs
 from uipath_langchain_client.utils import RetryConfig
 
 
@@ -527,6 +528,12 @@ class UiPathBaseChatModel(UiPathBaseLLMClient, BaseChatModel):
             model_name=self.model_name,
             logger=self.logger,
         )
+        kwargs = relax_forced_tool_choice_kwargs(
+            kwargs,
+            model_details=self.model_details,
+            model_name=self.model_name,
+            logger=self.logger,
+        )
         set_captured_response_headers({})
         # Models that bypass the UiPath httpx client (litellm) would otherwise
         # inherit the value a previous request left in this context.
@@ -566,6 +573,12 @@ class UiPathBaseChatModel(UiPathBaseLLMClient, BaseChatModel):
             model_name=self.model_name,
             logger=self.logger,
         )
+        kwargs = relax_forced_tool_choice_kwargs(
+            kwargs,
+            model_details=self.model_details,
+            model_name=self.model_name,
+            logger=self.logger,
+        )
         set_captured_response_headers({})
         set_captured_dollar_cost(None)
         try:
@@ -600,6 +613,12 @@ class UiPathBaseChatModel(UiPathBaseLLMClient, BaseChatModel):
         kwargs = strip_disabled_kwargs(
             kwargs,
             disabled_params=self.disabled_params,
+            model_name=self.model_name,
+            logger=self.logger,
+        )
+        kwargs = relax_forced_tool_choice_kwargs(
+            kwargs,
+            model_details=self.model_details,
             model_name=self.model_name,
             logger=self.logger,
         )
@@ -642,6 +661,12 @@ class UiPathBaseChatModel(UiPathBaseLLMClient, BaseChatModel):
         kwargs = strip_disabled_kwargs(
             kwargs,
             disabled_params=self.disabled_params,
+            model_name=self.model_name,
+            logger=self.logger,
+        )
+        kwargs = relax_forced_tool_choice_kwargs(
+            kwargs,
+            model_details=self.model_details,
             model_name=self.model_name,
             logger=self.logger,
         )

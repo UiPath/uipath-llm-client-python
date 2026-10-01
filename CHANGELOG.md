@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_llm_client` (core package) will be documented in this file.
 
+## [1.20.1] - 2026-10-01
+
+### Fixed
+- `UiPathHttpxClient` / `UiPathHttpxAsyncClient` now pass `verify`, `cert`, `trust_env`, `http1`, `http2` and `limits` to the retryable transport they build by default. httpx ignores these client arguments when a transport is supplied, so the default transport verified TLS with httpx's own default (`SSL_CERT_FILE` / `SSL_CERT_DIR` if set, otherwise certifi) instead of the OS trust store, and ignored both an explicit `verify` and `UIPATH_DISABLE_SSL_VERIFY`. Hosts whose certificate chains to a private CA failed every LLM call with `CERTIFICATE_VERIFY_FAILED`, even with the CA in the OS store. A caller-supplied `transport` is still used as given.
+
 ## [1.20.0] - 2026-09-10
 
 ### Added

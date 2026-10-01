@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_langchain_client` will be documented in this file.
 
+## [1.20.1] - 2026-10-01
+
+### Changed
+- Bumped the `uipath-llm-client` floor to `>=1.20.1`, whose default transport verifies TLS with the configured SSL context (OS trust store, explicit `verify`, `UIPATH_DISABLE_SSL_VERIFY`) instead of httpx's certifi default, so hosts signed by a private CA no longer fail with `CERTIFICATE_VERIFY_FAILED`.
+
 ## [1.20.0] - 2026-09-10
 
 ### Changed

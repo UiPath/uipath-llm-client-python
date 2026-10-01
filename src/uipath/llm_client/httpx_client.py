@@ -219,12 +219,26 @@ class UiPathHttpxClient(Client):
 
         self._freeze_base_url = api_config is not None and api_config.freeze_base_url
 
-        # Setup retry transport if not provided
+        # Apply UiPath SSL defaults only when the caller did not provide explicit values
+        ssl_defaults = get_httpx_ssl_client_kwargs()
+        if verify is _UNSET:
+            verify = ssl_defaults.get("verify", True)
+        if follow_redirects is _UNSET:
+            follow_redirects = ssl_defaults.get("follow_redirects", True)
+
+        # Setup retry transport if not provided. httpx applies verify/cert/limits etc.
+        # only to transports it builds itself, so they must be passed here too.
         if transport is None:
             transport = RetryableHTTPTransport(
                 max_retries=max_retries if max_retries is not None else _DEFAULT_MAX_RETRIES,
                 retry_config=retry_config,
                 logger=logger,
+                verify=verify,
+                cert=cert,
+                trust_env=trust_env,
+                http1=http1,
+                http2=http2,
+                limits=limits,
             )
 
         # Setup logging hooks
@@ -239,13 +253,6 @@ class UiPathHttpxClient(Client):
         mutable_hooks.setdefault("request", []).append(logging_config.log_request_duration)
         mutable_hooks.setdefault("response", []).append(logging_config.log_response_duration)
         mutable_hooks["response"].append(logging_config.log_error)
-
-        # Apply UiPath SSL defaults only when the caller did not provide explicit values
-        ssl_defaults = get_httpx_ssl_client_kwargs()
-        if verify is _UNSET:
-            verify = ssl_defaults.get("verify", True)
-        if follow_redirects is _UNSET:
-            follow_redirects = ssl_defaults.get("follow_redirects", True)
 
         super().__init__(
             auth=auth,
@@ -382,12 +389,26 @@ class UiPathHttpxAsyncClient(AsyncClient):
 
         self._freeze_base_url = api_config is not None and api_config.freeze_base_url
 
-        # Setup retry transport if not provided
+        # Apply UiPath SSL defaults only when the caller did not provide explicit values
+        ssl_defaults = get_httpx_ssl_client_kwargs()
+        if verify is _UNSET:
+            verify = ssl_defaults.get("verify", True)
+        if follow_redirects is _UNSET:
+            follow_redirects = ssl_defaults.get("follow_redirects", True)
+
+        # Setup retry transport if not provided. httpx applies verify/cert/limits etc.
+        # only to transports it builds itself, so they must be passed here too.
         if transport is None:
             transport = RetryableAsyncHTTPTransport(
                 max_retries=max_retries if max_retries is not None else _DEFAULT_MAX_RETRIES,
                 retry_config=retry_config,
                 logger=logger,
+                verify=verify,
+                cert=cert,
+                trust_env=trust_env,
+                http1=http1,
+                http2=http2,
+                limits=limits,
             )
 
         # Setup logging hooks
@@ -402,13 +423,6 @@ class UiPathHttpxAsyncClient(AsyncClient):
         mutable_hooks.setdefault("request", []).append(logging_config.alog_request_duration)
         mutable_hooks.setdefault("response", []).append(logging_config.alog_response_duration)
         mutable_hooks["response"].append(logging_config.alog_error)
-
-        # Apply UiPath SSL defaults only when the caller did not provide explicit values
-        ssl_defaults = get_httpx_ssl_client_kwargs()
-        if verify is _UNSET:
-            verify = ssl_defaults.get("verify", True)
-        if follow_redirects is _UNSET:
-            follow_redirects = ssl_defaults.get("follow_redirects", True)
 
         super().__init__(
             auth=auth,

@@ -1,10 +1,21 @@
 """Tests for HTTPX client functionality."""
 
+import os
+import ssl
 from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
-from httpx import Auth, Client, Headers, MockTransport, Request, Response
+from httpx import (
+    AsyncHTTPTransport,
+    Auth,
+    Client,
+    Headers,
+    HTTPTransport,
+    MockTransport,
+    Request,
+    Response,
+)
 
 from tests.lazy_stream import LazyByteStream
 from uipath.llm_client.settings import UiPathAPIConfig
@@ -24,6 +35,10 @@ class RecordingHeaderAuth(Auth):
         self.signed_user_agents = request.headers.get_list("user-agent")
         request.headers["x-signed-user-agents"] = "|".join(self.signed_user_agents)
         yield request
+
+
+def transport_ssl_context(transport: Any) -> ssl.SSLContext:
+    return transport._pool._ssl_context
 
 
 class TestUiPathHttpxClient:
@@ -124,6 +139,52 @@ class TestUiPathHttpxClient:
         assert client.headers["X-UiPath-LlmGateway-ByoIsConnectionId"] == "test-connection-id"
         client.close()
 
+    def test_client_default_transport_uses_configured_ssl_context(self):
+        """The default transport uses the context from ``get_httpx_ssl_client_kwargs()``."""
+        from uipath.llm_client.httpx_client import UiPathHttpxClient
+
+        ssl_context = ssl.create_default_context()
+        with patch(
+            "uipath.llm_client.httpx_client.get_httpx_ssl_client_kwargs",
+            return_value={"verify": ssl_context, "follow_redirects": True},
+        ):
+            client = UiPathHttpxClient(base_url="https://example.com")
+        assert isinstance(client._transport, RetryableHTTPTransport)
+        assert transport_ssl_context(client._transport) is ssl_context
+        client.close()
+
+    def test_client_default_transport_uses_explicit_verify(self):
+        """An explicit ``verify`` reaches the default transport."""
+        from uipath.llm_client.httpx_client import UiPathHttpxClient
+
+        ssl_context = ssl.create_default_context()
+        client = UiPathHttpxClient(base_url="https://example.com", verify=ssl_context)
+        assert transport_ssl_context(client._transport) is ssl_context
+        client.close()
+
+    def test_client_default_transport_honours_disable_ssl_verify(self):
+        """``UIPATH_DISABLE_SSL_VERIFY`` turns off verification on the default transport."""
+        from uipath.llm_client.httpx_client import UiPathHttpxClient
+
+        with patch.dict(os.environ, {"UIPATH_DISABLE_SSL_VERIFY": "1"}):
+            client = UiPathHttpxClient(base_url="https://example.com")
+        ssl_context = transport_ssl_context(client._transport)
+        assert ssl_context.verify_mode == ssl.CERT_NONE
+        assert ssl_context.check_hostname is False
+        client.close()
+
+    def test_client_leaves_caller_transport_untouched(self):
+        """A caller-supplied transport keeps its own SSL configuration."""
+        from uipath.llm_client.httpx_client import UiPathHttpxClient
+
+        transport = HTTPTransport()
+        client = UiPathHttpxClient(
+            base_url="https://example.com", transport=transport, verify=False
+        )
+        assert client._transport is transport
+        assert transport_ssl_context(transport).verify_mode == ssl.CERT_REQUIRED
+        client.close()
+
 
 class TestUiPathHttpxAsyncClient:
     """Tests for UiPathHttpxAsyncClient."""
@@ -170,6 +231,48 @@ class TestUiPathHttpxAsyncClient:
         client = UiPathHttpxAsyncClient(base_url="https://example.com", max_retries=0)
         assert isinstance(client._transport, RetryableAsyncHTTPTransport)
         assert client._transport.retryer is None
+
+    def test_async_client_default_transport_uses_configured_ssl_context(self):
+        """Async: the default transport uses the context from ``get_httpx_ssl_client_kwargs()``."""
+        from uipath.llm_client.httpx_client import UiPathHttpxAsyncClient
+
+        ssl_context = ssl.create_default_context()
+        with patch(
+            "uipath.llm_client.httpx_client.get_httpx_ssl_client_kwargs",
+            return_value={"verify": ssl_context, "follow_redirects": True},
+        ):
+            client = UiPathHttpxAsyncClient(base_url="https://example.com")
+        assert isinstance(client._transport, RetryableAsyncHTTPTransport)
+        assert transport_ssl_context(client._transport) is ssl_context
+
+    def test_async_client_default_transport_uses_explicit_verify(self):
+        """Async: an explicit ``verify`` reaches the default transport."""
+        from uipath.llm_client.httpx_client import UiPathHttpxAsyncClient
+
+        ssl_context = ssl.create_default_context()
+        client = UiPathHttpxAsyncClient(base_url="https://example.com", verify=ssl_context)
+        assert transport_ssl_context(client._transport) is ssl_context
+
+    def test_async_client_default_transport_honours_disable_ssl_verify(self):
+        """Async: ``UIPATH_DISABLE_SSL_VERIFY`` turns off verification on the default transport."""
+        from uipath.llm_client.httpx_client import UiPathHttpxAsyncClient
+
+        with patch.dict(os.environ, {"UIPATH_DISABLE_SSL_VERIFY": "1"}):
+            client = UiPathHttpxAsyncClient(base_url="https://example.com")
+        ssl_context = transport_ssl_context(client._transport)
+        assert ssl_context.verify_mode == ssl.CERT_NONE
+        assert ssl_context.check_hostname is False
+
+    def test_async_client_leaves_caller_transport_untouched(self):
+        """Async: a caller-supplied transport keeps its own SSL configuration."""
+        from uipath.llm_client.httpx_client import UiPathHttpxAsyncClient
+
+        transport = AsyncHTTPTransport()
+        client = UiPathHttpxAsyncClient(
+            base_url="https://example.com", transport=transport, verify=False
+        )
+        assert client._transport is transport
+        assert transport_ssl_context(transport).verify_mode == ssl.CERT_REQUIRED
 
 
 class TestBuildRoutingHeaders:

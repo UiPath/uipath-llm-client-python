@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_llm_client` (core package) will be documented in this file.
 
+## [1.21.0] - 2026-10-02
+
+### Added
+- `uipath.llm_client.clients.typesafe.UiPathJevClient`, a sync/async client for TypeSafe AI's Jev classification model (`systemone` API: typed `choice` / `score` / `noul` questions answered with probabilities). It calls the LLM Gateway's raw vendor passthrough (`.../raw/vendor/typesafe/model/{model}/completions`) with the configured client settings, reusing the UiPath httpx clients (retries incl. 429/529, logging, `UiPathAPIError` mapping).
+
 ## [1.20.1] - 2026-10-01
 
 ### Fixed

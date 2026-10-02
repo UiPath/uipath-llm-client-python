@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_langchain_client` will be documented in this file.
 
+## [1.21.0] - 2026-10-02
+
+### Changed
+- Bumped the `uipath-llm-client` floor to `>=1.21.0`, which adds `UiPathJevClient` for TypeSafe AI's Jev classification model.
+
 ## [1.20.1] - 2026-10-01
 
 ### Changed

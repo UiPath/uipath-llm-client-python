@@ -2,10 +2,10 @@
 
 All notable changes to `uipath_langchain_client` will be documented in this file.
 
-## [1.22.0] - 2026-10-07
+## [1.21.1] - 2026-10-07
 
 ### Changed
-- Bumped the `uipath-llm-client` floor to `>=1.22.0`, whose `UiPathJevClient` requires `model_name` instead of defaulting to `jev-latest`, which the LLM Gateway does not serve.
+- Bumped the `uipath-llm-client` floor to `>=1.21.1`, whose `UiPathJevClient` requires `model_name` instead of defaulting to `jev-latest`, which the LLM Gateway does not serve.
 
 ## [1.21.0] - 2026-10-02
 

@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_llm_client` (core package) will be documented in this file.
 
+## [1.21.1] - 2026-10-07
+
+### Changed
+- `UiPathJevClient` requires `model_name`, and `JEV_DEFAULT_MODEL` is removed. The previous default, `jev-latest`, is not served by the LLM Gateway (it serves only pinned versions, e.g. `jev-1.13.0`), so every call relying on it failed with 400 "Unsupported model used". A missing model is now an error at construction instead of a failed call.
+
 ## [1.21.0] - 2026-10-02
 
 ### Added

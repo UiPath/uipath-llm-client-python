@@ -14,6 +14,7 @@ from uipath.llm_client.settings import LLMGatewaySettings
 from uipath.llm_client.utils.exceptions import UiPathAPIError
 
 MODULE = "uipath.llm_client.clients.typesafe.client"
+MODEL = "jev-1.13.0"
 
 QUESTIONS = {
     "department": {
@@ -83,7 +84,7 @@ class TestLLMGatewayAccess:
         mock_transport: Callable[[int], None],
         requests: list[httpx.Request],
     ) -> None:
-        client = UiPathJevClient(client_settings=gateway_settings)
+        client = UiPathJevClient(model_name=MODEL, client_settings=gateway_settings)
 
         result = client.system_one("Payment failed", QUESTIONS)
 
@@ -91,12 +92,12 @@ class TestLLMGatewayAccess:
         (request,) = requests
         assert str(request.url) == (
             "https://cloud.uipath.com/test-org-id/test-tenant-id/"
-            "llmgateway_/api/raw/vendor/typesafe/model/jev-latest/completions"
+            "llmgateway_/api/raw/vendor/typesafe/model/jev-1.13.0/completions"
         )
         assert request.headers["X-UiPath-LlmGateway-RequestingProduct"] == "test-product"
         assert json.loads(request.content) == {
             "state": "Payment failed",
-            "model": "jev-latest",
+            "model": "jev-1.13.0",
             "questions": QUESTIONS,
         }
 
@@ -119,7 +120,7 @@ class TestLLMGatewayAccess:
         mock_transport: Callable[[int], None],
         requests: list[httpx.Request],
     ) -> None:
-        client = UiPathJevClient(client_settings=gateway_settings)
+        client = UiPathJevClient(model_name=MODEL, client_settings=gateway_settings)
 
         result = await client.asystem_one("text", QUESTIONS)
 
@@ -130,15 +131,20 @@ class TestLLMGatewayAccess:
         self, gateway_settings: LLMGatewaySettings, mock_transport: Callable[[int], None]
     ) -> None:
         mock_transport(422)
-        client = UiPathJevClient(client_settings=gateway_settings, max_retries=0)
+        client = UiPathJevClient(model_name=MODEL, client_settings=gateway_settings, max_retries=0)
 
         with pytest.raises(UiPathAPIError):
             client.system_one("text", QUESTIONS)
 
+    def test_model_name_is_required(self, gateway_settings: LLMGatewaySettings) -> None:
+        # No default: the gateway serves only pinned Jev versions.
+        with pytest.raises(TypeError, match="model_name"):
+            UiPathJevClient(client_settings=gateway_settings)  # type: ignore[call-arg]
+
     def test_empty_questions_rejected(
         self, gateway_settings: LLMGatewaySettings, mock_transport: Callable[[int], None]
     ) -> None:
-        client = UiPathJevClient(client_settings=gateway_settings)
+        client = UiPathJevClient(model_name=MODEL, client_settings=gateway_settings)
 
         with pytest.raises(ValueError):
             client.system_one("text", {})
@@ -149,7 +155,7 @@ class TestLLMGatewayAccess:
         with patch.dict("os.environ", llmgw_env_vars):
             settings = LLMGatewaySettings()
         with patch(f"{MODULE}.get_default_client_settings", return_value=settings) as factory:
-            client = UiPathJevClient()
+            client = UiPathJevClient(model_name=MODEL)
 
         factory.assert_called_once_with()
-        assert client.model_name == "jev-latest"
+        assert client.model_name == MODEL

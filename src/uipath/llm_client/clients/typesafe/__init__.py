@@ -5,12 +5,8 @@ Jev is not a chat model: it answers typed questions (``choice``, ``score``,
 https://docs.typesafe.ai/api for the request/response contract.
 """
 
-from uipath.llm_client.clients.typesafe.client import (
-    JEV_DEFAULT_MODEL,
-    UiPathJevClient,
-)
+from uipath.llm_client.clients.typesafe.client import UiPathJevClient
 
 __all__ = [
-    "JEV_DEFAULT_MODEL",
     "UiPathJevClient",
 ]

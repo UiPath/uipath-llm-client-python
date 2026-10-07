@@ -13,8 +13,6 @@ from uipath.llm_client.settings import (
 from uipath.llm_client.settings.constants import ApiType, RoutingMode
 from uipath.llm_client.utils.retry import RetryConfig
 
-JEV_DEFAULT_MODEL = "jev-latest"
-
 # Raw vendor passthrough: .../raw/vendor/typesafe/model/{model}/completions
 TYPESAFE_VENDOR_TYPE = "typesafe"
 TYPESAFE_API_FLAVOR = "systemone"
@@ -39,7 +37,8 @@ class UiPathJevClient:
     UiPath exception mapping behave like the other vendor clients.
 
     Args:
-        model_name: The Jev model name. Defaults to ``jev-latest``.
+        model_name: The Jev model name, e.g. ``jev-1.13.0``. Required: there is
+            no default, since the gateway serves only pinned versions.
         client_settings: UiPath client settings. Defaults to the default settings.
         timeout: Client-side request timeout in seconds.
         max_retries: Maximum retry attempts for failed requests.
@@ -51,7 +50,7 @@ class UiPathJevClient:
     def __init__(
         self,
         *,
-        model_name: str = JEV_DEFAULT_MODEL,
+        model_name: str,
         client_settings: UiPathBaseSettings | None = None,
         timeout: float | None = None,
         max_retries: int | None = None,

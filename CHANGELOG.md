@@ -2,6 +2,15 @@
 
 All notable changes to `uipath_llm_client` (core package) will be documented in this file.
 
+## [1.22.0] - 2026-10-09
+
+### Added
+- `ApiType.DECISIONS` and the LLM Gateway's raw vendor decisions route, `.../raw/vendor/{vendor}/model/{model}/decisions`, for typed classification decisions. The Platform backend builds it with `EndpointManager.get_vendor_decisions_endpoint()` (`uipath-platform>=0.2.36`); the LLM Gateway backend templates the API type as before.
+- `uipath.llm_client.clients.decisions.UiPathDecisionsClient`, a sync/async client for OpenAI's Decisions API (`POST /v1/decisions`: typed `choice` / `score` / `predicate` questions about a text or text-and-images `input`, answered with probabilities), calling the decisions route for vendor `openai`, e.g. `gpt-6-luna`.
+
+### Changed
+- `UiPathJevClient` calls `.../raw/vendor/typesafe/model/{model}/decisions`, where the LLM Gateway moved Jev, without an API flavor. The `.../completions` route with the `systemone` flavor is deprecated. Requests and responses are unchanged.
+
 ## [1.21.1] - 2026-10-07
 
 ### Changed

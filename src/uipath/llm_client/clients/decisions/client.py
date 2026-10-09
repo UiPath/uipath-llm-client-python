@@ -1,5 +1,5 @@
 import logging
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from typing import Any
 
 from httpx import Response
@@ -10,34 +10,31 @@ from uipath.llm_client.settings import (
     UiPathBaseSettings,
     get_default_client_settings,
 )
-from uipath.llm_client.settings.constants import ApiType, RoutingMode
+from uipath.llm_client.settings.constants import ApiType, RoutingMode, VendorType
 from uipath.llm_client.utils.retry import RetryConfig
 
-# Raw vendor passthrough: .../raw/vendor/typesafe/model/{model}/decisions. The gateway
-# moved Jev there from .../completions (with the "systemone" API flavor), now deprecated.
-TYPESAFE_VENDOR_TYPE = "typesafe"
+# Raw vendor passthrough: .../raw/vendor/openai/model/{model}/decisions (POST /v1/decisions).
 
 
 def _build_api_config() -> UiPathAPIConfig:
     return UiPathAPIConfig(
         api_type=ApiType.DECISIONS,
         routing_mode=RoutingMode.PASSTHROUGH,
-        vendor_type=TYPESAFE_VENDOR_TYPE,
+        vendor_type=VendorType.OPENAI,
         freeze_base_url=True,
     )
 
 
-class UiPathJevClient:
-    """Client for TypeSafe's Jev ``systemone`` endpoint.
+class UiPathDecisionsClient:
+    """Client for OpenAI's Decisions API (``POST /v1/decisions``).
 
     Calls the UiPath LLM Gateway raw vendor decisions passthrough for vendor
-    ``typesafe`` using ``client_settings`` (or the default settings). It uses
-    the UiPath httpx clients, so retries (including 429/529), logging and
-    UiPath exception mapping behave like the other vendor clients.
+    ``openai`` using ``client_settings`` (or the default settings). It uses the
+    UiPath httpx clients, so retries (including 429/529), logging and UiPath
+    exception mapping behave like the other vendor clients.
 
     Args:
-        model_name: The Jev model name, e.g. ``jev-1.13.0``. Required: there is
-            no default, since the gateway serves only pinned versions.
+        model_name: The Decisions model, e.g. ``gpt-6-luna``. Required.
         client_settings: UiPath client settings. Defaults to the default settings.
         timeout: Client-side request timeout in seconds.
         max_retries: Maximum retry attempts for failed requests.
@@ -74,43 +71,48 @@ class UiPathJevClient:
         self._async_client = UiPathHttpxAsyncClient(**gateway)
 
     def _build_body(
-        self, state: str | Mapping[str, Any] | list[Any], questions: Mapping[str, Any]
+        self, input: str | Sequence[Any], questions: Sequence[Mapping[str, Any]]
     ) -> dict[str, Any]:
         if not questions:
             raise ValueError("At least one question is required.")
-        return {"state": state, "model": self.model_name, "questions": dict(questions)}
+        return {
+            "model": self.model_name,
+            "input": input if isinstance(input, str) else list(input),
+            "questions": [dict(question) for question in questions],
+        }
 
     @staticmethod
     def _parse(response: Response) -> dict[str, Any]:
         response.raise_for_status()
         return response.json()
 
-    def system_one(
-        self, state: str | Mapping[str, Any] | list[Any], questions: Mapping[str, Any]
+    def create(
+        self, input: str | Sequence[Any], questions: Sequence[Mapping[str, Any]]
     ) -> dict[str, Any]:
-        """Ask Jev typed questions about ``state``.
+        """Ask typed questions about ``input``.
 
         Args:
-            state: The input to classify (text, or a JSON object/array).
-            questions: Question id to question definition, e.g.
-                ``{"department": {"type": "choice", "instructions": "...",
-                "criteria": {"billing": "Payment issues"}}}``.
+            input: The shared evidence: a text, or user messages whose content
+                combines ``input_text`` and ``input_image`` parts.
+            questions: The questions, each with a ``type`` (``choice``, ``score``
+                or ``predicate``), a unique ``name`` and ``instructions``, plus
+                ``choices`` (choice) or ``levels`` (score).
 
         Returns:
-            The decoded response: ``{"model", "answers", "usage"}``.
+            The decoded response, with one entry per question in ``answers``.
 
         Raises:
             ValueError: If ``questions`` is empty.
             UiPathAPIError: If the request fails.
         """
-        body = self._build_body(state, questions)
+        body = self._build_body(input, questions)
         return self._parse(self._client.post("", json=body))
 
-    async def asystem_one(
-        self, state: str | Mapping[str, Any] | list[Any], questions: Mapping[str, Any]
+    async def acreate(
+        self, input: str | Sequence[Any], questions: Sequence[Mapping[str, Any]]
     ) -> dict[str, Any]:
-        """Async version of :meth:`system_one`."""
-        body = self._build_body(state, questions)
+        """Async version of :meth:`create`."""
+        body = self._build_body(input, questions)
         return self._parse(await self._async_client.post("", json=body))
 
     def close(self) -> None:

@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_langchain_client` will be documented in this file.
 
+## [1.22.0] - 2026-10-15
+
+### Changed
+- Bumped the `uipath-llm-client` floor to `>=1.22.0`, which adds the LLM Gateway decisions route (`UiPathDecisionsClient` for OpenAI's Decisions API) and moves `UiPathJevClient` to it.
+
 ## [1.21.2] - 2026-10-14
 
 ### Changed

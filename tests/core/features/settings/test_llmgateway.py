@@ -6,8 +6,9 @@ from unittest.mock import MagicMock, patch
 import pytest
 from httpx import Client, Request, Response
 
-from uipath.llm_client.settings import LLMGatewaySettings
+from uipath.llm_client.settings import LLMGatewaySettings, UiPathAPIConfig
 from uipath.llm_client.settings.base import UiPathBaseSettings
+from uipath.llm_client.settings.constants import ApiType, RoutingMode
 from uipath.llm_client.utils.exceptions import UiPathAPIError, UiPathAuthenticationError
 
 
@@ -29,6 +30,20 @@ class TestLLMGatewaySettings:
             assert "test-org-id" in url
             assert "test-tenant-id" in url
             assert "llmgateway_/api/raw/vendor/openai/model/gpt-4o/completions" in url
+
+    def test_build_base_url_passthrough_decisions(self, llmgw_env_vars):
+        """Test build_base_url for the passthrough decisions route."""
+        api_config = UiPathAPIConfig(
+            api_type=ApiType.DECISIONS,
+            routing_mode=RoutingMode.PASSTHROUGH,
+            vendor_type="openai",
+        )
+        with patch.dict(os.environ, llmgw_env_vars, clear=True):
+            settings = LLMGatewaySettings()
+            url = settings.build_base_url(model_name="gpt-6-luna", api_config=api_config)
+            assert url.endswith(
+                "test-org-id/test-tenant-id/llmgateway_/api/raw/vendor/openai/model/gpt-6-luna/decisions"
+            )
 
     def test_build_base_url_normalized(self, llmgw_env_vars, normalized_api_config):
         """Test build_base_url for normalized mode."""

@@ -26,6 +26,18 @@ class TestPlatformSettings:
             )
             assert "llm/raw/vendor/openai/model/gpt-4o/completions" in url
 
+    def test_build_base_url_passthrough_decisions(self, platform_env_vars, mock_platform_auth):
+        """Test build_base_url for the passthrough decisions route."""
+        api_config = UiPathAPIConfig(
+            api_type=ApiType.DECISIONS,
+            routing_mode=RoutingMode.PASSTHROUGH,
+            vendor_type="typesafe",
+        )
+        with patch.dict(os.environ, platform_env_vars, clear=True):
+            settings = PlatformSettings()
+            url = settings.build_base_url(model_name="jev-1.13.0", api_config=api_config)
+            assert url.endswith("llm/raw/vendor/typesafe/model/jev-1.13.0/decisions")
+
     def test_build_base_url_passthrough_with_api_version(
         self, platform_env_vars, mock_platform_auth
     ):

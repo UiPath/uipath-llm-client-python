@@ -1,4 +1,4 @@
-"""Tests for the TypeSafe Jev client."""
+"""Tests for the OpenAI Decisions client."""
 
 import json
 from collections.abc import Callable, Iterator
@@ -8,35 +8,45 @@ from unittest.mock import patch
 import httpx
 import pytest
 
-from uipath.llm_client.clients.typesafe import UiPathJevClient
+from uipath.llm_client.clients.decisions import UiPathDecisionsClient
 from uipath.llm_client.httpx_client import UiPathHttpxAsyncClient, UiPathHttpxClient
-from uipath.llm_client.settings import LLMGatewaySettings
+from uipath.llm_client.settings import LLMGatewaySettings, PlatformSettings
 from uipath.llm_client.utils.exceptions import UiPathAPIError
 
-MODULE = "uipath.llm_client.clients.typesafe.client"
-MODEL = "jev-1.13.0"
+MODULE = "uipath.llm_client.clients.decisions.client"
+MODEL = "gpt-6-luna"
 
-QUESTIONS = {
-    "department": {
+QUESTIONS = [
+    {
         "type": "choice",
-        "instructions": "Which team should handle this",
-        "criteria": {"billing": "Payment issues", "technical": None},
-    }
-}
-ANSWER = {
-    "model": "jev-1.13.0",
-    "answers": {
-        "department": {
-            "type": "choice",
-            "choice": "billing",
-            "confidence": 0.9,
-            "probabilities": {"billing": 0.95, "technical": 0.05},
-        }
+        "name": "department",
+        "instructions": "Which department should handle this complaint?",
+        "choices": [
+            {"value": "billing", "description": "Payments, invoices, and refunds."},
+            {"value": "technical"},
+        ],
     },
-    "usage": {"input_tokens": 12, "output_tokens": 0},
+    {
+        "type": "predicate",
+        "name": "is_urgent",
+        "instructions": "The customer needs an answer today.",
+    },
+]
+ANSWER = {
+    "answers": [
+        {
+            "type": "choice",
+            "name": "department",
+            "choice": "billing",
+            "confidence": 0.93,
+            "probabilities": [
+                {"value": "billing", "probability": 0.93},
+                {"value": "technical", "probability": 0.07},
+            ],
+        },
+        {"type": "predicate", "name": "is_urgent", "probability": 0.82},
+    ]
 }
-
-Handler = Callable[[httpx.Request], httpx.Response]
 
 
 @pytest.fixture
@@ -52,7 +62,7 @@ def mock_transport(requests: list[httpx.Request]) -> Iterator[Callable[[int], No
     def handler(request: httpx.Request) -> httpx.Response:
         requests.append(request)
         if state["status"] != 200:
-            return httpx.Response(state["status"], json={"detail": "bad"})
+            return httpx.Response(state["status"], json={"error": {"message": "bad"}})
         return httpx.Response(200, json=ANSWER)
 
     def make_sync(**kwargs: Any) -> UiPathHttpxClient:
@@ -77,44 +87,69 @@ def gateway_settings(llmgw_env_vars: dict[str, str]) -> LLMGatewaySettings:
         return LLMGatewaySettings()
 
 
-class TestLLMGatewayAccess:
-    def test_calls_gateway_raw_vendor_endpoint(
+class TestDecisionsClient:
+    def test_calls_gateway_raw_vendor_decisions_endpoint(
         self,
         gateway_settings: LLMGatewaySettings,
         mock_transport: Callable[[int], None],
         requests: list[httpx.Request],
     ) -> None:
-        client = UiPathJevClient(model_name=MODEL, client_settings=gateway_settings)
+        client = UiPathDecisionsClient(model_name=MODEL, client_settings=gateway_settings)
 
-        result = client.system_one("Payment failed", QUESTIONS)
+        result = client.create("I was charged twice for my order.", QUESTIONS)
 
         assert result == ANSWER
         (request,) = requests
         assert str(request.url) == (
             "https://cloud.uipath.com/test-org-id/test-tenant-id/"
-            "llmgateway_/api/raw/vendor/typesafe/model/jev-1.13.0/decisions"
+            "llmgateway_/api/raw/vendor/openai/model/gpt-6-luna/decisions"
         )
-        assert request.headers["X-UiPath-LlmGateway-RequestingProduct"] == "test-product"
-        # The decisions route takes no API flavor (the deprecated completions route took "systemone").
         assert "X-UiPath-LlmGateway-ApiFlavor" not in request.headers
         assert json.loads(request.content) == {
-            "state": "Payment failed",
-            "model": "jev-1.13.0",
+            "model": "gpt-6-luna",
+            "input": "I was charged twice for my order.",
             "questions": QUESTIONS,
         }
 
-    def test_model_name_in_url_and_body(
+    def test_calls_agenthub_raw_vendor_decisions_endpoint(
+        self,
+        platform_env_vars: dict[str, str],
+        mock_platform_auth: None,
+        mock_transport: Callable[[int], None],
+        requests: list[httpx.Request],
+    ) -> None:
+        with patch.dict("os.environ", {**platform_env_vars, "UIPATH_LLM_SERVICE": "agenthub"}):
+            settings = PlatformSettings()
+            client = UiPathDecisionsClient(model_name=MODEL, client_settings=settings)
+            client.create("text", QUESTIONS)
+
+        (request,) = requests
+        assert str(request.url) == (
+            "https://cloud.uipath.com/org/tenant/"
+            "agenthub_/llm/raw/vendor/openai/model/gpt-6-luna/decisions"
+        )
+
+    def test_sends_messages_with_images_as_a_list(
         self,
         gateway_settings: LLMGatewaySettings,
         mock_transport: Callable[[int], None],
         requests: list[httpx.Request],
     ) -> None:
-        client = UiPathJevClient(model_name="jev-preview", client_settings=gateway_settings)
-        client.system_one("text", QUESTIONS)
+        messages = (
+            {
+                "role": "user",
+                "content": [
+                    {"type": "input_text", "text": "Is this a receipt?"},
+                    {"type": "input_image", "image_url": "data:image/png;base64,AA"},
+                ],
+            },
+        )
+        client = UiPathDecisionsClient(model_name=MODEL, client_settings=gateway_settings)
+
+        client.create(messages, QUESTIONS)
 
         (request,) = requests
-        assert str(request.url).endswith("/raw/vendor/typesafe/model/jev-preview/decisions")
-        assert json.loads(request.content)["model"] == "jev-preview"
+        assert json.loads(request.content)["input"] == list(messages)
 
     async def test_async_call(
         self,
@@ -122,9 +157,9 @@ class TestLLMGatewayAccess:
         mock_transport: Callable[[int], None],
         requests: list[httpx.Request],
     ) -> None:
-        client = UiPathJevClient(model_name=MODEL, client_settings=gateway_settings)
+        client = UiPathDecisionsClient(model_name=MODEL, client_settings=gateway_settings)
 
-        result = await client.asystem_one("text", QUESTIONS)
+        result = await client.acreate("text", QUESTIONS)
 
         assert result == ANSWER
         assert len(requests) == 1
@@ -132,24 +167,25 @@ class TestLLMGatewayAccess:
     def test_http_error_raises_uipath_error(
         self, gateway_settings: LLMGatewaySettings, mock_transport: Callable[[int], None]
     ) -> None:
-        mock_transport(422)
-        client = UiPathJevClient(model_name=MODEL, client_settings=gateway_settings, max_retries=0)
+        mock_transport(400)
+        client = UiPathDecisionsClient(
+            model_name=MODEL, client_settings=gateway_settings, max_retries=0
+        )
 
         with pytest.raises(UiPathAPIError):
-            client.system_one("text", QUESTIONS)
+            client.create("text", QUESTIONS)
 
     def test_model_name_is_required(self, gateway_settings: LLMGatewaySettings) -> None:
-        # No default: the gateway serves only pinned Jev versions.
         with pytest.raises(TypeError, match="model_name"):
-            UiPathJevClient(client_settings=gateway_settings)  # type: ignore[call-arg]
+            UiPathDecisionsClient(client_settings=gateway_settings)  # type: ignore[call-arg]
 
     def test_empty_questions_rejected(
         self, gateway_settings: LLMGatewaySettings, mock_transport: Callable[[int], None]
     ) -> None:
-        client = UiPathJevClient(model_name=MODEL, client_settings=gateway_settings)
+        client = UiPathDecisionsClient(model_name=MODEL, client_settings=gateway_settings)
 
         with pytest.raises(ValueError):
-            client.system_one("text", {})
+            client.create("text", [])
 
     def test_uses_default_settings_when_none_given(
         self, mock_transport: Callable[[int], None], llmgw_env_vars: dict[str, str]
@@ -157,7 +193,7 @@ class TestLLMGatewayAccess:
         with patch.dict("os.environ", llmgw_env_vars):
             settings = LLMGatewaySettings()
         with patch(f"{MODULE}.get_default_client_settings", return_value=settings) as factory:
-            client = UiPathJevClient(model_name=MODEL)
+            client = UiPathDecisionsClient(model_name=MODEL)
 
         factory.assert_called_once_with()
         assert client.model_name == MODEL

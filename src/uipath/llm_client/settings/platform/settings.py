@@ -169,6 +169,15 @@ class PlatformBaseSettings(UiPathBaseSettings):
             )
         elif (
             api_config.routing_mode == RoutingMode.PASSTHROUGH
+            and api_config.api_type == ApiType.DECISIONS
+        ):
+            endpoint_path = self._format_endpoint(
+                EndpointManager.get_vendor_decisions_endpoint(),
+                model=model_name,
+                vendor=api_config.vendor_type,
+            )
+        elif (
+            api_config.routing_mode == RoutingMode.PASSTHROUGH
             and api_config.api_type == ApiType.EMBEDDINGS
         ):
             if api_config.vendor_type is not None and api_config.vendor_type != "openai":

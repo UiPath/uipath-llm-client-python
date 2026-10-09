@@ -4,6 +4,8 @@ from enum import StrEnum
 class ApiType(StrEnum):
     COMPLETIONS = "completions"
     EMBEDDINGS = "embeddings"
+    # Typed classification decisions (OpenAI's Decisions API, TypeSafe's Jev): passthrough only.
+    DECISIONS = "decisions"
 
 
 class RoutingMode(StrEnum):

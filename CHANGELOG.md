@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_llm_client` (core package) will be documented in this file.
 
+## [1.21.2] - 2026-10-13
+
+### Fixed
+- `PlatformSettings` asks AgentHub discovery for retired models too (`include_deprecated_models=True`, needs `uipath-platform>=0.2.37`). Once LLM Gateway scopes discovery by operation code, a model past its usage end date is listed only when asked for, flagged `isDeprecated` and described by its successor. Without it, `get_model_info` raised `ModelNotFoundError` for an agent still configured with the retired name, although the gateway serves that name on the successor.
+
 ## [1.21.1] - 2026-10-07
 
 ### Changed

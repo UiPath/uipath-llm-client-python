@@ -1,0 +1,117 @@
+# Model onboarding check: run the langchain integration suite for ONE model that is not (yet) in
+# the committed test matrix — e.g. a model the LLM Gateway just onboarded — as a given requesting
+# product, against the LLM Gateway environment held in a GitHub environment of this repo.
+#
+# Dispatched by hand, or by UiPath/llm-gateway-config when a model is routed for agents/agenthub
+# in prod. The model is injected into the per-provider conftest matrix for this run only, and only
+# into the vendor clients whose API flavor the gateway declares for it (SupportedApiFlavors).
+#
+# target_environment: LLMGW_SETTINGS (alpha, exists) or a prod-tier environment such as
+# LLMGW_SETTINGS_PROD — same variable/secret names as ci.yml's test job.
+name: Model onboarding check
+
+on:
+  workflow_dispatch:
+    inputs:
+      model:
+        description: model id as passed to the gateway (e.g. gemini-3.7-flash)
+        required: true
+        type: string
+      family:
+        description: LLM Gateway ModelFamily
+        required: true
+        type: choice
+        options: [GoogleGemini, AnthropicClaude, OpenAi]
+      vendor:
+        description: LLM Gateway Vendor
+        required: true
+        type: choice
+        options: [VertexAi, AwsBedrock, OpenAi, NativeOpenAi]
+      product:
+        description: X-UiPath-LlmGateway-RequestingProduct
+        required: true
+        type: choice
+        options: [agents, agenthub, agent-gym, testproduct]
+      api_flavors:
+        description: comma-separated LLM Gateway SupportedApiFlavors (selects which vendor clients run)
+        required: true
+        type: string
+      operations:
+        description: comma-separated SupportedNormalizedOperations
+        required: false
+        default: NormalizedChat
+        type: string
+      target_environment:
+        description: GitHub environment holding the LLMGW_* settings
+        required: false
+        default: LLMGW_SETTINGS
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: ${{ inputs.model }} · ${{ inputs.product }} · ${{ inputs.target_environment }}
+    runs-on: uipath-ubuntu-latest
+    environment: ${{ inputs.target_environment }}
+    env:
+      UIPATH_LLM_SERVICE: ${{ vars.UIPATH_LLM_SERVICE }}
+      LLMGW_URL: ${{ vars.LLMGW_URL }}
+      LLMGW_SEMANTIC_ORG_ID: ${{ secrets.LLMGW_SEMANTIC_ORG_ID }}
+      LLMGW_SEMANTIC_USER_ID: ${{ secrets.LLMGW_SEMANTIC_USER_ID }}
+      LLMGW_SEMANTIC_TENANT_ID: ${{ secrets.LLMGW_SEMANTIC_TENANT_ID }}
+      LLMGW_CLIENT_ID: ${{ secrets.LLMGW_CLIENT_ID }}
+      LLMGW_CLIENT_SECRET: ${{ secrets.LLMGW_CLIENT_SECRET }}
+      LLMGW_REQUESTING_PRODUCT: ${{ inputs.product }}
+      LLMGW_REQUESTING_FEATURE: ${{ inputs.product == 'agenthub' && 'llm-call' || inputs.product == 'agents' && 'agents-prompt' || vars.LLMGW_REQUESTING_FEATURE }}
+      LLMGW_OPERATION_CODE: ${{ inputs.product == 'agenthub' && 'AgentHub.LLM' || inputs.product == 'agents' && 'Agents.Execution' || '' }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803  # v6.1.0
+        with:
+          lfs: true
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78  # v7.6.0
+        with:
+          version: "0.9.27"
+          enable-cache: true
+
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1  # v6.3.0
+        with:
+          python-version-file: ".python-version"
+
+      - name: Install dependencies
+        run: uv sync --dev --all-extras
+
+      - name: Inject the model into the test matrix (this run only)
+        id: inject
+        run: |
+          out=$(python scripts/inject_model_into_matrix.py --repo . \
+                  --model "${{ inputs.model }}" --family "${{ inputs.family }}" --vendor "${{ inputs.vendor }}" \
+                  --flavors "${{ inputs.api_flavors }}" --operations "${{ inputs.operations }}")
+          echo "$out"
+          echo "dirs=$(echo "$out" | tail -1)" >> "$GITHUB_OUTPUT"
+
+      # record_mode=new_episodes: an unseen model goes to the wire. The cassette DB is not
+      # uploaded or committed, so this never pollutes the committed recordings.
+      - name: Run the langchain integration suite for the model
+        run: |
+          paths=""; for d in ${{ steps.inject.outputs.dirs }}; do paths="$paths tests/langchain/clients/$d/test_integration.py"; done
+          uv run pytest $paths -k "${{ inputs.model }}" -q --no-header \
+            --junitxml "report-${{ inputs.model }}-${{ inputs.product }}.xml" | tee "run-${{ inputs.model }}-${{ inputs.product }}.log"
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "### ${{ inputs.model }} · ${{ inputs.product }} · ${{ inputs.target_environment }}" >> "$GITHUB_STEP_SUMMARY"
+          tail -3 "run-${{ inputs.model }}-${{ inputs.product }}.log" >> "$GITHUB_STEP_SUMMARY" || true
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: model-onboarding-${{ inputs.model }}-${{ inputs.product }}-${{ inputs.target_environment }}
+          path: |
+            report-*.xml
+            run-*.log

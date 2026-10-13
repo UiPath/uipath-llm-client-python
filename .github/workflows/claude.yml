@@ -1,0 +1,90 @@
+name: Claude
+
+# Lets Claude act on issues and pull requests.
+#
+# Triggers:
+#   * Assign an issue to the configured account (see `assignee_trigger` below) and
+#     Claude will investigate, implement a fix on a new branch, and open a PR that
+#     references the issue.
+#   * Mention `@claude` in an issue comment, PR comment, or PR review and Claude
+#     will respond / make the requested change on that thread.
+#
+# Setup (one-time, done by a repo admin):
+#   1. Install the Claude GitHub App on this repository
+#      (https://github.com/apps/claude) so an assignable bot account exists, OR
+#      pick an existing machine-user login and set `assignee_trigger` to it.
+#   2. Add a repository secret named `ANTHROPIC_API_KEY` (Settings → Secrets and
+#      variables → Actions). To use a Claude subscription instead of an API key,
+#      replace it with `CLAUDE_CODE_OAUTH_TOKEN` below.
+
+on:
+  issues:
+    types: [assigned]
+  issue_comment:
+    types: [created]
+  pull_request_review_comment:
+    types: [created]
+  pull_request_review:
+    types: [submitted]
+
+jobs:
+  claude:
+    # Only run when an issue is assigned to the Claude account, or when @claude is
+    # mentioned. This keeps the job from spinning up on every comment/assignment.
+    if: |
+      (github.event_name == 'issues' && github.event.assignee.login == 'claude') ||
+      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude')) ||
+      (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude')) ||
+      (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@claude'))
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # create branches and commits
+      pull-requests: write # open PRs and comment
+      issues: write # comment on issues
+      id-token: write # OIDC for the action
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          lfs: true
+
+      - name: Run Claude Code
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          # To use a Claude subscription instead of an API key, remove the line
+          # above and uncomment:
+          # claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+
+          # Account that issues are assigned to in order to trigger Claude.
+          assignee_trigger: "claude"
+          # Phrase that triggers Claude in comments and reviews.
+          trigger_phrase: "@claude"
+
+          # Repo-specific instructions. The action automatically injects the
+          # triggering issue / comment and its context; this tells Claude how to
+          # work in THIS monorepo and to deliver the result as a PR.
+          prompt: |
+            You are working in the `uipath-llm-client` Python monorepo. A GitHub
+            issue or comment has triggered you — read it (and any code it links to)
+            and fully resolve the request.
+
+            Follow the repository conventions in `.claude/CLAUDE.md` exactly. In
+            particular:
+              - Apply the versioning rules: when you change source under `src/` or
+                `packages/`, bump the affected `__version__.py`, update the matching
+                dependency pin, and add CHANGELOG entries.
+              - Run the full pre-commit checklist and make sure all of it passes
+                before committing:
+                  `uv sync --all-extras`
+                  `uv run ruff check && uv run ruff format . && uv run pyright && uv run pytest tests`
+              - Keep the change focused: one logical change.
+
+            When the work is done and the checks pass, push a branch and open a pull
+            request whose description explains what changed and why, which package(s)
+            are affected, and that closes the issue (e.g. "Fixes #<number>").
+
+          # Tune the agent's run. Bump --max-turns for larger issues.
+          claude_args: |
+            --max-turns 40

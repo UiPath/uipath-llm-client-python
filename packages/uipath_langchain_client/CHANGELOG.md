@@ -2,7 +2,7 @@
 
 All notable changes to `uipath_langchain_client` will be documented in this file.
 
-## [1.21.2] - 2026-10-13
+## [1.21.2] - 2026-10-14
 
 ### Changed
 - Bumped the `uipath-llm-client` floor to `>=1.21.2`, whose `PlatformSettings` resolves models retired for the requesting feature instead of raising `ModelNotFoundError`.

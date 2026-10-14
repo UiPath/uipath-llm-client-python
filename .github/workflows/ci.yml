@@ -15,6 +15,9 @@ on:
 permissions:
   contents: read
 
+env:
+  SAFE_CHAIN_MINIMUM_PACKAGE_AGE_EXCLUSIONS: uipath-core,uipath-platform,uipath-llm-client,uipath-langchain-client
+
 jobs:
   type_check:
     name: Type Check and Lint

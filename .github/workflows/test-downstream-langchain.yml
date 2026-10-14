@@ -20,6 +20,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
+  SAFE_CHAIN_MINIMUM_PACKAGE_AGE_EXCLUSIONS: uipath,uipath-core,uipath-dev,uipath-langchain,uipath-langchain-client,uipath-llm-client,uipath-platform,uipath-robot,uipath-runtime,jsonschema-pydantic-converter
   DOWNSTREAM_REPO: UiPath/uipath-langchain-python
   DOWNSTREAM_REF: main
 

@@ -8,6 +8,7 @@ from httpx import Request, Response
 from pydantic import ValidationError
 
 from uipath.llm_client.settings import PlatformSettings, UiPathAPIConfig
+from uipath.llm_client.settings.base import UiPathBaseSettings
 from uipath.llm_client.settings.constants import ApiType, RoutingMode
 
 
@@ -343,6 +344,41 @@ class TestPlatformSettings:
             settings = PlatformSettings()
             result = settings.validate_byo_model({"modelName": "custom-model"})
             assert result is None
+
+
+class TestPlatformDiscovery:
+    RETIRED_MODEL = {
+        "modelName": "gpt-4o-2024-05-13",
+        "vendor": "OpenAi",
+        "modelFamily": "OpenAi",
+        "effectiveModel": "gpt-5.1-2025-11-13",
+        "isDeprecated": True,
+        "deprecationDetails": {
+            "usageEndDate": "2026-09-30",
+            "replacedBy": "gpt-5.1-2025-11-13",
+        },
+    }
+
+    @pytest.fixture(autouse=True)
+    def _clear_discovery_cache(self):
+        UiPathBaseSettings._discovery_cache.clear()
+        yield
+        UiPathBaseSettings._discovery_cache.clear()
+
+    def test_get_model_info_resolves_retired_model(self, platform_env_vars, mock_platform_auth):
+        def discovery(_transport, request: Request) -> Response:
+            assert request.url.path.endswith("/agenthub_/llm/api/discovery")
+            retired = request.url.params.get("includeDeprecatedModels") == "true"
+            return Response(200, json=[self.RETIRED_MODEL] if retired else [], request=request)
+
+        with (
+            patch.dict(os.environ, platform_env_vars, clear=True),
+            patch("httpx.HTTPTransport.handle_request", autospec=True, side_effect=discovery),
+        ):
+            model_info = PlatformSettings().get_model_info("gpt-4o-2024-05-13")
+
+        assert model_info["isDeprecated"] is True
+        assert model_info["effectiveModel"] == "gpt-5.1-2025-11-13"
 
 
 class TestPlatformAuthRefresh:

@@ -230,5 +230,6 @@ class PlatformBaseSettings(UiPathBaseSettings):
     def _fetch_available_models(self) -> list[dict[str, Any]]:
         models = UiPath().agenthub.get_available_llm_models(
             headers=dict(self.build_auth_headers()),
+            include_deprecated_models=True,
         )
         return [model.model_dump(by_alias=True) for model in models]

@@ -3871,7 +3871,7 @@ requires-dist = [
     { name = "pydantic", specifier = ">=2.12.5,<3.0.0" },
     { name = "pydantic-settings", specifier = ">=2.14.0,<3.0.0" },
     { name = "tenacity", specifier = ">=9.1.4,<10.0.0" },
-    { name = "uipath-platform", specifier = ">=0.2.37,<1.0.0" },
+    { name = "uipath-platform", specifier = ">=0.2.38,<1.0.0" },
 ]
 provides-extras = ["all", "anthropic", "google", "litellm", "openai"]
 
@@ -3894,7 +3894,7 @@ dev = [
 
 [[package]]
 name = "uipath-platform"
-version = "0.2.37"
+version = "0.2.38"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "anyio" },
@@ -3905,9 +3905,9 @@ dependencies = [
     { name = "truststore" },
     { name = "uipath-core" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/64/f3/9ccf3479c94611a5db4290b94fecb70f1e9d15331631866ee4998c654a0c/uipath_platform-0.2.37.tar.gz", hash = "sha256:465ad869998f61d35b504f873cdbebec6f90afef856c5a62cdf246177aaba370", size = 456542, upload-time = "2026-10-14T11:31:59.116Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/3e/4e/933789aaac3b495060e4d5ff0e583d6397cefba9687e3c8975706b9d8d4e/uipath_platform-0.2.38.tar.gz", hash = "sha256:134f90da04825fbf4d1d52a465f473d14c172191a684c46fdd1e4b2b28360f8a", size = 457023, upload-time = "2026-10-15T14:50:26.154Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/de/30/3a4e561a495afa7c2e880fe741e904dd078eec3e2df07b2a45cc88f2f5d6/uipath_platform-0.2.37-py3-none-any.whl", hash = "sha256:b2061fccd073c65d7fe73b7e524b6215f56de0ed605161ebe805d7a701001c10", size = 295184, upload-time = "2026-10-14T11:31:57.309Z" },
+    { url = "https://files.pythonhosted.org/packages/07/f8/62db96b7fd1ebe6453248b77a87a54abdb312eeb0cb85e21ac74aeeffbf5/uipath_platform-0.2.38-py3-none-any.whl", hash = "sha256:d4b7cada0bfb9bca46052c2cf9dff98c24eadebffac24858212ad06ec6875f8a", size = 295435, upload-time = "2026-10-15T14:50:24.218Z" },
 ]
 
 [[package]]

@@ -92,9 +92,11 @@ class TestLLMGatewayAccess:
         (request,) = requests
         assert str(request.url) == (
             "https://cloud.uipath.com/test-org-id/test-tenant-id/"
-            "llmgateway_/api/raw/vendor/typesafe/model/jev-1.13.0/completions"
+            "llmgateway_/api/raw/vendor/typesafe/model/jev-1.13.0/decisions"
         )
         assert request.headers["X-UiPath-LlmGateway-RequestingProduct"] == "test-product"
+        # The decisions route takes no API flavor (the deprecated completions route took "systemone").
+        assert "X-UiPath-LlmGateway-ApiFlavor" not in request.headers
         assert json.loads(request.content) == {
             "state": "Payment failed",
             "model": "jev-1.13.0",
@@ -111,7 +113,7 @@ class TestLLMGatewayAccess:
         client.system_one("text", QUESTIONS)
 
         (request,) = requests
-        assert str(request.url).endswith("/raw/vendor/typesafe/model/jev-preview/completions")
+        assert str(request.url).endswith("/raw/vendor/typesafe/model/jev-preview/decisions")
         assert json.loads(request.content)["model"] == "jev-preview"
 
     async def test_async_call(

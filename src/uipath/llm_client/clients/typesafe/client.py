@@ -13,17 +13,16 @@ from uipath.llm_client.settings import (
 from uipath.llm_client.settings.constants import ApiType, RoutingMode
 from uipath.llm_client.utils.retry import RetryConfig
 
-# Raw vendor passthrough: .../raw/vendor/typesafe/model/{model}/completions
+# Raw vendor passthrough: .../raw/vendor/typesafe/model/{model}/decisions. The gateway
+# moved Jev there from .../completions (with the "systemone" API flavor), now deprecated.
 TYPESAFE_VENDOR_TYPE = "typesafe"
-TYPESAFE_API_FLAVOR = "systemone"
 
 
 def _build_api_config() -> UiPathAPIConfig:
     return UiPathAPIConfig(
-        api_type=ApiType.COMPLETIONS,
+        api_type=ApiType.DECISIONS,
         routing_mode=RoutingMode.PASSTHROUGH,
         vendor_type=TYPESAFE_VENDOR_TYPE,
-        api_flavor=TYPESAFE_API_FLAVOR,
         freeze_base_url=True,
     )
 
@@ -31,7 +30,7 @@ def _build_api_config() -> UiPathAPIConfig:
 class UiPathJevClient:
     """Client for TypeSafe's Jev ``systemone`` endpoint.
 
-    Calls the UiPath LLM Gateway raw vendor passthrough for vendor
+    Calls the UiPath LLM Gateway raw vendor decisions passthrough for vendor
     ``typesafe`` using ``client_settings`` (or the default settings). It uses
     the UiPath httpx clients, so retries (including 429/529), logging and
     UiPath exception mapping behave like the other vendor clients.

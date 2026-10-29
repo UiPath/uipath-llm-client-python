@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_langchain_client` will be documented in this file.
 
+## [1.23.3] - 2026-11-23
+
+### Changed
+- Bumped the `uipath-llm-client` floor to `>=1.23.2`, whose discovery cache expires after 10 minutes and is refetched once on a model-name miss instead of raising `ModelNotFoundError` from a stale list.
+
 ## [1.23.2] - 2026-11-11
 
 ### Added

@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_langchain_client` will be documented in this file.
 
+## [1.22.1] - 2026-10-29
+
+### Changed
+- Bumped the `uipath-llm-client` floor to `>=1.22.1`, whose `PlatformSettings` strips a whitespace-padded `UIPATH_TRACE_ID` and drops an invalid one instead of failing every request with `Illegal header value`.
+
 ## [1.22.0] - 2026-10-15
 
 ### Changed

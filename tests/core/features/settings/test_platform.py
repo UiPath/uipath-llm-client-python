@@ -177,6 +177,56 @@ class TestPlatformSettings:
             headers = settings.build_auth_headers()
             assert headers["x-uipath-processkey"] == "path%2Fwith%2Bspecial%3Dchars"
 
+    @pytest.mark.parametrize(
+        ("raw", "expected"),
+        [
+            ("a76c8baf57670932d66cca8345ce3325", "a76c8baf57670932d66cca8345ce3325"),
+            ("a76c8baf57670932d66cca8345ce3325    ", "a76c8baf57670932d66cca8345ce3325"),
+            ("  a76c8baf57670932d66cca8345ce3325\n", "a76c8baf57670932d66cca8345ce3325"),
+            (
+                "a76c8baf-5767-0932-d66c-ca8345ce3325",
+                "a76c8baf-5767-0932-d66c-ca8345ce3325",
+            ),
+        ],
+    )
+    def test_build_auth_headers_trace_id_is_stripped(
+        self, platform_env_vars, mock_platform_auth, raw, expected
+    ):
+        """A whitespace-padded trace id is sent stripped: httpx rejects the padded value."""
+        env = {**platform_env_vars, "UIPATH_TRACE_ID": raw}
+        with patch.dict(os.environ, env, clear=True):
+            settings = PlatformSettings()
+            assert settings.trace_id == expected
+            assert settings.build_auth_headers()["x-uipath-traceid"] == expected
+
+    @pytest.mark.parametrize(
+        "raw", ["", "    ", "not-a-trace-id", "a76c8baf57670932d66cca8345ce33"]
+    )
+    def test_build_auth_headers_omits_invalid_trace_id(
+        self, platform_env_vars, mock_platform_auth, raw
+    ):
+        """An empty or malformed trace id is dropped instead of failing the request."""
+        env = {**platform_env_vars, "UIPATH_TRACE_ID": raw}
+        with patch.dict(os.environ, env, clear=True):
+            settings = PlatformSettings()
+            assert settings.trace_id is None
+            assert "x-uipath-traceid" not in settings.build_auth_headers()
+
+    def test_padded_trace_id_header_is_sendable(self, platform_env_vars, mock_platform_auth):
+        """The built headers serialize through h11, which raised LocalProtocolError before."""
+        import h11
+
+        env = {**platform_env_vars, "UIPATH_TRACE_ID": "a76c8baf57670932d66cca8345ce3325    "}
+        with patch.dict(os.environ, env, clear=True):
+            headers = PlatformSettings().build_auth_headers()
+        conn = h11.Connection(our_role=h11.CLIENT)
+        request = h11.Request(
+            method="GET",
+            target="/",
+            headers=[("Host", "cloud.uipath.com"), *headers.items()],
+        )
+        assert conn.send(request)
+
     def test_build_auth_pipeline_returns_auth(self, platform_env_vars, mock_platform_auth):
         """Test build_auth_pipeline returns an Auth instance."""
         from httpx import Auth

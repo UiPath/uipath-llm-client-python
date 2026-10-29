@@ -9,7 +9,18 @@ from httpx import Client, Request, Response
 from uipath.llm_client.settings import LLMGatewaySettings, UiPathAPIConfig
 from uipath.llm_client.settings.base import UiPathBaseSettings
 from uipath.llm_client.settings.constants import ApiType, RoutingMode
-from uipath.llm_client.utils.exceptions import UiPathAPIError, UiPathAuthenticationError
+from uipath.llm_client.utils.exceptions import (
+    ModelNotFoundError,
+    UiPathAPIError,
+    UiPathAuthenticationError,
+)
+
+
+def _discovery_response(models: list[dict]) -> MagicMock:
+    response = MagicMock()
+    response.is_error = False
+    response.json.return_value = models
+    return response
 
 
 class TestLLMGatewaySettings:
@@ -619,6 +630,45 @@ class TestDiscoveryCache:
 
             assert mock_get.call_count == 2
 
+    def test_expired_entry_is_refetched(self, llmgw_env_vars):
+        """An entry older than the TTL is fetched again, so catalog changes reach the process."""
+        with patch.dict(os.environ, llmgw_env_vars, clear=True):
+            settings = LLMGatewaySettings()
+
+        old = [{"modelName": "gpt-4o", "vendor": "openai"}]
+        new = [
+            {"modelName": "gpt-4o", "vendor": "openai"},
+            {"modelName": "gpt-5", "vendor": "openai"},
+        ]
+        with patch.object(
+            Client, "get", side_effect=[_discovery_response(old), _discovery_response(new)]
+        ) as mock_get:
+            with patch("uipath.llm_client.settings.base.time.monotonic", return_value=1000.0):
+                assert settings.get_available_models() == old
+            ttl = UiPathBaseSettings._discovery_cache_ttl_seconds
+            with patch(
+                "uipath.llm_client.settings.base.time.monotonic", return_value=1000.0 + ttl - 1
+            ):
+                assert settings.get_available_models() == old
+            with patch("uipath.llm_client.settings.base.time.monotonic", return_value=1000.0 + ttl):
+                assert settings.get_available_models() == new
+            assert mock_get.call_count == 2
+
+    def test_seeded_entry_ignores_a_stale_timestamp(self, llmgw_env_vars):
+        """A list put in the cache directly is not expired by an earlier fetch's timestamp."""
+        with patch.dict(os.environ, llmgw_env_vars, clear=True):
+            settings = LLMGatewaySettings()
+
+        with patch.object(Client, "get", return_value=_discovery_response([])):
+            with patch("uipath.llm_client.settings.base.time.monotonic", return_value=0.0):
+                settings.get_available_models()
+        seeded = [{"modelName": "seeded", "vendor": "openai"}]
+        UiPathBaseSettings._discovery_cache[settings._discovery_cache_key()] = seeded
+
+        with patch.object(Client, "get") as mock_get:
+            assert settings.get_available_models() is seeded
+            mock_get.assert_not_called()
+
     def test_cache_key_includes_requesting_product(self, llmgw_env_vars):
         """LLMGateway cache key should include requesting_product."""
         with patch.dict(os.environ, llmgw_env_vars, clear=True):
@@ -668,6 +718,59 @@ class TestGetModelInfo:
             settings.get_available_models()
         return settings
 
+    def test_refetches_once_on_miss_and_finds_restored_model(self, llmgw_env_vars):
+        """PC-5200: a process that cached a list without model X finds X once discovery returns it."""
+        reduced = [m for m in self._MODELS if m["modelName"] != "claude-3-opus"]
+        settings = self._make_settings(llmgw_env_vars, models=reduced)
+
+        with patch.object(
+            Client, "get", return_value=_discovery_response(self._MODELS)
+        ) as mock_get:
+            info = settings.get_model_info("claude-3-opus")
+            assert info["modelName"] == "claude-3-opus"
+            mock_get.assert_called_once()
+
+            # The refreshed list is cached: the next lookup does not fetch again.
+            assert settings.get_model_info("claude-3-opus")["modelName"] == "claude-3-opus"
+            mock_get.assert_called_once()
+
+    def test_hit_does_not_refetch(self, llmgw_env_vars):
+        settings = self._make_settings(llmgw_env_vars)
+        with patch.object(Client, "get") as mock_get:
+            settings.get_model_info("claude-3-opus")
+            mock_get.assert_not_called()
+
+    def test_cold_cache_miss_fetches_only_once(self, llmgw_env_vars):
+        """A list fetched by this very lookup is not fetched again on a miss."""
+        with patch.dict(os.environ, llmgw_env_vars, clear=True):
+            settings = LLMGatewaySettings()
+        with patch.object(
+            Client, "get", return_value=_discovery_response(self._MODELS)
+        ) as mock_get:
+            with pytest.raises(ModelNotFoundError, match="not found"):
+                settings.get_model_info("nonexistent-model")
+            mock_get.assert_called_once()
+
+    def test_miss_after_refetch_raises(self, llmgw_env_vars):
+        settings = self._make_settings(llmgw_env_vars)
+        with patch.object(
+            Client, "get", return_value=_discovery_response(self._MODELS)
+        ) as mock_get:
+            with pytest.raises(ModelNotFoundError, match="Model nonexistent-model not found"):
+                settings.get_model_info("nonexistent-model")
+            mock_get.assert_called_once()
+
+    def test_failed_refetch_raises_model_not_found(self, llmgw_env_vars):
+        """A discovery failure during the refetch keeps the ModelNotFoundError contract."""
+        settings = self._make_settings(llmgw_env_vars)
+        cached = UiPathBaseSettings._discovery_cache[settings._discovery_cache_key()]
+        with patch.object(Client, "get", side_effect=RuntimeError("discovery down")):
+            with pytest.raises(ModelNotFoundError, match="refreshing it failed") as exc_info:
+                settings.get_model_info("nonexistent-model")
+        assert isinstance(exc_info.value.__cause__, RuntimeError)
+        # The cached list is kept when the refetch fails.
+        assert UiPathBaseSettings._discovery_cache[settings._discovery_cache_key()] is cached
+
     def test_finds_model_by_name(self, llmgw_env_vars):
         settings = self._make_settings(llmgw_env_vars)
         info = settings.get_model_info("claude-3-opus")
@@ -680,8 +783,9 @@ class TestGetModelInfo:
 
     def test_raises_on_unknown_model(self, llmgw_env_vars):
         settings = self._make_settings(llmgw_env_vars)
-        with pytest.raises(ValueError, match="not found"):
-            settings.get_model_info("nonexistent-model")
+        with patch.object(Client, "get", return_value=_discovery_response(self._MODELS)):
+            with pytest.raises(ValueError, match="not found"):
+                settings.get_model_info("nonexistent-model")
 
     def test_filters_by_vendor_type(self, llmgw_env_vars):
         models = [
@@ -742,8 +846,9 @@ class TestGetModelInfo:
         activate_connection_overwrite("other-conn", "conn-123")
         settings = self._make_settings(llmgw_env_vars)
 
-        with pytest.raises(ValueError, match="not found"):
-            settings.get_model_info("gpt-4o", byo_connection_id="design-time-conn")
+        with patch.object(Client, "get", return_value=_discovery_response(self._MODELS)):
+            with pytest.raises(ValueError, match="not found"):
+                settings.get_model_info("gpt-4o", byo_connection_id="design-time-conn")
 
     def test_ignores_overwrites_for_uipath_owned_models(
         self, llmgw_env_vars, activate_connection_overwrite

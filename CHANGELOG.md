@@ -2,6 +2,12 @@
 
 All notable changes to `uipath_llm_client` (core package) will be documented in this file.
 
+## [1.22.1] - 2026-10-29
+
+### Fixed
+- The discovery cache expires: a model list cached by `get_available_models` is fetched again after 10 minutes (`_discovery_cache_ttl_seconds`, matching AgentHub's discovery cache), instead of living for the whole process.
+- `get_model_info` fetches the model list once more before raising `ModelNotFoundError` when the cached list has no match. A process that cached a reduced list (as serverless execution instances running several jobs did during INC-482) finds a restored model on its next lookup instead of failing until it restarts. A failure of that refetch is raised as `ModelNotFoundError`, chained to the discovery error, and keeps the cached list (PC-5200).
+
 ## [1.22.0] - 2026-10-15
 
 ### Added

@@ -5,6 +5,7 @@ This module defines the abstract base classes and data models for UiPath API set
 Concrete implementations are provided in the `platform` and `llmgateway` submodules.
 """
 
+import time
 from abc import ABC, abstractmethod
 from collections.abc import Mapping
 from typing import Any, ClassVar, Self
@@ -83,6 +84,15 @@ class UiPathBaseSettings(BaseSettings, ABC):
     )
 
     _discovery_cache: ClassVar[dict[tuple[str, ...], list[dict[str, Any]]]] = {}
+    # When each ``_discovery_cache`` entry was fetched (``time.monotonic()``), with the
+    # list it was fetched for. An entry older than ``_discovery_cache_ttl_seconds`` is
+    # fetched again, so a long-lived process picks up catalog changes. An entry without
+    # a timestamp of its own (e.g. seeded directly) never expires.
+    _discovery_cache_fetched_at: ClassVar[
+        dict[tuple[str, ...], tuple[float, list[dict[str, Any]]]]
+    ] = {}
+    # Matches AgentHub's discovery cache expiry.
+    _discovery_cache_ttl_seconds: ClassVar[float] = 600.0
 
     @abstractmethod
     def build_base_url(
@@ -157,10 +167,22 @@ class UiPathBaseSettings(BaseSettings, ABC):
         """
         ...
 
+    def _get_cached_models(self, key: tuple[str, ...]) -> list[dict[str, Any]] | None:
+        """Return the cached discovery result for ``key``, or None if missing or expired."""
+        cached = self._discovery_cache.get(key)
+        if cached is None:
+            return None
+        fetched = self._discovery_cache_fetched_at.get(key)
+        if fetched is not None and fetched[1] is cached:
+            if time.monotonic() - fetched[0] >= self._discovery_cache_ttl_seconds:
+                return None
+        return cached
+
     def get_available_models(self, *, refresh: bool = False) -> list[dict[str, Any]]:
         """Get the list of available models, with caching.
 
-        Returns cached results if available. Pass ``refresh=True`` to
+        Returns cached results if available and younger than
+        ``_discovery_cache_ttl_seconds``. Pass ``refresh=True`` to
         bypass the cache and fetch fresh results.
 
         Args:
@@ -172,45 +194,28 @@ class UiPathBaseSettings(BaseSettings, ABC):
         key = self._discovery_cache_key()
 
         if not refresh:
-            cached = self._discovery_cache.get(key)
+            cached = self._get_cached_models(key)
             if cached is not None:
                 return cached
 
         models = self._fetch_available_models()
         self._discovery_cache[key] = models
+        self._discovery_cache_fetched_at[key] = (time.monotonic(), models)
         return models
 
     def validate_byo_model(self, model_info: dict[str, Any]) -> None:
         """Validate that the model is a BYOM model."""
         return
 
-    @resource_override(resource_type="connection", resource_identifier="byo_connection_id")
-    def get_model_info(
-        self,
+    @staticmethod
+    def _match_models(
+        available_models: list[dict[str, Any]],
         model_name: str,
         *,
         byo_connection_id: str | None = None,
         vendor_type: VendorType | str | None = None,
-    ) -> dict[str, Any]:
-        """Look up a model by name from the available models list.
-
-        Filters the cached available models by name, and optionally by
-        vendor type and BYO connection ID. When multiple matches exist and
-        no ``byo_connection_id`` is given, UiPath-owned models are preferred.
-
-        Args:
-            model_name: The model name to search for (case-insensitive).
-            byo_connection_id: Filter by BYO integration connection ID.
-            vendor_type: Filter by vendor (e.g. ``VendorType.OPENAI``).
-
-        Returns:
-            The first matching model info dictionary.
-
-        Raises:
-            ModelNotFoundError: If no matching model is found.
-        """
-        available_models = self.get_available_models()
-
+    ) -> list[dict[str, Any]]:
+        """Filter ``available_models`` the way ``get_model_info`` selects a model."""
         matching_models = [
             m for m in available_models if m["modelName"].lower() == model_name.lower()
         ]
@@ -240,6 +245,63 @@ class UiPathBaseSettings(BaseSettings, ABC):
                     or (m.get("byomDetails") is None)
                 )
             ]
+
+        return matching_models
+
+    @resource_override(resource_type="connection", resource_identifier="byo_connection_id")
+    def get_model_info(
+        self,
+        model_name: str,
+        *,
+        byo_connection_id: str | None = None,
+        vendor_type: VendorType | str | None = None,
+    ) -> dict[str, Any]:
+        """Look up a model by name from the available models list.
+
+        Filters the cached available models by name, and optionally by
+        vendor type and BYO connection ID. When multiple matches exist and
+        no ``byo_connection_id`` is given, UiPath-owned models are preferred.
+        If the cached list has no match, it is fetched again once before
+        giving up, so a model added since the list was cached is found.
+
+        Args:
+            model_name: The model name to search for (case-insensitive).
+            byo_connection_id: Filter by BYO integration connection ID.
+            vendor_type: Filter by vendor (e.g. ``VendorType.OPENAI``).
+
+        Returns:
+            The first matching model info dictionary.
+
+        Raises:
+            ModelNotFoundError: If no matching model is found, including after
+                the refetch.
+        """
+        served_from_cache = self._get_cached_models(self._discovery_cache_key()) is not None
+        available_models = self.get_available_models()
+        matching_models = self._match_models(
+            available_models,
+            model_name,
+            byo_connection_id=byo_connection_id,
+            vendor_type=vendor_type,
+        )
+
+        if not matching_models and served_from_cache:
+            # The cached list may predate a catalog change (e.g. a model restored after an
+            # incident): fetch it once more before giving up on the model.
+            try:
+                available_models = self.get_available_models(refresh=True)
+            except Exception as e:
+                raise ModelNotFoundError(
+                    f"Model {model_name} not found in the cached model list, "
+                    f"and refreshing it failed: {e}. "
+                    f"Available models are: {[m['modelName'] for m in available_models]}"
+                ) from e
+            matching_models = self._match_models(
+                available_models,
+                model_name,
+                byo_connection_id=byo_connection_id,
+                vendor_type=vendor_type,
+            )
 
         if not matching_models:
             raise ModelNotFoundError(

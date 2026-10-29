@@ -1,10 +1,12 @@
 """Base settings for UiPath Platform (AgentHub/Orchestrator) client."""
 
+import logging
+import re
 from collections.abc import Mapping
 from typing import Any, Self
 from urllib.parse import quote
 
-from pydantic import Field, SecretStr, model_validator
+from pydantic import Field, SecretStr, field_validator, model_validator
 from typing_extensions import override
 from uipath.platform import UiPath
 from uipath.platform.common import (
@@ -37,6 +39,13 @@ from uipath.llm_client.settings.constants import ApiType, RoutingMode
 from uipath.llm_client.settings.platform.utils import (
     is_token_expired,
     try_parse_access_token,
+)
+
+logger = logging.getLogger(__name__)
+
+# A trace id is 32 hex characters, or the same 128 bits as a dashed GUID.
+_TRACE_ID_PATTERN = re.compile(
+    r"[0-9a-fA-F]{32}|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}"
 )
 
 
@@ -78,6 +87,28 @@ class PlatformBaseSettings(UiPathBaseSettings):
     folder_key: str | None = Field(default=None, validation_alias=ENV_FOLDER_KEY)
     job_key: str | None = Field(default=None, validation_alias=ENV_JOB_KEY)
     trace_id: str | None = Field(default=None, validation_alias=ENV_UIPATH_TRACE_ID)
+
+    @field_validator("trace_id", mode="before")
+    @classmethod
+    def normalize_trace_id(cls, value: Any) -> Any:
+        """Strip the trace id and drop it when it is not a valid trace id.
+
+        ``trace_id`` is sent verbatim as the ``x-uipath-traceid`` header, and httpx
+        refuses to send a header value with leading or trailing whitespace. A job can
+        receive ``UIPATH_TRACE_ID`` padded with spaces (32 hex characters padded to the
+        36 of a GUID), which made every request fail before it left the process. The
+        trace id only correlates telemetry, so an invalid one is dropped (the header is
+        omitted) rather than failing the request.
+        """
+        if not isinstance(value, str):
+            return value
+        stripped = value.strip()
+        if not stripped:
+            return None
+        if not _TRACE_ID_PATTERN.fullmatch(stripped):
+            logger.warning("Ignoring invalid %s: %r", ENV_UIPATH_TRACE_ID, value)
+            return None
+        return stripped
 
     @model_validator(mode="after")
     def validate_environment(self) -> Self:

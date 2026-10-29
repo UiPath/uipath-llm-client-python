@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_llm_client` (core package) will be documented in this file.
 
+## [1.22.1] - 2026-10-29
+
+### Fixed
+- `PlatformSettings` strips `UIPATH_TRACE_ID` before sending it as `x-uipath-traceid`, and drops it (omitting the header, with a warning) when it is neither 32 hex characters nor a GUID. A trace id padded with spaces made httpx refuse to send the header (`LocalProtocolError: Illegal header value`), so every request failed before leaving the process, starting with model discovery.
+
 ## [1.22.0] - 2026-10-15
 
 ### Added

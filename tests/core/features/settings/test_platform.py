@@ -27,6 +27,37 @@ class TestPlatformSettings:
             )
             assert "llm/raw/vendor/openai/model/gpt-4o/completions" in url
 
+    @pytest.mark.parametrize(
+        ("model_name", "encoded"),
+        [
+            ("openai/gpt-oss-20b", "openai%2Fgpt-oss-20b"),
+            ("qwen/qwen3.8-27b", "qwen%2Fqwen3.8-27b"),
+            ("my model", "my%20model"),
+        ],
+    )
+    def test_build_base_url_passthrough_encodes_model_name(
+        self, platform_env_vars, mock_platform_auth, passthrough_api_config, model_name, encoded
+    ):
+        """A BYO model id with '/' stays one path segment, so the passthrough route still matches."""
+        with patch.dict(os.environ, platform_env_vars, clear=True):
+            settings = PlatformSettings()
+            url = settings.build_base_url(model_name=model_name, api_config=passthrough_api_config)
+            assert url.endswith(f"llm/raw/vendor/openai/model/{encoded}/completions")
+
+    def test_build_base_url_passthrough_decisions_encodes_model_name(
+        self, platform_env_vars, mock_platform_auth
+    ):
+        """The decisions route encodes the model name like completions."""
+        api_config = UiPathAPIConfig(
+            api_type=ApiType.DECISIONS,
+            routing_mode=RoutingMode.PASSTHROUGH,
+            vendor_type="openai",
+        )
+        with patch.dict(os.environ, platform_env_vars, clear=True):
+            settings = PlatformSettings()
+            url = settings.build_base_url(model_name="openai/gpt-oss-20b", api_config=api_config)
+            assert url.endswith("llm/raw/vendor/openai/model/openai%2Fgpt-oss-20b/decisions")
+
     def test_build_base_url_passthrough_decisions(self, platform_env_vars, mock_platform_auth):
         """Test build_base_url for the passthrough decisions route."""
         api_config = UiPathAPIConfig(

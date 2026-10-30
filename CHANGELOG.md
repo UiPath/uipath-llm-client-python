@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_llm_client` (core package) will be documented in this file.
 
+## [1.22.1] - 2026-10-30
+
+### Fixed
+- `PlatformSettings` percent-encodes the model name (and the other values) it formats into the AgentHub/Orchestrator endpoint templates. A BYO model registered under a provider id with `/` (e.g. `openai/gpt-oss-20b` on Groq or OpenRouter) was put into `.../raw/vendor/{vendor}/model/{model}/completions` as an extra path segment, so the path matched no route and every call failed with 404 (PC-5361). Names without reserved characters produce the same URL as before.
+
 ## [1.22.0] - 2026-10-15
 
 ### Added

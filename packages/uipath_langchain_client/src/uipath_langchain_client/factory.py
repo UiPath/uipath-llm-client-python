@@ -26,6 +26,7 @@ from typing import Any
 from uipath_langchain_client.base_client import (
     UiPathBaseChatModel,
     UiPathBaseEmbeddings,
+    model_details_from_model_info,
 )
 from uipath_langchain_client.settings import (
     API_FLAVOR_TO_VENDOR_TYPE,
@@ -93,7 +94,7 @@ def get_chat_model(
         vendor_type=vendor_type,
     )
     model_family = model_info.get("modelFamily", None)
-    model_details = model_info.get("modelDetails") or {}
+    model_details = model_details_from_model_info(model_info)
 
     if model_settings is not None:
         model_kwargs["model_settings"] = model_settings

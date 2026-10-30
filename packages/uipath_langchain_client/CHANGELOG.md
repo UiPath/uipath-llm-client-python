@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_langchain_client` will be documented in this file.
 
+## [1.22.1] - 2026-10-30
+
+### Fixed
+- A BYO model whose configuration carries `customFieldMappings.ToolChoice = "auto"` now gets `model_details["shouldSkipForcedToolChoice"] = True`, from both `get_chat_model` and a directly built chat model. LLM Gateway stores that mapping when the model rejects a forced tool choice (Claude Sonnet 5.5 and Opus 5.5). Discovery returns it under `byomDetails` but sends `modelDetails: null` for BYO-added models, so the agent runtime kept forcing tool choice and every call failed with a 400.
+
 ## [1.22.0] - 2026-10-15
 
 ### Changed

@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_langchain_client` will be documented in this file.
 
+## [1.22.1] - 2026-10-30
+
+### Fixed
+- Bumped the `uipath-llm-client` floor to `>=1.22.1`, which percent-encodes the model name in the AgentHub/Orchestrator passthrough URL, so BYO models named with `/` (e.g. `openai/gpt-oss-20b`) no longer fail with 404 (PC-5361).
+
 ## [1.22.0] - 2026-10-15
 
 ### Changed

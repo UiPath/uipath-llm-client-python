@@ -119,7 +119,11 @@ class PlatformBaseSettings(UiPathBaseSettings):
 
     @staticmethod
     def _format_endpoint(endpoint: str, **kwargs: str | None) -> str:
-        """Format an endpoint template, stripping query params with None values."""
+        """Format an endpoint template, stripping query params with None values.
+
+        Values are percent-encoded (``safe=""``) so a model name such as
+        ``openai/gpt-oss-20b`` stays one path segment instead of splitting the route.
+        """
         # Remove query parameters whose values are None
         if "?" in endpoint:
             base, query = endpoint.split("?", 1)
@@ -129,7 +133,7 @@ class PlatformBaseSettings(UiPathBaseSettings):
                 if not any(f"{{{k}}}" in p for k, v in kwargs.items() if v is None)
             ]
             endpoint = f"{base}?{'&'.join(params)}" if params else base
-        return endpoint.format(**{k: v for k, v in kwargs.items() if v is not None})
+        return endpoint.format(**{k: quote(v, safe="") for k, v in kwargs.items() if v is not None})
 
     @override
     def build_base_url(

@@ -75,6 +75,15 @@ from uipath_langchain_client.settings import (
 from uipath_langchain_client.utils import RetryConfig
 
 
+def model_details_from_model_info(model_info: Mapping[str, Any]) -> dict[str, Any]:
+    model_details: dict[str, Any] = dict(model_info.get("modelDetails") or {})
+    byom_details: Mapping[str, Any] = model_info.get("byomDetails") or {}
+    custom_field_mappings: Mapping[str, str] = byom_details.get("customFieldMappings") or {}
+    if custom_field_mappings.get("ToolChoice") == "auto":
+        model_details["shouldSkipForcedToolChoice"] = True
+    return model_details
+
+
 class UiPathBaseLLMClient(BaseModel, ABC):
     """Base HTTP client for interacting with UiPath's LLM services.
 
@@ -200,7 +209,7 @@ class UiPathBaseLLMClient(BaseModel, ABC):
                     self.model_name,
                     byo_connection_id=self.byo_connection_id,
                 )
-                self.model_details = info.get("modelDetails") or {}
+                self.model_details = model_details_from_model_info(info)
             except Exception:
                 self.model_details = {}
 

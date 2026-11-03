@@ -36,6 +36,9 @@ class OpenAIRequestHandler:
         request.url = URL(
             self.client_settings.build_base_url(model_name=self.model_name, api_config=api_config)
         )
+        # httpx derives Host only when the request is built, from the SDK's placeholder
+        # base URL, so it is missing or wrong after the rewrite.
+        request.headers["Host"] = request.url.netloc.decode("ascii")
 
     def fix_url_and_headers(self, request: Request):
         if request.url.path.endswith("/completions"):

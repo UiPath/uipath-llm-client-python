@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_langchain_client` will be documented in this file.
 
+## [1.22.2] - 2026-11-03
+
+### Changed
+- Requires `uipath-llm-client>=1.22.2`, whose OpenAI and Azure OpenAI clients send the `Host` header of the gateway they call.
+
 ## [1.22.1] - 2026-10-30
 
 ### Fixed

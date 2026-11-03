@@ -152,6 +152,38 @@ class TestFixUrlResponses:
 
 
 # ============================================================================
+# fix_url_and_headers — Host header
+# ============================================================================
+
+
+class TestFixUrlHostHeader:
+    """The SDKs build requests against a placeholder base URL, so the Host header
+    httpx derives at request construction is missing or wrong; h11 then refuses to
+    send the request ("Missing mandatory Host: header")."""
+
+    @pytest.mark.parametrize(
+        "url",
+        [
+            "/responses",  # UiPathOpenAI: base_url=""
+            "PLACEHOLDER/openai/responses",  # UiPathAzureOpenAI: azure_endpoint="PLACEHOLDER"
+            "https://api.openai.com/v1/chat/completions",
+        ],
+    )
+    def test_host_header_matches_rewritten_url(self, handler, url):
+        request = Request("POST", url)
+        handler.fix_url_and_headers(request)
+
+        assert request.headers["Host"] == "gateway.uipath.com"
+
+    def test_host_header_keeps_non_default_port(self, handler, mock_settings):
+        mock_settings.build_base_url.return_value = "http://localhost:8080/llm/v1"
+        request = Request("POST", "/embeddings")
+        handler.fix_url_and_headers(request)
+
+        assert request.headers["Host"] == "localhost:8080"
+
+
+# ============================================================================
 # fix_url_and_headers — embeddings endpoint
 # ============================================================================
 

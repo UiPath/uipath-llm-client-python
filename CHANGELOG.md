@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_llm_client` (core package) will be documented in this file.
 
+## [1.22.2] - 2026-11-03
+
+### Fixed
+- `UiPathOpenAI`, `UiPathAzureOpenAI` and their async variants set the `Host` header to the gateway host when they rewrite a request's URL. The SDK builds each request against a placeholder base URL (`""`, or `PLACEHOLDER` for Azure), so the request had no `Host` header and every live call failed with `httpx.LocalProtocolError: Missing mandatory Host: header`. Recorded cassettes replay without a socket, so the tests did not catch it.
+
 ## [1.22.0] - 2026-10-15
 
 ### Added

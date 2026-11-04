@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_langchain_client` will be documented in this file.
 
+## [1.22.3] - 2026-11-05
+
+### Added
+- `get_chat_model` now supports UiPath-hosted models that discovery lists with vendor `UiPathMls`, such as `path-mini`. Before, it raised `Invalid vendor type: uipathmls`. It returns `UiPathChatOpenAI` on the raw route `.../raw/vendor/uipathmls/model/{model}/completions` with the chat completions flavor. Streaming is forced off because the gateway rejects streaming requests for this vendor. `chat_template_kwargs.enable_thinking` defaults to `false`, as the gateway's existing `uipathmls` callers send it; a caller's `extra_body` overrides it.
+
 ## [1.22.2] - 2026-11-05
 
 ### Changed

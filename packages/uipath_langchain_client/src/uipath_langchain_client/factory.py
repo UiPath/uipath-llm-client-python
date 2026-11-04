@@ -32,8 +32,10 @@ from uipath_langchain_client.settings import (
     API_FLAVOR_TO_VENDOR_TYPE,
     BYOM_TO_ROUTING_FLAVOR,
     ApiFlavor,
+    ApiType,
     ModelFamily,
     RoutingMode,
+    UiPathAPIConfig,
     UiPathBaseSettings,
     VendorType,
     get_default_client_settings,
@@ -252,6 +254,34 @@ def get_chat_model(
                 settings=client_settings,
                 byo_connection_id=byo_connection_id,
                 model_details=model_details,
+                **model_kwargs,
+            )
+
+        case "uipathmls":
+            # UiPath-hosted models (path-mini): OpenAI chat completions on the raw route, no streaming.
+            from uipath_langchain_client.clients.openai.chat_models import (
+                UiPathChatOpenAI,
+            )
+
+            model_kwargs["streaming"] = False
+            model_kwargs["disable_streaming"] = True
+            # Qwen thinking off by default, as the gateway's existing MLS callers send it.
+            extra_body = dict(model_kwargs.pop("extra_body", None) or {})
+            extra_body.setdefault("chat_template_kwargs", {"enable_thinking": False})
+
+            return UiPathChatOpenAI(
+                model=model_name,
+                settings=client_settings,
+                api_config=UiPathAPIConfig(
+                    api_type=ApiType.COMPLETIONS,
+                    routing_mode=RoutingMode.PASSTHROUGH,
+                    vendor_type=discovered_vendor_type,
+                    freeze_base_url=True,
+                ),
+                api_flavor=ApiFlavor.CHAT_COMPLETIONS,
+                byo_connection_id=byo_connection_id,
+                model_details=model_details,
+                extra_body=extra_body,
                 **model_kwargs,
             )
 

@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_langchain_client` will be documented in this file.
 
+## [1.22.2] - 2026-11-05
+
+### Changed
+- Raised the `langchain-aws` floor in the `bedrock` extra to `>=1.6.0`. On Bedrock Converse, 1.4.5 leaves cached tokens out of `input_tokens`, so once prompt caching is on, `promptTokens` drops to the uncached remainder. 1.6.0 counts cached reads and writes in `input_tokens` and reports them in `input_token_details`.
+
 ## [1.22.1] - 2026-10-30
 
 ### Fixed

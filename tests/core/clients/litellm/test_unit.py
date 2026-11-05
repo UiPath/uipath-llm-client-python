@@ -50,6 +50,13 @@ _VERTEX_CLAUDE_MODEL = {
     "modelFamily": "AnthropicClaude",
 }
 
+_PATH_MINI_MODEL = {
+    "modelName": "path-mini",
+    "vendor": "UiPathMls",
+    "apiFlavor": None,
+    "modelFamily": "Proprietary",
+}
+
 _EMBEDDING_MODEL = {
     "modelName": "text-embedding-3-large",
     "vendor": "OpenAi",
@@ -124,6 +131,13 @@ class TestResolveProvider:
     def test_vertex_claude_resolves_to_vertex_ai(self):
         client = self._make_client(_VERTEX_CLAUDE_MODEL)
         assert client._custom_llm_provider == "vertex_ai"
+
+    def test_uipathmls_model_resolves_to_openai(self):
+        client = self._make_client(_PATH_MINI_MODEL)
+        assert client._api_config.vendor_type == VendorType.UIPATHMLS
+        assert client._api_config.api_flavor is None
+        assert client._custom_llm_provider == "openai"
+        assert client._litellm_model == "path-mini"
 
     def test_responses_flavor_resolves_to_openai(self):
         client = self._make_client(_OPENAI_MODEL, api_flavor=ApiFlavor.RESPONSES)

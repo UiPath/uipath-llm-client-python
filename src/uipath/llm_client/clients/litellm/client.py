@@ -74,6 +74,7 @@ _VENDOR_TO_LITELLM: dict[str, str] = {
     "awsbedrock": "bedrock",
     "azure": "azure",
     "anthropic": "anthropic",
+    "uipathmls": "openai",
 }
 
 # Providers where litellm's embedding() path expects an OpenAI SDK client.

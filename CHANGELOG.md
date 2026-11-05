@@ -2,6 +2,12 @@
 
 All notable changes to `uipath_llm_client` (core package) will be documented in this file.
 
+## [1.23.0] - 2026-11-05
+
+### Added
+- `VendorType.UIPATHMLS` (`"uipathmls"`) for UiPath-hosted models that discovery lists with vendor `UiPathMls`, such as `path-mini`.
+- `UiPathLiteLLM` maps `uipathmls` to LiteLLM's `openai` provider. Discovery returns no `apiFlavor` for these models, so before this `UiPathLiteLLM(model_name="path-mini")` passed `uipathmls` to LiteLLM as the provider and failed with `LiteLLMUnknownProvider`. The gateway rejects streaming requests for this vendor, so `stream=True` fails with a 400.
+
 ## [1.22.0] - 2026-10-15
 
 ### Added

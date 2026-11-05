@@ -257,7 +257,7 @@ def get_chat_model(
                 **model_kwargs,
             )
 
-        case "uipathmls":
+        case VendorType.UIPATHMLS:
             # UiPath-hosted models (path-mini): OpenAI chat completions on the raw route, no streaming.
             from uipath_langchain_client.clients.openai.chat_models import (
                 UiPathChatOpenAI,

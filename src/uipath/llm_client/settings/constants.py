@@ -19,6 +19,8 @@ class VendorType(StrEnum):
     AWSBEDROCK = "awsbedrock"
     AZURE = "azure"
     ANTHROPIC = "anthropic"
+    # UiPath-hosted models (path-mini): OpenAI chat completions, passthrough only.
+    UIPATHMLS = "uipathmls"
 
 
 class ModelFamily(StrEnum):

@@ -2,7 +2,7 @@
 
 All notable changes to `uipath_llm_client` (core package) will be documented in this file.
 
-## [1.23.0] - 2026-11-05
+## [1.22.3] - 2026-11-05
 
 ### Added
 - `VendorType.UIPATHMLS` (`"uipathmls"`) for UiPath-hosted models that discovery lists with vendor `UiPathMls`, such as `path-mini`.

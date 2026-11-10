@@ -2,6 +2,14 @@
 
 All notable changes to `uipath_llm_client` (core package) will be documented in this file.
 
+## [1.23.0] - 2026-11-10
+
+### Added
+- `PlatformSettings` sends the LLM Gateway sticky-session headers, `X-UiPath-LlmGateway-StickySession: true` and `X-UiPath-LlmGateway-StickySession-TransactionId`, when the run has an id. The transaction id is the conversation id of a conversational run (`UiPathConfig.conversation_id`), otherwise the job key (`UIPATH_JOB_KEY`). With it, the gateway serves every request of the run from the same model deployment, which a reasoning model needs when a request replays reasoning from an earlier response. A run with neither id sends no sticky-session headers.
+
+### Changed
+- Raised the `uipath-platform` floor to `>=0.3.4`, which adds `UiPathConfig.conversation_id`.
+
 ## [1.22.3] - 2026-11-05
 
 ### Added

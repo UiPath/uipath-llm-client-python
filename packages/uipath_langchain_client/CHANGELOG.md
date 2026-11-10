@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_langchain_client` will be documented in this file.
 
+## [1.23.0] - 2026-11-10
+
+### Changed
+- Bumped the `uipath-llm-client` floor to `>=1.23.0`, whose `PlatformSettings` sends the LLM Gateway sticky-session headers. Chat models and embeddings on the Platform backend now carry them on every request of a run that has a conversation id or a job key.
+
 ## [1.22.3] - 2026-11-05
 
 ### Changed

@@ -33,7 +33,12 @@ from uipath.platform.common.constants import (
 )
 
 from uipath.llm_client.settings.base import UiPathAPIConfig, UiPathBaseSettings
-from uipath.llm_client.settings.constants import ApiType, RoutingMode
+from uipath.llm_client.settings.constants import (
+    HEADER_LLMGATEWAY_STICKY_SESSION,
+    HEADER_LLMGATEWAY_STICKY_SESSION_TRANSACTION_ID,
+    ApiType,
+    RoutingMode,
+)
 from uipath.llm_client.settings.platform.utils import (
     is_token_expired,
     try_parse_access_token,
@@ -203,6 +208,10 @@ class PlatformBaseSettings(UiPathBaseSettings):
         (which pull from env vars), and licensing context is read dynamically
         from ``UiPathConfig`` at call time so updates are picked up without
         rebuilding settings.
+
+        When the run has a conversation id or a job key, the LLM Gateway
+        sticky-session headers are added with that id as the transaction id, so
+        every request of the run is served by the same model deployment.
         """
         headers: dict[str, str] = {
             HEADER_INTERNAL_ACCOUNT_ID: self.organization_id,
@@ -220,6 +229,9 @@ class PlatformBaseSettings(UiPathBaseSettings):
             headers[HEADER_TRACE_ID] = self.trace_id
         if licensing_context := UiPathConfig.licensing_context:
             headers[HEADER_LICENSING_CONTEXT] = licensing_context
+        if transaction_id := UiPathConfig.conversation_id or self.job_key:
+            headers[HEADER_LLMGATEWAY_STICKY_SESSION] = "true"
+            headers[HEADER_LLMGATEWAY_STICKY_SESSION_TRANSACTION_ID] = transaction_id
         return headers
 
     @override

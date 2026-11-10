@@ -8,6 +8,9 @@ on:
       - 'src/uipath/llm_client/__version__.py'
   workflow_dispatch:
 
+env:
+  SAFE_CHAIN_MINIMUM_PACKAGE_AGE_EXCLUSIONS: uipath-core,uipath-platform,uipath-llm-client,uipath-langchain-client
+
 jobs:
   build:
     name: Build package

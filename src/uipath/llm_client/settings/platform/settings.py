@@ -238,16 +238,10 @@ class PlatformBaseSettings(UiPathBaseSettings):
             headers[HEADER_TRACE_ID] = self.trace_id
         if licensing_context := UiPathConfig.licensing_context:
             headers[HEADER_LICENSING_CONTEXT] = licensing_context
-        if transaction_id := self._sticky_session_transaction_id():
+        if transaction_id := UiPathConfig.conversation_id or self.job_key:
             headers[HEADER_LLMGATEWAY_STICKY_SESSION] = "true"
             headers[HEADER_LLMGATEWAY_STICKY_SESSION_TRANSACTION_ID] = transaction_id
         return headers
-
-    def _sticky_session_transaction_id(self) -> str | None:
-        """The conversation id of a conversational run, else the job key."""
-        # UiPathConfig.conversation_id exists from uipath-platform 0.3.4.
-        conversation_id: str | None = getattr(UiPathConfig, "conversation_id", None)
-        return conversation_id or self.job_key
 
     @override
     def _discovery_cache_key(self) -> tuple[str, ...]:

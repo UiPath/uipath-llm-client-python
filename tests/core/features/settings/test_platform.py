@@ -402,22 +402,6 @@ class TestPlatformStickySession:
         assert STICKY_SESSION not in headers
         assert STICKY_SESSION_TRANSACTION_ID not in headers
 
-    def test_falls_back_to_job_key_without_conversation_id_support(
-        self, platform_env_vars, mock_platform_auth
-    ):
-        """uipath-platform before 0.3.4 has no ``UiPathConfig.conversation_id``."""
-        env = {**platform_env_vars, "UIPATH_JOB_KEY": "job-123"}
-
-        class _OlderConfig:
-            licensing_context = None
-
-        with (
-            patch.dict(os.environ, env, clear=True),
-            patch(f"{SETTINGS_MODULE}.UiPathConfig", _OlderConfig()),
-        ):
-            headers = PlatformSettings().build_auth_headers()
-        assert headers[STICKY_SESSION_TRANSACTION_ID] == "job-123"
-
 
 class TestPlatformDiscovery:
     RETIRED_MODEL = {

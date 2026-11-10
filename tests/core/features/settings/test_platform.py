@@ -345,6 +345,51 @@ class TestPlatformSettings:
             assert result is None
 
 
+STICKY_SESSION = "x-uipath-llmgateway-stickysession"
+STICKY_SESSION_TRANSACTION_ID = "x-uipath-llmgateway-stickysession-transactionid"
+SETTINGS_MODULE = "uipath.llm_client.settings.platform.settings"
+
+
+class TestPlatformStickySession:
+    """The LLM Gateway sticky-session headers built from the run's id."""
+
+    def test_job_key_is_the_transaction_id(self, platform_env_vars, mock_platform_auth):
+        env = {**platform_env_vars, "UIPATH_JOB_KEY": "job-123"}
+        with (
+            patch.dict(os.environ, env, clear=True),
+            patch(f"{SETTINGS_MODULE}.UiPathConfig") as config,
+        ):
+            config.licensing_context = None
+            config.conversation_id = None
+            headers = PlatformSettings().build_auth_headers()
+        assert headers[STICKY_SESSION] == "true"
+        assert headers[STICKY_SESSION_TRANSACTION_ID] == "job-123"
+
+    def test_conversation_id_wins_over_job_key(self, platform_env_vars, mock_platform_auth):
+        env = {**platform_env_vars, "UIPATH_JOB_KEY": "job-123"}
+        with (
+            patch.dict(os.environ, env, clear=True),
+            patch(f"{SETTINGS_MODULE}.UiPathConfig") as config,
+        ):
+            config.licensing_context = None
+            config.conversation_id = "conversation-456"
+            headers = PlatformSettings().build_auth_headers()
+        assert headers[STICKY_SESSION] == "true"
+        assert headers[STICKY_SESSION_TRANSACTION_ID] == "conversation-456"
+        assert headers["x-uipath-jobkey"] == "job-123"
+
+    def test_no_headers_without_a_run_id(self, platform_env_vars, mock_platform_auth):
+        with (
+            patch.dict(os.environ, platform_env_vars, clear=True),
+            patch(f"{SETTINGS_MODULE}.UiPathConfig") as config,
+        ):
+            config.licensing_context = None
+            config.conversation_id = None
+            headers = PlatformSettings().build_auth_headers()
+        assert STICKY_SESSION not in headers
+        assert STICKY_SESSION_TRANSACTION_ID not in headers
+
+
 class TestPlatformAuthRefresh:
     """Tests for PlatformAuth token refresh logic."""
 

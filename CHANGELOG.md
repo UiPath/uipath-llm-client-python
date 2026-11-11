@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_llm_client` (core package) will be documented in this file.
 
+## [1.23.1] - 2026-11-11
+
+### Changed
+- Declared the MIT license in the package metadata (`license = "MIT"`) and included the `LICENSE` file in the wheel. The `LICENSE` file itself is now MIT.
+
 ## [1.23.0] - 2026-11-10
 
 ### Added

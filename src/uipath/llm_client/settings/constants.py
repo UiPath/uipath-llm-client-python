@@ -76,3 +76,8 @@ BYOM_TO_ROUTING_FLAVOR: dict[str, ApiFlavor] = {
     ByomApiFlavor.AWS_BEDROCK_CONVERSE: ApiFlavor.CONVERSE,
     ByomApiFlavor.ANTHROPIC_MESSAGES: ApiFlavor.ANTHROPIC_MESSAGES,
 }
+
+# LLM Gateway sticky-session headers. With a transaction id, the gateway serves every
+# request that carries the same id from the same model deployment.
+HEADER_LLMGATEWAY_STICKY_SESSION = "x-uipath-llmgateway-stickysession"
+HEADER_LLMGATEWAY_STICKY_SESSION_TRANSACTION_ID = "x-uipath-llmgateway-stickysession-transactionid"

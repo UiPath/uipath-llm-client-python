@@ -3,6 +3,8 @@ name = "uipath-langchain-client"
 description = "LangChain-compatible chat models and embeddings for UiPath's LLM services"
 dynamic = ["version"]
 readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
 requires-python = ">=3.11"
 dependencies = [
     "langchain>=1.2.15,<2.0.0",

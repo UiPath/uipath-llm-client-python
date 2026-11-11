@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_llm_client` (core package) will be documented in this file.
 
+## [1.20.4] - 2026-11-11
+
+### Fixed
+- `uipath-platform` is pinned to `==0.2.43.post1` instead of `==0.2.33.post2`. 0.2.43.post1 is 0.2.43 plus `UiPathConfig.conversation_id`. The old pin conflicted with `uipath` 2.14.49, which requires `uipath-platform>=0.2.37`, so an install without a lock file downgraded `uipath` or fell back to 1.20.1.
+
 ## [1.20.3] - 2026-11-11
 
 ### Fixed

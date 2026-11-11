@@ -74,6 +74,9 @@ from uipath_langchain_client.settings import (
 )
 from uipath_langchain_client.utils import RetryConfig
 
+# Metadata key that marks a chat model, and every LangChain run it produces, as LLM Gateway-backed.
+UIPATH_LLM_GATEWAY_METADATA_KEY = "uipath_llm_gateway"
+
 
 def model_details_from_model_info(model_info: Mapping[str, Any]) -> dict[str, Any]:
     model_details: dict[str, Any] = dict(model_info.get("modelDetails") or {})
@@ -453,6 +456,18 @@ class UiPathBaseChatModel(UiPathBaseLLMClient, BaseChatModel):
     @model_validator(mode="after")
     def apply_model_settings(self) -> Self:
         self._apply_model_settings()
+        return self
+
+    @model_validator(mode="after")
+    def mark_llm_gateway_runs(self) -> Self:
+        """Merge the LLM Gateway marker into ``metadata``.
+
+        Merged rather than declared as a field default: a caller who passes
+        ``metadata=`` would otherwise replace the default and drop the marker.
+        Declared after ``apply_model_settings`` so it also survives model settings
+        that set ``metadata``.
+        """
+        self.metadata = {**(self.metadata or {}), UIPATH_LLM_GATEWAY_METADATA_KEY: True}
         return self
 
     def _assign_validated(self, field_name: str, value: Any) -> None:

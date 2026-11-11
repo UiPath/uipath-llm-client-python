@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_langchain_client` will be documented in this file.
 
+## [1.23.1] - 2026-11-11
+
+### Added
+- `UiPathBaseChatModel` merges `{"uipath_llm_gateway": True}` into the model's `metadata`, and the key is exported as `UIPATH_LLM_GATEWAY_METADATA_KEY`. LangChain copies a model's `metadata` onto every run the model starts, so tracers and callbacks can tell LLM Gateway calls from direct-provider calls (`ChatAnthropic`, `ChatOpenAI`, BYO models) per run, through `run.extra["metadata"]` or the `metadata` argument of `on_chat_model_start`. The marker is merged after validation, so `metadata=` passed by the caller, or set through `model_settings`, keeps its keys and does not drop the marker. It is local to the model's own runs and is not inherited by sibling or child runs.
+
 ## [1.23.0] - 2026-11-10
 
 ### Changed

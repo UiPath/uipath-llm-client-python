@@ -23,9 +23,11 @@ Example:
     >>> response = client.uipath_request(request_body={"messages": [...]})
 """
 
+import builtins
 import logging
+import uuid
 from abc import ABC
-from collections.abc import AsyncGenerator, Generator, Mapping, Sequence
+from collections.abc import AsyncGenerator, AsyncIterator, Generator, Iterator, Mapping, Sequence
 from functools import cached_property
 from typing import Any, ClassVar, Literal, Self
 
@@ -33,11 +35,14 @@ from httpx import URL, Response
 from langchain_core.callbacks import (
     AsyncCallbackManagerForLLMRun,
     CallbackManagerForLLMRun,
+    Callbacks,
 )
 from langchain_core.embeddings import Embeddings
+from langchain_core.language_models import LanguageModelInput
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import AIMessageChunk, BaseMessage
-from langchain_core.outputs import ChatGeneration, ChatGenerationChunk, ChatResult
+from langchain_core.outputs import ChatGeneration, ChatGenerationChunk, ChatResult, LLMResult
+from langchain_core.runnables import RunnableConfig, ensure_config
 from pydantic import (
     AliasChoices,
     BaseModel,
@@ -71,6 +76,11 @@ from uipath_langchain_client.settings import (
     UiPathAPIConfig,
     UiPathBaseSettings,
     get_default_client_settings,
+)
+from uipath_langchain_client.tracing import (
+    llm_run_start,
+    skips_client_llm_span,
+    skips_client_llm_span_in_context,
 )
 from uipath_langchain_client.utils import RetryConfig
 
@@ -522,6 +532,107 @@ class UiPathBaseChatModel(UiPathBaseLLMClient, BaseChatModel):
                     list(extra),
                     type(self).__name__,
                 )
+
+    # --- LLM run start ---
+    # LangChain starts a chat model's run (``on_chat_model_start``, where
+    # tracers create its span) in these public methods; invoke / ainvoke /
+    # batch / abatch go through generate / agenerate. Each starts the run under
+    # ``llm_run_start()``, which suppresses instrumentation when the run's
+    # metadata (its own, or what the parent run passes down) sets
+    # ``tracing.UIPATH_SKIP_CLIENT_LLM_SPANS_KEY``. ``stream_events(version="v3")``
+    # (beta) starts its run lazily inside ``ChatModelStream`` and isn't covered.
+
+    def generate(
+        self,
+        messages: list[list[BaseMessage]],
+        stop: list[str] | None = None,
+        callbacks: Callbacks = None,
+        *,
+        tags: list[str] | None = None,
+        metadata: builtins.dict[str, Any] | None = None,
+        run_name: str | None = None,
+        run_id: uuid.UUID | None = None,
+        **kwargs: Any,
+    ) -> LLMResult:
+        skip = skips_client_llm_span(metadata, callbacks) or skips_client_llm_span_in_context()
+        with llm_run_start(skip):
+            return super().generate(
+                messages,
+                stop,
+                callbacks,
+                tags=tags,
+                metadata=metadata,
+                run_name=run_name,
+                run_id=run_id,
+                **kwargs,
+            )
+
+    async def agenerate(
+        self,
+        messages: list[list[BaseMessage]],
+        stop: list[str] | None = None,
+        callbacks: Callbacks = None,
+        *,
+        tags: list[str] | None = None,
+        metadata: builtins.dict[str, Any] | None = None,
+        run_name: str | None = None,
+        run_id: uuid.UUID | None = None,
+        **kwargs: Any,
+    ) -> LLMResult:
+        skip = skips_client_llm_span(metadata, callbacks) or skips_client_llm_span_in_context()
+        with llm_run_start(skip):
+            return await super().agenerate(
+                messages,
+                stop,
+                callbacks,
+                tags=tags,
+                metadata=metadata,
+                run_name=run_name,
+                run_id=run_id,
+                **kwargs,
+            )
+
+    def stream(
+        self,
+        input: LanguageModelInput,
+        config: RunnableConfig | None = None,
+        *,
+        stop: list[str] | None = None,
+        **kwargs: Any,
+    ) -> Iterator[AIMessageChunk]:
+        config = ensure_config(config)
+        skip = skips_client_llm_span(config.get("metadata"), config.get("callbacks"))
+        chunks = super().stream(input, config, stop=stop, **kwargs)
+        # The run starts on the first chunk. Only that step is suppressed: a
+        # context left attached across a yield would leak into the caller.
+        with llm_run_start(skip):
+            try:
+                first = next(chunks)
+            except StopIteration:
+                return
+        yield first
+        yield from chunks
+
+    async def astream(
+        self,
+        input: LanguageModelInput,
+        config: RunnableConfig | None = None,
+        *,
+        stop: list[str] | None = None,
+        **kwargs: Any,
+    ) -> AsyncIterator[AIMessageChunk]:
+        config = ensure_config(config)
+        skip = skips_client_llm_span(config.get("metadata"), config.get("callbacks"))
+        chunks = super().astream(input, config, stop=stop, **kwargs)
+        # As in stream(): only the step that starts the run is suppressed.
+        with llm_run_start(skip):
+            try:
+                first = await anext(chunks)
+            except StopAsyncIteration:
+                return
+        yield first
+        async for chunk in chunks:
+            yield chunk
 
     def _generate(
         self,

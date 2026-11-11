@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_llm_client` (core package) will be documented in this file.
 
+## [1.20.3] - 2026-11-11
+
+### Fixed
+- `uipath-platform` is pinned to `==0.2.33.post2`. 1.20.2 required `>=0.2.33.post2,<1.0.0`, which also admits 0.2.34 through 0.2.43 and 0.3.0 through 0.3.3. Those versions do not have `UiPathConfig.conversation_id`, so a resolver that picked one of them made every request fail with `AttributeError: 'ConfigurationManager' object has no attribute 'conversation_id'`. With the pin, a resolver that needs a different `uipath-platform` falls back to 1.20.1 instead.
+
 ## [1.20.2] - 2026-11-10
 
 ### Added

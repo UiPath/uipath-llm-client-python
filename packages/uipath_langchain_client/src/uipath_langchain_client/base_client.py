@@ -533,14 +533,7 @@ class UiPathBaseChatModel(UiPathBaseLLMClient, BaseChatModel):
                     type(self).__name__,
                 )
 
-    # --- LLM run start ---
-    # LangChain starts a chat model's run (``on_chat_model_start``, where
-    # tracers create its span) in these public methods; invoke / ainvoke /
-    # batch / abatch go through generate / agenerate. Each starts the run under
-    # ``llm_run_start()``, which suppresses instrumentation when the run's
-    # metadata (its own, or what the parent run passes down) sets
-    # ``tracing.UIPATH_SKIP_CLIENT_LLM_SPANS_KEY``. ``stream_events(version="v3")``
-    # (beta) starts its run lazily inside ``ChatModelStream`` and isn't covered.
+    # These are the methods where LangChain starts the LLM run (and tracers create its span).
 
     def generate(
         self,
@@ -603,8 +596,7 @@ class UiPathBaseChatModel(UiPathBaseLLMClient, BaseChatModel):
         config = ensure_config(config)
         skip = skips_client_llm_span(config.get("metadata"), config.get("callbacks"))
         chunks = super().stream(input, config, stop=stop, **kwargs)
-        # The run starts on the first chunk. Only that step is suppressed: a
-        # context left attached across a yield would leak into the caller.
+        # Suppress only the first step, which starts the run.
         with llm_run_start(skip):
             try:
                 first = next(chunks)
@@ -624,7 +616,6 @@ class UiPathBaseChatModel(UiPathBaseLLMClient, BaseChatModel):
         config = ensure_config(config)
         skip = skips_client_llm_span(config.get("metadata"), config.get("callbacks"))
         chunks = super().astream(input, config, stop=stop, **kwargs)
-        # As in stream(): only the step that starts the run is suppressed.
         with llm_run_start(skip):
             try:
                 first = await anext(chunks)

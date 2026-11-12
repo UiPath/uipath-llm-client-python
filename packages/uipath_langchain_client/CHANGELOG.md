@@ -5,8 +5,7 @@ All notable changes to `uipath_langchain_client` will be documented in this file
 ## [1.23.2] - 2026-11-11
 
 ### Added
-- `UIPATH_SKIP_CLIENT_LLM_SPANS_KEY`, exported from `uipath_langchain_client`, is a run metadata key that turns off the client-side LLM span for LLM Gateway calls. The Gateway already records each call in the caller's trace as "Model run", with its governance and guardrail spans, under the span named by the `x-uipath-traceparent-id` header, so a client-side span would duplicate it. In a run whose metadata sets the key to `True`, for example `graph.invoke(inputs, config={"metadata": {UIPATH_SKIP_CLIENT_LLM_SPANS_KEY: True}})`, every `UiPathBaseChatModel` called inside it starts its run under OpenTelemetry's public `suppress_instrumentation()`, and instrumentations that honour it, such as OpenInference's LangChain instrumentation, create no span for it. This covers `invoke`, `ainvoke`, `batch`, `abatch`, `stream`, `astream` and `astream_events`. For streams, only the step that starts the run is suppressed, so code that runs between chunks is still traced. `stream_events(version="v3")`, which is in beta, is not covered.
-- The skip is scoped to the run that sets the key and its child runs, including calls that pass their own `metadata=`. Other runs in the same process keep their spans. Direct-provider models, which are not `UiPathBaseChatModel`, keep their spans either way. If `opentelemetry-instrumentation` is not installed, the key has no effect.
+- `UIPATH_SKIP_CLIENT_LLM_SPANS_KEY` run metadata key. When set to `True`, `UiPathBaseChatModel` calls in that run create no client-side LLM span, since the LLM Gateway already traces them.
 
 ## [1.23.1] - 2026-11-11
 

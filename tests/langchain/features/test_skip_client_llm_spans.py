@@ -1,11 +1,4 @@
-"""Tests for ``UIPATH_SKIP_CLIENT_LLM_SPANS_KEY``: no client-side span for LLM Gateway calls.
-
-The LLM Gateway records each call ("Model run") in the caller's trace, so in a
-run whose metadata sets the key, a ``UiPathBaseChatModel`` starts its LLM run
-under OpenTelemetry's ``suppress_instrumentation()`` and OpenInference doesn't
-create the duplicate client-side span. Runs against the real OpenInference
-LangChain instrumentation.
-"""
+"""Tests for ``UIPATH_SKIP_CLIENT_LLM_SPANS_KEY``."""
 
 import ast
 import inspect
@@ -33,8 +26,6 @@ SKIP: RunnableConfig = {"metadata": {UIPATH_SKIP_CLIENT_LLM_SPANS_KEY: True}}
 
 
 class _GatewayChat(UiPathBaseChatModel, FakeListChatModel):
-    """A Gateway model with canned replies: the real UiPathBaseChatModel paths."""
-
     api_config: UiPathAPIConfig = UiPathAPIConfig(
         api_type=ApiType.COMPLETIONS,
         routing_mode=RoutingMode.NORMALIZED,
@@ -43,7 +34,7 @@ class _GatewayChat(UiPathBaseChatModel, FakeListChatModel):
 
 
 class _DirectChat(FakeListChatModel):
-    """A direct-provider model: not a UiPathBaseChatModel."""
+    pass
 
 
 class _Recorder(SpanProcessor):
@@ -109,8 +100,6 @@ async def _call(llm: Any, how: str, config: RunnableConfig | None = None) -> Non
 async def _call_inside_run(
     llm: Any, how: str, run_config: RunnableConfig, call_config: RunnableConfig | None = None
 ) -> None:
-    """Call the model from inside a parent run, as a graph node does."""
-
     async def node(_: Any) -> None:
         await _call(llm, how, call_config)
 
@@ -126,10 +115,8 @@ async def test_gateway_call_inside_a_skipping_run_has_no_client_span(
 ) -> None:
     await _call_inside_run(_gateway_chat(), how, SKIP)
 
-    # Never started, not just dropped at export: live tracking can't leave it
-    # behind as "running".
     assert "_GatewayChat" not in recorder.started
-    assert "node" in recorder.started  # the parent run is still traced
+    assert "node" in recorder.started
 
 
 @pytest.mark.parametrize("how", CALLS)
@@ -145,8 +132,6 @@ async def test_gateway_call_with_the_key_on_its_own_config_has_no_client_span(
 async def test_own_metadata_inside_a_skipping_run_still_skips(
     recorder: _Recorder, how: str
 ) -> None:
-    # The call's metadata replaces the inherited dict in its config; the key
-    # still reaches it through the parent run's callback manager.
     await _call_inside_run(_gateway_chat(), how, SKIP, {"metadata": {"mine": 1}})
 
     assert "_GatewayChat" not in recorder.started
@@ -163,7 +148,6 @@ async def test_gateway_call_keeps_client_span_without_the_key(
 
 @pytest.mark.parametrize("how", CALLS)
 async def test_direct_provider_call_keeps_client_span(recorder: _Recorder, how: str) -> None:
-    # Not a Gateway model: no "Model run" replaces its span.
     await _call_inside_run(_DirectChat(responses=["a b"]), how, SKIP)
 
     assert "_DirectChat" in recorder.started
@@ -179,8 +163,6 @@ async def test_instrumentation_is_enabled_again_after_the_call(
 
 
 async def test_skip_is_scoped_to_its_run(recorder: _Recorder) -> None:
-    # No process-wide state: a run without the key, after one with it, keeps
-    # its span.
     await _call_inside_run(_gateway_chat(), "ainvoke", SKIP)
     await _call_inside_run(_gateway_chat(), "ainvoke", {})
 
@@ -224,7 +206,6 @@ async def test_caller_code_between_async_chunks_is_traced(
 
 
 def test_abandoned_stream_leaves_instrumentation_enabled(recorder: _Recorder) -> None:
-    # stream() is a generator, typed as the Iterator its base class returns.
     stream = cast(Generator[Any, None, None], _gateway_chat().stream("hi", SKIP))
     next(stream)
     stream.close()
@@ -245,10 +226,7 @@ async def test_abandoned_async_stream_leaves_instrumentation_enabled(
 
 
 def test_every_method_that_starts_a_chat_model_run_is_covered() -> None:
-    # Guards against a langchain-core upgrade adding another public method
-    # that starts a run (calls on_chat_model_start) without going through the
-    # ones UiPathBaseChatModel overrides. The v3 streaming helpers are the
-    # documented exception (beta; they start the run lazily).
+    # Fails if langchain-core adds another method that starts a run.
     (cls,) = ast.parse(inspect.getsource(chat_models.BaseChatModel)).body
     assert isinstance(cls, ast.ClassDef)
     starts_a_run = {

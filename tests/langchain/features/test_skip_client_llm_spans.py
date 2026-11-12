@@ -8,6 +8,7 @@ from typing import Any, cast
 from unittest.mock import patch
 
 import pytest
+from langchain_core.callbacks import BaseCallbackHandler
 from langchain_core.language_models import chat_models
 from langchain_core.language_models.fake_chat_models import FakeListChatModel
 from langchain_core.runnables import RunnableConfig, RunnableLambda
@@ -223,6 +224,44 @@ async def test_abandoned_async_stream_leaves_instrumentation_enabled(
 
     assert is_instrumentation_enabled()
     assert "_GatewayChat" not in recorder.started
+
+
+class _RunEvents(BaseCallbackHandler):
+    def __init__(self) -> None:
+        self.events: list[str] = []
+
+    def on_chat_model_start(self, *args: Any, **kwargs: Any) -> None:
+        self.events.append("start")
+
+    def on_llm_end(self, *args: Any, **kwargs: Any) -> None:
+        self.events.append("end")
+
+    def on_llm_error(self, *args: Any, **kwargs: Any) -> None:
+        self.events.append("error")
+
+
+def test_abandoned_stream_finishes_its_run() -> None:
+    handler = _RunEvents()
+    stream = cast(
+        Generator[Any, None, None],
+        _gateway_chat().stream("hi", {**SKIP, "callbacks": [handler]}),
+    )
+    next(stream)
+    stream.close()
+
+    assert handler.events == ["start", "error"]
+
+
+async def test_abandoned_async_stream_finishes_its_run() -> None:
+    handler = _RunEvents()
+    stream = cast(
+        AsyncGenerator[Any, None],
+        _gateway_chat().astream("hi", {**SKIP, "callbacks": [handler]}),
+    )
+    await anext(stream)
+    await stream.aclose()
+
+    assert handler.events == ["start", "error"]
 
 
 def test_every_method_that_starts_a_chat_model_run_is_covered() -> None:

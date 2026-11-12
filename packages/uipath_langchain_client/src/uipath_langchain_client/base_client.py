@@ -596,14 +596,19 @@ class UiPathBaseChatModel(UiPathBaseLLMClient, BaseChatModel):
         config = ensure_config(config)
         skip = skips_client_llm_span(config.get("metadata"), config.get("callbacks"))
         chunks = super().stream(input, config, stop=stop, **kwargs)
-        # Suppress only the first step, which starts the run.
-        with llm_run_start(skip):
-            try:
-                first = next(chunks)
-            except StopIteration:
-                return
-        yield first
-        yield from chunks
+        try:
+            # Suppress only the first step, which starts the run.
+            with llm_run_start(skip):
+                try:
+                    first = next(chunks)
+                except StopIteration:
+                    return
+            yield first
+            yield from chunks
+        finally:
+            # Close the inner stream too, so its callbacks and tracing finish.
+            if isinstance(chunks, Generator):
+                chunks.close()
 
     async def astream(
         self,
@@ -616,14 +621,18 @@ class UiPathBaseChatModel(UiPathBaseLLMClient, BaseChatModel):
         config = ensure_config(config)
         skip = skips_client_llm_span(config.get("metadata"), config.get("callbacks"))
         chunks = super().astream(input, config, stop=stop, **kwargs)
-        with llm_run_start(skip):
-            try:
-                first = await anext(chunks)
-            except StopAsyncIteration:
-                return
-        yield first
-        async for chunk in chunks:
-            yield chunk
+        try:
+            with llm_run_start(skip):
+                try:
+                    first = await anext(chunks)
+                except StopAsyncIteration:
+                    return
+            yield first
+            async for chunk in chunks:
+                yield chunk
+        finally:
+            if isinstance(chunks, AsyncGenerator):
+                await chunks.aclose()
 
     def _generate(
         self,

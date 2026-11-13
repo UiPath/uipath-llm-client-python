@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_langchain_client` will be documented in this file.
 
+## [1.23.2] - 2026-11-11
+
+### Added
+- `UIPATH_SKIP_CLIENT_LLM_SPANS_KEY` run metadata key. When set to `True`, `UiPathBaseChatModel` calls in that run create no client-side LLM span, since the LLM Gateway already traces them.
+
 ## [1.23.1] - 2026-11-11
 
 ### Changed

@@ -42,6 +42,7 @@ from uipath_langchain_client.settings import (
     PlatformSettings,
     get_default_client_settings,
 )
+from uipath_langchain_client.tracing import UIPATH_SKIP_CLIENT_LLM_SPANS_KEY
 
 __all__ = [
     "__version__",
@@ -54,4 +55,5 @@ __all__ = [
     "LLMGatewaySettings",
     "PlatformSettings",
     "UiPathError",
+    "UIPATH_SKIP_CLIENT_LLM_SPANS_KEY",
 ]

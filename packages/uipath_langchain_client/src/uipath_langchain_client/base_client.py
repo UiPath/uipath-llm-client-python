@@ -24,6 +24,7 @@ Example:
 """
 
 import builtins
+import itertools
 import logging
 import uuid
 from abc import ABC
@@ -52,6 +53,7 @@ from pydantic import (
     model_validator,
 )
 from pydantic.errors import PydanticSchemaGenerationError
+from tenacity import AsyncRetrying, Retrying
 
 from uipath.llm_client.httpx_client import (
     UiPathHttpxAsyncClient,
@@ -67,6 +69,7 @@ from uipath.llm_client.utils.headers import (
     get_captured_response_headers,
     set_captured_response_headers,
 )
+from uipath.llm_client.utils.retry import build_in_stream_retryer
 from uipath.llm_client.utils.sampling import (
     disabled_params_from_model_details,
     strip_disabled_fields,
@@ -83,6 +86,22 @@ from uipath_langchain_client.tracing import (
     skips_client_llm_span_in_context,
 )
 from uipath_langchain_client.utils import RetryConfig
+
+
+def _carries_output(chunk: ChatGenerationChunk) -> bool:
+    """True when a stream chunk carries model output, not only stream metadata.
+
+    Chunks such as the Responses API ``response.created`` event carry only an
+    id; until a chunk with content, tool-call deltas, extra kwargs (e.g.
+    reasoning) or usage arrives, a failed stream can be restarted without
+    the caller seeing duplicated or mixed output.
+    """
+    message = chunk.message
+    if message.content or message.additional_kwargs:
+        return True
+    if isinstance(message, AIMessageChunk):
+        return bool(message.tool_call_chunks or message.usage_metadata)
+    return True
 
 
 def model_details_from_model_info(model_info: Mapping[str, Any]) -> dict[str, Any]:
@@ -725,12 +744,30 @@ class UiPathBaseChatModel(UiPathBaseLLMClient, BaseChatModel):
         )
         set_captured_response_headers({})
         set_captured_dollar_cost(None)
+
+        def start() -> tuple[Iterator[ChatGenerationChunk], list[ChatGenerationChunk]]:
+            with wrap_provider_errors():
+                stream = self._uipath_stream(messages, stop=stop, run_manager=run_manager, **kwargs)
+                preamble: list[ChatGenerationChunk] = []
+                for chunk in stream:
+                    preamble.append(chunk)
+                    if _carries_output(chunk):
+                        break
+                return stream, preamble
+
         try:
             first = True
+            retryer = build_in_stream_retryer(
+                max_retries=self.max_retries,
+                retry_config=self.retry_config,
+                logger=self.logger,
+            )
+            # Read the stream up to its first output-bearing chunk, retrying an
+            # in-stream provider error (HTTP 200, then an error event) that
+            # arrives before any output: nothing has reached the caller yet.
+            stream, preamble = retryer(start) if isinstance(retryer, Retrying) else start()
             with wrap_provider_errors():
-                for chunk in self._uipath_stream(
-                    messages, stop=stop, run_manager=run_manager, **kwargs
-                ):
+                for chunk in itertools.chain(preamble, stream):
                     if first:
                         self._inject_gateway_headers([chunk])
                         first = False
@@ -767,12 +804,38 @@ class UiPathBaseChatModel(UiPathBaseLLMClient, BaseChatModel):
         )
         set_captured_response_headers({})
         set_captured_dollar_cost(None)
+
+        async def start() -> tuple[AsyncIterator[ChatGenerationChunk], list[ChatGenerationChunk]]:
+            with wrap_provider_errors():
+                stream = self._uipath_astream(
+                    messages, stop=stop, run_manager=run_manager, **kwargs
+                )
+                preamble: list[ChatGenerationChunk] = []
+                async for chunk in stream:
+                    preamble.append(chunk)
+                    if _carries_output(chunk):
+                        break
+                return stream, preamble
+
         try:
             first = True
+            retryer = build_in_stream_retryer(
+                max_retries=self.max_retries,
+                retry_config=self.retry_config,
+                logger=self.logger,
+                async_mode=True,
+            )
+            # See _stream: retry an in-stream error that precedes any output.
+            stream, preamble = (
+                await retryer(start) if isinstance(retryer, AsyncRetrying) else await start()
+            )
             with wrap_provider_errors():
-                async for chunk in self._uipath_astream(
-                    messages, stop=stop, run_manager=run_manager, **kwargs
-                ):
+                for chunk in preamble:
+                    if first:
+                        self._inject_gateway_headers([chunk])
+                        first = False
+                    yield chunk
+                async for chunk in stream:
                     if first:
                         self._inject_gateway_headers([chunk])
                         first = False

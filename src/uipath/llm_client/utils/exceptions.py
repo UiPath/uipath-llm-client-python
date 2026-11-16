@@ -50,6 +50,10 @@ class UiPathLLMErrorCode(StrEnum):
 
     UNSUPPORTED_MIME_TYPE = "UNSUPPORTED_MIME_TYPE"
     MODEL_NOT_FOUND = "MODEL_NOT_FOUND"
+    # The model endpoint answered the call successfully (HTTP 2xx) but the body
+    # is an error object instead of a completion; ``detail`` is the endpoint's
+    # own message.
+    PROVIDER_ERROR_RESPONSE = "PROVIDER_ERROR_RESPONSE"
 
 
 class UiPathError(Exception):

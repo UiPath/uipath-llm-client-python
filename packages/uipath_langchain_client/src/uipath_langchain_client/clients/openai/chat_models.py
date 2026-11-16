@@ -1,7 +1,8 @@
 from collections.abc import Awaitable, Callable
-from typing import Self
+from typing import Any, Self
 
 from httpx import Request
+from langchain_core.outputs import ChatResult
 from pydantic import Field, SecretStr, model_validator
 
 from uipath_langchain_client.base_client import UiPathBaseChatModel
@@ -135,3 +136,62 @@ class UiPathAzureChatOpenAI(UiPathBaseChatModel, AzureChatOpenAI):  # type: igno
         self.client = self.root_client.chat.completions
         self.async_client = self.root_async_client.chat.completions
         return self
+
+    def _create_chat_result(
+        self,
+        response: Any,
+        generation_info: dict | None = None,
+    ) -> ChatResult:
+        """Return a content-filtered choice as a message instead of raising.
+
+        langchain-openai's ``AzureChatOpenAI`` raises a bare ``ValueError`` for a
+        choice whose ``finish_reason`` is ``"content_filter"``. That error carries
+        no HTTP response (the call returned 200), so it would reach callers as an
+        uncategorised ``UiPathError``. ``ChatOpenAI`` and the Responses API path
+        return the message instead, with the finish reason in
+        ``response_metadata``; this does the same, so callers check the stop
+        reason one way on every OpenAI route.
+        """
+        is_dict = isinstance(response, dict)
+        choices = (response.get("choices") if is_dict else getattr(response, "choices", None)) or []
+        filtered = {
+            i
+            for i, choice in enumerate(choices)
+            if (choice.get("finish_reason") if is_dict else getattr(choice, "finish_reason", None))
+            == "content_filter"
+        }
+        if not filtered:
+            return super()._create_chat_result(response, generation_info)
+
+        # Hide the finish reason from AzureChatOpenAI so it does not raise, keeping
+        # the rest of its processing (model name, content filter results, and the
+        # typed response's parsed/refusal fields), then put the finish reason back
+        # on the filtered generations.
+        if is_dict:
+            unfiltered: Any = {
+                **response,
+                "choices": [
+                    {**choice, "finish_reason": None} if i in filtered else choice
+                    for i, choice in enumerate(choices)
+                ],
+            }
+        else:
+            unfiltered = response.model_copy(
+                update={
+                    "choices": [
+                        choice.model_copy(update={"finish_reason": None})
+                        if i in filtered
+                        else choice
+                        for i, choice in enumerate(choices)
+                    ]
+                }
+            )
+        result = super()._create_chat_result(unfiltered, generation_info)
+        for i in filtered:
+            generation = result.generations[i]
+            generation.generation_info = {
+                **(generation.generation_info or {}),
+                "finish_reason": "content_filter",
+            }
+            generation.message.response_metadata["finish_reason"] = "content_filter"
+        return result

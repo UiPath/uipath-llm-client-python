@@ -131,7 +131,14 @@ class UiPathAPIError(UiPathError, HTTPStatusError):
             x-retry-after header), or None. A server can attach Retry-After to
             any status code, so this lives on the base class — the retry layer
             treats its presence as an explicit retry request.
+        in_stream: True when the provider reported the error inside a stream
+            that had already returned HTTP 200 (``response`` is then a
+            synthetic response carrying the status the error stands for). The
+            transport retryer never sees such errors; the LangChain chat models
+            retry them when the stream fails before producing any output.
     """
+
+    in_stream: bool = False
 
     def __init__(
         self,
@@ -414,13 +421,90 @@ def _as_unsupported_mime_type_error(
     return None
 
 
+# Error ``type`` / ``code`` values a provider sends in an in-stream error event
+# when it is overloaded or unavailable (OpenAI / Azure OpenAI Responses and Chat
+# Completions streams, Anthropic-style ``overloaded_error``).
+_IN_STREAM_UNAVAILABLE_KINDS = frozenset(
+    {
+        "service_unavailable",
+        "service_unavailable_error",
+        "server_is_overloaded",
+        "overloaded",
+        "overloaded_error",
+    }
+)
+# Message fragments of the same events, for providers that send only a message
+# (e.g. "Service Unavailable", "Our servers are currently overloaded", "The
+# server is overloaded or not ready yet").
+_IN_STREAM_UNAVAILABLE_MARKERS = ("service unavailable", "overloaded", "not ready yet")
+
+
+def _is_in_stream_unavailable(err: BaseException) -> bool:
+    body = getattr(err, "body", None)
+    kinds = [getattr(err, "type", None), getattr(err, "code", None)]
+    message = str(err)
+    if isinstance(body, dict):
+        kinds += [body.get("type"), body.get("code")]
+        if isinstance(body.get("message"), str):
+            message = f"{message} {body['message']}"
+    if any(
+        isinstance(kind, str) and kind.lower() in _IN_STREAM_UNAVAILABLE_KINDS for kind in kinds
+    ):
+        return True
+    lowered = message.lower()
+    return any(marker in lowered for marker in _IN_STREAM_UNAVAILABLE_MARKERS)
+
+
+def _as_in_stream_unavailable_error(exc: BaseException) -> UiPathError | None:
+    """Map an in-stream provider overload to :class:`UiPathServiceUnavailableError`.
+
+    A streamed call can get HTTP 200 and then an error event inside the stream
+    (``openai._streaming`` raises ``openai.APIError`` with the event's ``error``
+    object as ``body`` and the request, but no response). The provider is
+    reporting a 503 condition after the status line was sent, so it is surfaced
+    as the typed 503 (on a synthetic response tied to the original request) to
+    keep it retryable and categorised as a provider failure, like the same
+    condition on a non-streamed call. Only errors shaped like a provider SDK
+    error (a ``body`` attribute and an ``httpx.Request``) are considered.
+    """
+    for err in _iter_error_chain(exc):
+        request = getattr(err, "request", None)
+        if not hasattr(err, "body") or not isinstance(request, Request):
+            continue
+        if not _is_in_stream_unavailable(err):
+            continue
+        raw_body = getattr(err, "body", None)
+        body = raw_body if isinstance(raw_body, (dict, str)) else None
+        code = getattr(err, "code", None) or getattr(err, "type", None)
+        # The synthetic response carries the provider's error event as its
+        # body, as a real 503 would, so callers reading ``response.text`` (the
+        # agent runtime's error mapper) keep the provider message.
+        if isinstance(body, dict):
+            response = Response(503, request=request, json={"error": body})
+        else:
+            response = Response(503, request=request, text=body or str(err))
+        error = UiPathServiceUnavailableError(
+            "Service Unavailable",
+            request=request,
+            response=response,
+            body=body,
+            error_code=code if isinstance(code, str) else None,
+            detail=str(err),
+        )
+        error.in_stream = True
+        return error
+    return None
+
+
 _ClientSideClassifier = Callable[[BaseException], UiPathError | None]
 
-# Classifiers for provider errors raised *before* an HTTP response exists
-# (client-side request rejection). Consulted in order, but only after the chain
+# Classifiers for provider errors raised *without* an HTTP error response:
+# client-side request rejections, and errors a provider sends inside a stream
+# that already returned HTTP 200. Consulted in order, but only after the chain
 # is confirmed to carry no httpx.Response — HTTP status stays authoritative.
 _CLIENT_SIDE_CLASSIFIERS: list[_ClientSideClassifier] = [
     _as_unsupported_mime_type_error,
+    _as_in_stream_unavailable_error,
 ]
 
 
@@ -436,10 +520,12 @@ def as_uipath_error(exc: Exception) -> UiPathError:
     classifier match elsewhere in the chain, which may be incidental
     ``__context__`` rather than the actual failure.
 
-    Only when no response is available anywhere in the chain (a genuinely
-    client-side rejection) is ``exc`` offered to each classifier in
-    ``_CLIENT_SIDE_CLASSIFIERS``; a match yields :class:`UiPathError` with a
-    stable semantic ``error_code`` and diagnostic ``detail``.
+    Only when no response is available anywhere in the chain (a client-side
+    rejection, or an error event inside a stream that returned HTTP 200) is
+    ``exc`` offered to each classifier in ``_CLIENT_SIDE_CLASSIFIERS``; a match
+    yields :class:`UiPathError` with a stable semantic ``error_code`` and
+    diagnostic ``detail`` — or, for an in-stream overload / service-unavailable
+    event, a :class:`UiPathServiceUnavailableError` on a synthetic 503 response.
 
     Otherwise the :class:`UiPathError` root is returned — still catchable as
     ``UiPathError``. ``UiPathError`` instances are returned unchanged.

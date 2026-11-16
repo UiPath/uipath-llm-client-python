@@ -2,6 +2,15 @@
 
 All notable changes to `uipath_llm_client` (core package) will be documented in this file.
 
+## [1.24.0] - 2026-11-16
+
+### Fixed
+- An overload or service-unavailable error a provider sends inside a stream that already returned HTTP 200 (`openai.APIError` raised by `openai._streaming`, e.g. "Service Unavailable", "Our servers are currently overloaded", `service_unavailable_error`, `server_is_overloaded`) now becomes a `UiPathServiceUnavailableError` (status 503, on a synthetic response tied to the original request) instead of a status-less `UiPathError`. The provider message is kept as `detail` and its error code/type as `error_code` (PC-5454).
+
+### Added
+- `UiPathAPIError.in_stream`: `True` when the error was reported inside a 200 stream rather than by the HTTP status.
+- `uipath.llm_client.utils.retry.build_in_stream_retryer`: a retryer with the client's retry policy (`max_retries`, `retry_config`) that retries only `in_stream` errors, for callers that can restart a stream; HTTP error responses stay with the transport retryer.
+
 ## [1.23.1] - 2026-11-11
 
 ### Changed

@@ -48,7 +48,9 @@ from tenacity import (
     RetryCallState,
     Retrying,
     before_sleep_log,
+    retry_all,
     retry_any,
+    retry_base,
     retry_if_exception,
     retry_if_exception_type,
     stop_after_attempt,
@@ -197,6 +199,7 @@ def _build_retryer(
     retry_config: RetryConfig | None,
     logger: logging.Logger | None,
     async_mode: bool = False,
+    only_if: Callable[[BaseException], bool] | None = None,
 ) -> Retrying | AsyncRetrying | None:
     """Build a tenacity retryer from configuration.
 
@@ -205,6 +208,8 @@ def _build_retryer(
         retry_config: Configuration for retry behavior. Uses defaults if not provided.
         logger: Logger for retry attempt warnings.
         async_mode: If True, returns AsyncRetrying; otherwise returns Retrying.
+        only_if: Optional extra condition an exception must also meet to be
+            retried (on top of the configured types / Retry-After rule).
 
     Returns:
         A configured Retrying/AsyncRetrying instance, or None if retries disabled.
@@ -223,6 +228,13 @@ def _build_retryer(
     if logger is not None:
         before_sleep = before_sleep_log(logger, logging.WARNING)
 
+    retry_condition: retry_base = retry_any(
+        retry_if_exception_type(retry_on),
+        retry_if_exception(_server_requested_retry),
+    )
+    if only_if is not None:
+        retry_condition = retry_all(retry_if_exception(only_if), retry_condition)
+
     retryer_class = AsyncRetrying if async_mode else Retrying
     return retryer_class(
         stop=stop_after_attempt(max_retries),
@@ -235,10 +247,7 @@ def _build_retryer(
         # Retry on the configured exception types, and additionally on ANY
         # error response carrying a Retry-After header — the server explicitly
         # asked for a retry, regardless of status code (legacy-client parity).
-        retry=retry_any(
-            retry_if_exception_type(retry_on),
-            retry_if_exception(_server_requested_retry),
-        ),
+        retry=retry_condition,
         reraise=True,
         before_sleep=before_sleep,
     )
@@ -247,6 +256,40 @@ def _build_retryer(
 def _server_requested_retry(exception: BaseException) -> bool:
     """True when an error response carries a Retry-After / x-retry-after hint."""
     return isinstance(exception, UiPathAPIError) and exception.retry_after is not None
+
+
+def _is_in_stream_error(exception: BaseException) -> bool:
+    """True for an error the provider reported inside a stream after HTTP 200."""
+    return isinstance(exception, UiPathAPIError) and exception.in_stream
+
+
+def build_in_stream_retryer(
+    *,
+    max_retries: int,
+    retry_config: RetryConfig | None,
+    logger: logging.Logger | None,
+    async_mode: bool = False,
+) -> Retrying | AsyncRetrying | None:
+    """Build a retryer for errors a provider reports inside a 200 stream.
+
+    The transport retryer only sees the HTTP status, which for a stream is
+    sent before the body: an overload event the provider sends inside the
+    stream after HTTP 200 reaches the caller as an
+    :class:`~uipath.llm_client.utils.exceptions.UiPathAPIError` with
+    ``in_stream`` set, and the transport never retries it. This retryer applies
+    the same policy (``max_retries``, ``retry_config`` types, backoff and
+    Retry-After) to those errors only, so HTTP error responses the transport
+    already retried are not retried a second time.
+
+    Returns None when retries are disabled (``max_retries`` < 1).
+    """
+    return _build_retryer(
+        max_retries=max_retries,
+        retry_config=retry_config,
+        logger=logger,
+        async_mode=async_mode,
+        only_if=_is_in_stream_error,
+    )
 
 
 class RetryableHTTPTransport(HTTPTransport):
@@ -379,6 +422,7 @@ class RetryableAsyncHTTPTransport(AsyncHTTPTransport):
 
 __all__ = [
     "RetryConfig",
+    "build_in_stream_retryer",
     "RetryableHTTPTransport",
     "RetryableAsyncHTTPTransport",
 ]

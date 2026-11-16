@@ -2,6 +2,14 @@
 
 All notable changes to `uipath_langchain_client` will be documented in this file.
 
+## [1.24.0] - 2026-11-16
+
+### Fixed
+- `UiPathBaseChatModel` streaming (`stream`, `astream`, and `invoke` with `streaming=True`) restarts the request when the provider reports an overload / service-unavailable error inside the 200 stream before any output chunk (content, tool-call delta, extra kwargs or usage) was produced. Metadata-only chunks read before the error, such as the Responses API `response.created`, are dropped with the failed attempt. The retry uses the model's `max_retries` and `retry_config`. Before, the transport retryer had already accepted the 200 and the run failed on the first provider blip (PC-5454). An error after output was produced is not retried and raises `UiPathServiceUnavailableError`.
+
+### Changed
+- Bumped the `uipath-llm-client` floor to `>=1.24.0`.
+
 ## [1.23.2] - 2026-11-11
 
 ### Added

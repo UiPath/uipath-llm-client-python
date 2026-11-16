@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_langchain_client` will be documented in this file.
 
+## [1.23.3] - 2026-11-16
+
+### Fixed
+- Bedrock streaming (`UiPathChatBedrockConverse`, `UiPathChatBedrock`): an AWS event-stream exception or error frame, which Bedrock sends when the model fails after the HTTP 200 (for example `internalServerException`, `modelStreamErrorException`, `throttlingException`), now raises the matching `UiPathAPIError` subclass (500, 502, 429, …) carrying the AWS exception type in `error_code` and its message in the body. Before, `WrappedBotoClient` read `:event-type` from every frame and failed with a bare `KeyError(':event-type')`, which lost the provider error.
+
 ## [1.23.2] - 2026-11-11
 
 ### Added

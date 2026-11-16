@@ -3,9 +3,10 @@ import json
 from collections.abc import Generator
 from typing import Any
 
-from httpx import Client
+from httpx import Client, Request, Response
 
 from uipath.llm_client.utils.dollar_cost import COST_METADATA_EVENT_TYPE
+from uipath.llm_client.utils.exceptions import UiPathAPIError
 
 try:
     from botocore.eventstream import EventStreamBuffer
@@ -48,6 +49,64 @@ def _serialize_bytes(obj: Any) -> Any:
     return obj
 
 
+# HTTP status for each Bedrock in-stream exception, as the AWS API documents it
+# for the same exception raised before the stream starts. The exception is the
+# only signal: the HTTP response itself was already a 200.
+# modelStreamErrorException is 424 in AWS; it is mapped to 502 here because it is
+# an upstream failure part-way through the model's output, which AWS documents
+# as retryable and which callers should treat as a provider (5xx) error.
+_STREAM_EXCEPTION_STATUS: dict[str, int] = {
+    "validationException": 400,
+    "accessDeniedException": 403,
+    "resourceNotFoundException": 404,
+    "modelTimeoutException": 408,
+    "throttlingException": 429,
+    "internalServerException": 500,
+    "modelStreamErrorException": 502,
+    "serviceUnavailableException": 503,
+}
+_DEFAULT_STREAM_EXCEPTION_STATUS = 500
+
+
+def _stream_exception_error(
+    headers: dict[str, Any], payload: bytes, request: Request
+) -> UiPathAPIError:
+    """Turn an AWS event-stream ``exception`` / ``error`` frame into a UiPath error.
+
+    Bedrock reports a failure part-way through a stream as a frame with
+    ``:message-type`` ``exception`` (type in ``:exception-type``, JSON
+    ``{"message": ...}`` payload) or ``error`` (``:error-code`` /
+    ``:error-message`` headers). Neither carries ``:event-type``. The error is
+    raised as the ``UiPathAPIError`` subclass of the status AWS gives that
+    exception, on a synthetic response whose body names the exception and its
+    message, so callers see the provider failure instead of a parse error.
+    """
+    if headers.get(":message-type") == "exception":
+        error_type = str(headers.get(":exception-type") or "unknownException")
+        try:
+            body = json.loads(payload.decode("utf-8"))
+            message = (
+                (body.get("message") or body.get("Message")) if isinstance(body, dict) else None
+            )
+        except (UnicodeDecodeError, json.JSONDecodeError):
+            message = payload.decode("utf-8", errors="replace") or None
+    else:
+        error_type = str(headers.get(":error-code") or "unknownError")
+        message = headers.get(":error-message")
+    # ``error`` frames may spell the code ``ThrottlingException``; the table is camelCase.
+    lookup_key = error_type[:1].lower() + error_type[1:]
+    status_code = _STREAM_EXCEPTION_STATUS.get(lookup_key, _DEFAULT_STREAM_EXCEPTION_STATUS)
+    response = Response(
+        status_code,
+        json={"type": error_type, "message": message},
+        request=request,
+    )
+    error = UiPathAPIError.from_response(response, request)
+    error.error_code = error_type
+    error.detail = f"Bedrock stream {error_type}: {message}" if message else error_type
+    return error
+
+
 class WrappedBotoClient:
     def __init__(self, httpx_client: Client | None = None, region_name: str = "PLACEHOLDER"):
         self.httpx_client = httpx_client
@@ -70,6 +129,11 @@ class WrappedBotoClient:
                 buffer.add_data(chunk)
                 for event in buffer:
                     event_as_dict = event.to_response_dict()
+                    if event_as_dict["headers"].get(":message-type") in ("exception", "error"):
+                        # The model failed after the 200: surface the provider error.
+                        raise _stream_exception_error(
+                            event_as_dict["headers"], event_as_dict["body"], response.request
+                        )
                     dict_key = event_as_dict["headers"][":event-type"]
                     dict_value = json.loads(event_as_dict["body"].decode("utf-8"))
                     if dict_key == COST_METADATA_EVENT_TYPE:

@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_langchain_client` will be documented in this file.
 
+## [1.23.3] - 2026-11-16
+
+### Fixed
+- `UiPathAzureChatOpenAI` now returns a chat completions choice that Azure stopped with `finish_reason: "content_filter"` as an `AIMessage`, with `response_metadata["finish_reason"] == "content_filter"`. Before, langchain-openai's `AzureChatOpenAI` raised a bare `ValueError("Azure has not provided the response due to a content filter being triggered")`. That error carries no HTTP response, so `wrap_provider_errors` turned it into an uncategorised `UiPathError`, and callers that check the stop reason (the uipath-langchain payload handlers) never saw it. `UiPathChatOpenAI` and the Responses API already behave this way. [PC-5436]
+
 ## [1.23.2] - 2026-11-11
 
 ### Added

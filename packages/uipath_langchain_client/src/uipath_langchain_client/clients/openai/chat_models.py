@@ -5,6 +5,7 @@ from httpx import Request
 from pydantic import Field, SecretStr, model_validator
 
 from uipath_langchain_client.base_client import UiPathBaseChatModel
+from uipath_langchain_client.clients.openai.error_response import OpenAIErrorResponseMixin
 from uipath_langchain_client.clients.openai.tool_call_extras import (
     OpenAIToolCallExtrasMixin,
 )
@@ -27,7 +28,9 @@ except ImportError as e:
     ) from e
 
 
-class UiPathChatOpenAI(UiPathBaseChatModel, OpenAIToolCallExtrasMixin, ChatOpenAI):  # type: ignore[override]
+class UiPathChatOpenAI(  # type: ignore[override]
+    UiPathBaseChatModel, OpenAIErrorResponseMixin, OpenAIToolCallExtrasMixin, ChatOpenAI
+):
     api_config: UiPathAPIConfig = UiPathAPIConfig(
         api_type=ApiType.COMPLETIONS,
         routing_mode=RoutingMode.PASSTHROUGH,
@@ -83,7 +86,7 @@ class UiPathChatOpenAI(UiPathBaseChatModel, OpenAIToolCallExtrasMixin, ChatOpenA
         return self
 
 
-class UiPathAzureChatOpenAI(UiPathBaseChatModel, AzureChatOpenAI):  # type: ignore[override]
+class UiPathAzureChatOpenAI(UiPathBaseChatModel, OpenAIErrorResponseMixin, AzureChatOpenAI):  # type: ignore[override]
     api_config: UiPathAPIConfig = UiPathAPIConfig(
         api_type=ApiType.COMPLETIONS,
         routing_mode=RoutingMode.PASSTHROUGH,

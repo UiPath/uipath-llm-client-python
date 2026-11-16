@@ -2,6 +2,14 @@
 
 All notable changes to `uipath_langchain_client` will be documented in this file.
 
+## [1.24.0] - 2026-11-16
+
+### Fixed
+- `UiPathChatOpenAI` and `UiPathAzureChatOpenAI` raise a `UiPathError` with `error_code == UiPathLLMErrorCode.PROVIDER_ERROR_RESPONSE` and the endpoint's message as `detail` when a chat completions response carries an `error` field (for example an OpenAI-compatible bring-your-own endpoint answering HTTP 200 with `{"error": "apiUnexpected"}`). Before, langchain-openai raised a bare `ValueError` that carried no HTTP response, so `wrap_provider_errors` turned it into a `UiPathError` with no error code and callers could not tell the endpoint's failure from a client-side one. [PC-5441]
+
+### Changed
+- Bumped the `uipath-llm-client` floor to `>=1.24.0`, which adds `UiPathLLMErrorCode.PROVIDER_ERROR_RESPONSE`.
+
 ## [1.23.2] - 2026-11-11
 
 ### Added

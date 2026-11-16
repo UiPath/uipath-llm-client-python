@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_llm_client` (core package) will be documented in this file.
 
+## [1.24.0] - 2026-11-16
+
+### Added
+- `UiPathLLMErrorCode.PROVIDER_ERROR_RESPONSE` (`"PROVIDER_ERROR_RESPONSE"`): the model endpoint answered the call with a success status but its body is an error object instead of a completion. The `UiPathError`'s `detail` is the endpoint's own message. `uipath-langchain-client` raises it for OpenAI chat completions. [PC-5441]
+
 ## [1.23.1] - 2026-11-11
 
 ### Changed

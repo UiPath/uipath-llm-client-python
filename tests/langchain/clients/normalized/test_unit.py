@@ -123,6 +123,35 @@ def test_include_raw_accepts_message_list_input(
         assert result["parsed"] == StructuredAnswer(answer=expected_answer)
 
 
+@pytest.mark.parametrize("arguments", [None, {}])
+def test_tool_call_without_arguments_becomes_empty_args(
+    client_settings: UiPathBaseSettings,
+    arguments: Any,
+) -> None:
+    """A null `arguments` used to fail AIMessage validation and fault the run."""
+    model = UiPathChat(model="gpt-4o-2024-11-20", settings=client_settings)
+    response = {
+        "id": "resp-1",
+        "model": "gpt-4o-2024-11-20",
+        "choices": [
+            {
+                "finish_reason": "tool_calls",
+                "message": {
+                    "content": "",
+                    "tool_calls": [{"id": "call_1", "name": "ping", "arguments": arguments}],
+                },
+            }
+        ],
+    }
+
+    result = model._postprocess_response(response)
+
+    message = result.generations[0].message
+    assert isinstance(message, AIMessage)
+    assert message.tool_calls[0]["name"] == "ping"
+    assert message.tool_calls[0]["args"] == {}
+
+
 class TestNormalizedChatModel(ChatModelUnitTests):
     @pytest.fixture(autouse=True, params=NORMALIZED_CHAT_CLASSES)
     def setup_models(self, request: pytest.FixtureRequest, client_settings: UiPathBaseSettings):

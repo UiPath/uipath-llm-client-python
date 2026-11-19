@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_langchain_client` will be documented in this file.
 
+## [1.23.5] - 2026-11-25
+
+### Fixed
+- `UiPathChat` (normalized API) no longer fails when the gateway returns a tool call with `"arguments": null`. The call now gets empty arguments. Before this, building the `AIMessage` raised `1 validation error for AIMessage tool_calls.0.args Input should be a valid dictionary` and the whole run failed.
+
 ## [1.23.4] - 2026-11-25
 
 ### Changed

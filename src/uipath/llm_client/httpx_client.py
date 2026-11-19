@@ -34,6 +34,7 @@ from httpx import (
     Client,
     Headers,
     Limits,
+    Proxy,
     Request,
     Response,
 )
@@ -47,6 +48,7 @@ from httpx._types import (
     QueryParamTypes,
     TimeoutTypes,
 )
+from httpx._utils import get_environment_proxies
 
 from uipath.llm_client.settings.base import UiPathAPIConfig, UiPathBaseSettings
 from uipath.llm_client.utils.dollar_cost import (
@@ -78,6 +80,26 @@ _UNSET: Any = object()
 # Default applied when ``max_retries`` is left as ``None``. Callers can still
 # opt out by passing ``max_retries=0`` explicitly.
 _DEFAULT_MAX_RETRIES: typing.Final[int] = 5
+
+
+def _default_proxy_map(proxy: ProxyTypes | None, trust_env: bool) -> dict[str, Proxy | None]:
+    """Return the proxy routes httpx would mount if it built the transport itself.
+
+    httpx reads ``HTTP_PROXY`` / ``HTTPS_PROXY`` / ``ALL_PROXY`` / ``NO_PROXY`` only
+    when no ``transport`` is passed (``allow_env_proxies = trust_env and transport is
+    None``), and it serves an explicit ``proxy`` through a plain, non-retrying
+    ``HTTPTransport``. The clients below always pass their retrying transport, so
+    they compute the same map themselves and mount a retrying transport per proxy.
+    A ``None`` value (a ``NO_PROXY`` entry) routes to the default transport.
+    """
+    if proxy is not None:
+        return {"all://": Proxy(url=proxy) if isinstance(proxy, (str, URL)) else proxy}
+    if not trust_env:
+        return {}
+    return {
+        pattern: None if url is None else Proxy(url=url)
+        for pattern, url in get_environment_proxies().items()
+    }
 
 
 def _capture_dollar_cost(request: Request, response: Response, stream: bool) -> None:
@@ -228,8 +250,10 @@ class UiPathHttpxClient(Client):
 
         # Setup retry transport if not provided. httpx applies verify/cert/limits etc.
         # only to transports it builds itself, so they must be passed here too.
+        # Passing a transport also stops httpx reading the proxy env vars, so the
+        # proxy routes are mounted here as retrying transports (see _default_proxy_map).
         if transport is None:
-            transport = RetryableHTTPTransport(
+            transport_kwargs: dict[str, Any] = dict(
                 max_retries=max_retries if max_retries is not None else _DEFAULT_MAX_RETRIES,
                 retry_config=retry_config,
                 logger=logger,
@@ -240,6 +264,15 @@ class UiPathHttpxClient(Client):
                 http2=http2,
                 limits=limits,
             )
+            transport = RetryableHTTPTransport(**transport_kwargs)
+            proxy_mounts: dict[str, BaseTransport | None] = {
+                pattern: None
+                if route is None
+                else RetryableHTTPTransport(**transport_kwargs, proxy=route)
+                for pattern, route in _default_proxy_map(proxy, trust_env).items()
+            }
+            mounts = {**proxy_mounts, **(mounts or {})}
+            proxy = None
 
         # Setup logging hooks
         logging_config = LoggingConfig(
@@ -398,8 +431,10 @@ class UiPathHttpxAsyncClient(AsyncClient):
 
         # Setup retry transport if not provided. httpx applies verify/cert/limits etc.
         # only to transports it builds itself, so they must be passed here too.
+        # Passing a transport also stops httpx reading the proxy env vars, so the
+        # proxy routes are mounted here as retrying transports (see _default_proxy_map).
         if transport is None:
-            transport = RetryableAsyncHTTPTransport(
+            transport_kwargs: dict[str, Any] = dict(
                 max_retries=max_retries if max_retries is not None else _DEFAULT_MAX_RETRIES,
                 retry_config=retry_config,
                 logger=logger,
@@ -410,6 +445,15 @@ class UiPathHttpxAsyncClient(AsyncClient):
                 http2=http2,
                 limits=limits,
             )
+            transport = RetryableAsyncHTTPTransport(**transport_kwargs)
+            proxy_mounts: dict[str, AsyncBaseTransport | None] = {
+                pattern: None
+                if route is None
+                else RetryableAsyncHTTPTransport(**transport_kwargs, proxy=route)
+                for pattern, route in _default_proxy_map(proxy, trust_env).items()
+            }
+            mounts = {**proxy_mounts, **(mounts or {})}
+            proxy = None
 
         # Setup logging hooks
         logging_config = LoggingConfig(

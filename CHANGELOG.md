@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_llm_client` (core package) will be documented in this file.
 
+## [1.23.2] - 2026-11-19
+
+### Fixed
+- `UiPathHttpxClient` / `UiPathHttpxAsyncClient` now honour proxies when they build their default retrying transport. httpx reads `HTTP_PROXY` / `HTTPS_PROXY` / `ALL_PROXY` / `NO_PROXY` only when no transport is passed, so the clients ignored the proxy environment and connected directly: on a robot that can reach the internet only through a proxy, every LLM call failed with `httpx.ConnectError` (`openai.APIConnectionError: Connection error.`). The clients now mount a retrying transport for each proxy route from the environment (or from an explicit `proxy=`, which previously got a non-retrying transport), and `NO_PROXY` hosts use the default transport. Caller-supplied `mounts` still take precedence, and a caller-supplied `transport` is still used as given. [PC-5660]
+
 ## [1.23.1] - 2026-11-11
 
 ### Changed

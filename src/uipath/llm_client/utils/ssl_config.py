@@ -64,7 +64,8 @@ def get_httpx_ssl_client_kwargs() -> dict[str, Any]:
         # Use system certificates with truststore fallback
         client_kwargs["verify"] = create_ssl_context()
 
-    # Auto-detect proxy from environment variables (httpx handles this automatically)
-    # HTTP_PROXY, HTTPS_PROXY, NO_PROXY are read by httpx by default
+    # Proxy env vars (HTTP_PROXY, HTTPS_PROXY, ALL_PROXY, NO_PROXY) are read by httpx
+    # only when it builds its own transport; UiPathHttpxClient / UiPathHttpxAsyncClient
+    # pass a retrying transport and mount the env proxy routes themselves.
 
     return client_kwargs

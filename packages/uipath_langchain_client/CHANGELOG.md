@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_langchain_client` will be documented in this file.
 
+## [1.23.3] - 2026-11-19
+
+### Changed
+- Bumped the `uipath-llm-client` floor to `>=1.23.2`, whose default HTTP clients honour `HTTPS_PROXY` / `HTTP_PROXY` / `NO_PROXY`, so chat models on proxy-only hosts no longer fail every call with `Connection error.` [PC-5660]
+
 ## [1.23.2] - 2026-11-11
 
 ### Added

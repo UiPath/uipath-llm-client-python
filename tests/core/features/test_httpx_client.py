@@ -2,11 +2,16 @@
 
 import os
 import ssl
+import threading
+from collections.abc import Iterator
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any
 from unittest.mock import MagicMock, patch
 
+import httpcore
 import pytest
 from httpx import (
+    URL,
     AsyncHTTPTransport,
     Auth,
     Client,
@@ -273,6 +278,204 @@ class TestUiPathHttpxAsyncClient:
         )
         assert client._transport is transport
         assert transport_ssl_context(transport).verify_mode == ssl.CERT_REQUIRED
+
+
+_PROXY_ENV_VARS = ("HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY", "NO_PROXY")
+
+
+@pytest.fixture
+def clean_proxy_env(monkeypatch: pytest.MonkeyPatch) -> pytest.MonkeyPatch:
+    """Start from an environment with no proxy variables in either case."""
+    for name in _PROXY_ENV_VARS:
+        monkeypatch.delenv(name, raising=False)
+        monkeypatch.delenv(name.lower(), raising=False)
+    return monkeypatch
+
+
+class _RecordingProxyHandler(BaseHTTPRequestHandler):
+    """A forward HTTP proxy stand-in: records the request line and answers 200."""
+
+    request_lines: list[str] = []
+
+    def do_GET(self) -> None:  # noqa: N802 - http.server naming
+        type(self).request_lines.append(self.requestline)
+        body = b"via-proxy"
+        self.send_response(200)
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def log_message(self, format: str, *args: Any) -> None:
+        pass
+
+
+@pytest.fixture
+def recording_proxy() -> Iterator[tuple[str, list[str]]]:
+    """Run a local proxy; yield its URL and the request lines it received."""
+    request_lines: list[str] = []
+    handler = type("Handler", (_RecordingProxyHandler,), {"request_lines": request_lines})
+    server = ThreadingHTTPServer(("127.0.0.1", 0), handler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        yield f"http://127.0.0.1:{server.server_address[1]}", request_lines
+    finally:
+        server.shutdown()
+        server.server_close()
+
+
+class TestUiPathHttpxClientProxy:
+    """The default retrying transport must not switch off proxy support [PC-5660].
+
+    httpx reads the proxy env vars only when no ``transport`` is passed, and the
+    UiPath clients always pass one, so they must mount the proxy routes themselves.
+    """
+
+    def test_client_routes_through_https_proxy_env(self, clean_proxy_env):
+        from uipath.llm_client.httpx_client import UiPathHttpxClient
+
+        clean_proxy_env.setenv("HTTPS_PROXY", "http://proxy.corp:8080")
+        client = UiPathHttpxClient(base_url="https://cloud.uipath.com")
+        transport = client._transport_for_url(URL("https://cloud.uipath.com/org/llm"))
+        assert transport is not client._transport
+        assert isinstance(transport, RetryableHTTPTransport)
+        assert transport.retryer is not None
+        assert isinstance(transport._pool, httpcore.HTTPProxy)
+        assert transport._pool._proxy_url.host == b"proxy.corp"
+        client.close()
+
+    def test_client_proxy_transport_keeps_ssl_context(self, clean_proxy_env):
+        from uipath.llm_client.httpx_client import UiPathHttpxClient
+
+        clean_proxy_env.setenv("HTTPS_PROXY", "http://proxy.corp:8080")
+        ssl_context = ssl.create_default_context()
+        client = UiPathHttpxClient(base_url="https://cloud.uipath.com", verify=ssl_context)
+        transport = client._transport_for_url(URL("https://cloud.uipath.com/"))
+        assert transport_ssl_context(transport) is ssl_context
+        client.close()
+
+    def test_client_honours_no_proxy(self, clean_proxy_env):
+        from uipath.llm_client.httpx_client import UiPathHttpxClient
+
+        clean_proxy_env.setenv("HTTPS_PROXY", "http://proxy.corp:8080")
+        clean_proxy_env.setenv("NO_PROXY", "cloud.uipath.com")
+        client = UiPathHttpxClient(base_url="https://cloud.uipath.com")
+        assert client._transport_for_url(URL("https://cloud.uipath.com/")) is client._transport
+        assert client._transport_for_url(URL("https://other.example/")) is not client._transport
+        client.close()
+
+    def test_client_without_proxy_env_uses_direct_transport(self, clean_proxy_env):
+        from uipath.llm_client.httpx_client import UiPathHttpxClient
+
+        client = UiPathHttpxClient(base_url="https://cloud.uipath.com")
+        assert client._mounts == {}
+        assert client._transport_for_url(URL("https://cloud.uipath.com/")) is client._transport
+        client.close()
+
+    def test_client_trust_env_false_ignores_proxy_env(self, clean_proxy_env):
+        from uipath.llm_client.httpx_client import UiPathHttpxClient
+
+        clean_proxy_env.setenv("HTTPS_PROXY", "http://proxy.corp:8080")
+        client = UiPathHttpxClient(base_url="https://cloud.uipath.com", trust_env=False)
+        assert client._transport_for_url(URL("https://cloud.uipath.com/")) is client._transport
+        client.close()
+
+    def test_client_explicit_proxy_gets_retrying_transport(self, clean_proxy_env):
+        from uipath.llm_client.httpx_client import UiPathHttpxClient
+
+        clean_proxy_env.setenv("HTTPS_PROXY", "http://env-proxy.corp:8080")
+        client = UiPathHttpxClient(
+            base_url="https://cloud.uipath.com", proxy="http://explicit.corp:3128"
+        )
+        transport = client._transport_for_url(URL("https://cloud.uipath.com/"))
+        assert isinstance(transport, RetryableHTTPTransport)
+        assert transport.retryer is not None
+        assert isinstance(transport._pool, httpcore.HTTPProxy)
+        assert transport._pool._proxy_url.host == b"explicit.corp"
+        client.close()
+
+    def test_client_caller_mounts_override_proxy_routes(self, clean_proxy_env):
+        from uipath.llm_client.httpx_client import UiPathHttpxClient
+
+        clean_proxy_env.setenv("HTTPS_PROXY", "http://proxy.corp:8080")
+        custom = HTTPTransport()
+        client = UiPathHttpxClient(base_url="https://cloud.uipath.com", mounts={"https://": custom})
+        assert client._transport_for_url(URL("https://cloud.uipath.com/")) is custom
+        client.close()
+
+    def test_client_caller_transport_keeps_httpx_behaviour(self, clean_proxy_env):
+        from uipath.llm_client.httpx_client import UiPathHttpxClient
+
+        clean_proxy_env.setenv("HTTPS_PROXY", "http://proxy.corp:8080")
+        transport = HTTPTransport()
+        client = UiPathHttpxClient(base_url="https://cloud.uipath.com", transport=transport)
+        assert client._transport_for_url(URL("https://cloud.uipath.com/")) is transport
+        client.close()
+
+    def test_client_request_goes_through_env_proxy(self, clean_proxy_env, recording_proxy):
+        """End to end: with ``HTTP_PROXY`` set, the request reaches the proxy."""
+        from uipath.llm_client.httpx_client import UiPathHttpxClient
+
+        proxy_url, request_lines = recording_proxy
+        clean_proxy_env.setenv("HTTP_PROXY", proxy_url)
+        with UiPathHttpxClient(base_url="http://llm.invalid", max_retries=0) as client:
+            response = client.get("/chat")
+        assert response.status_code == 200
+        assert response.text == "via-proxy"
+        assert request_lines == ["GET http://llm.invalid/chat HTTP/1.1"]
+
+    def test_async_client_routes_through_https_proxy_env(self, clean_proxy_env):
+        from uipath.llm_client.httpx_client import UiPathHttpxAsyncClient
+
+        clean_proxy_env.setenv("HTTPS_PROXY", "http://proxy.corp:8080")
+        client = UiPathHttpxAsyncClient(base_url="https://cloud.uipath.com")
+        transport = client._transport_for_url(URL("https://cloud.uipath.com/org/llm"))
+        assert transport is not client._transport
+        assert isinstance(transport, RetryableAsyncHTTPTransport)
+        assert transport.retryer is not None
+        assert isinstance(transport._pool, httpcore.AsyncHTTPProxy)
+        assert transport._pool._proxy_url.host == b"proxy.corp"
+
+    def test_async_client_honours_no_proxy(self, clean_proxy_env):
+        from uipath.llm_client.httpx_client import UiPathHttpxAsyncClient
+
+        clean_proxy_env.setenv("HTTPS_PROXY", "http://proxy.corp:8080")
+        clean_proxy_env.setenv("NO_PROXY", "cloud.uipath.com")
+        client = UiPathHttpxAsyncClient(base_url="https://cloud.uipath.com")
+        assert client._transport_for_url(URL("https://cloud.uipath.com/")) is client._transport
+
+    def test_async_client_trust_env_false_ignores_proxy_env(self, clean_proxy_env):
+        from uipath.llm_client.httpx_client import UiPathHttpxAsyncClient
+
+        clean_proxy_env.setenv("HTTPS_PROXY", "http://proxy.corp:8080")
+        client = UiPathHttpxAsyncClient(base_url="https://cloud.uipath.com", trust_env=False)
+        assert client._transport_for_url(URL("https://cloud.uipath.com/")) is client._transport
+
+    def test_async_client_explicit_proxy_gets_retrying_transport(self, clean_proxy_env):
+        from uipath.llm_client.httpx_client import UiPathHttpxAsyncClient
+
+        client = UiPathHttpxAsyncClient(
+            base_url="https://cloud.uipath.com", proxy="http://explicit.corp:3128"
+        )
+        transport = client._transport_for_url(URL("https://cloud.uipath.com/"))
+        assert isinstance(transport, RetryableAsyncHTTPTransport)
+        assert transport.retryer is not None
+        assert isinstance(transport._pool, httpcore.AsyncHTTPProxy)
+        assert transport._pool._proxy_url.host == b"explicit.corp"
+
+    async def test_async_client_request_goes_through_env_proxy(
+        self, clean_proxy_env, recording_proxy
+    ):
+        """Async end to end: with ``HTTP_PROXY`` set, the request reaches the proxy."""
+        from uipath.llm_client.httpx_client import UiPathHttpxAsyncClient
+
+        proxy_url, request_lines = recording_proxy
+        clean_proxy_env.setenv("HTTP_PROXY", proxy_url)
+        async with UiPathHttpxAsyncClient(base_url="http://llm.invalid", max_retries=0) as client:
+            response = await client.get("/chat")
+        assert response.status_code == 200
+        assert response.text == "via-proxy"
+        assert request_lines == ["GET http://llm.invalid/chat HTTP/1.1"]
 
 
 class TestBuildRoutingHeaders:

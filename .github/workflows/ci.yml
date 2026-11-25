@@ -1,6 +1,16 @@
 name: CI Pipeline
 
 on:
+  push:
+    branches:
+      - main
+    paths:
+      - "src/**"
+      - "packages/**"
+      - "tests/**"
+      - "pyproject.toml"
+      - "uv.lock"
+      - ".python-version"
   pull_request:
     branches:
       - main
@@ -106,5 +116,51 @@ jobs:
       - name: Install dependencies
         run: uv sync --dev --all-extras
 
-      - name: Run tests
-        run: uv run pytest tests
+      - name: Run tests with coverage
+        run: uv run pytest tests --cov --cov-report=xml --cov-report=term
+
+      - name: Upload coverage XML report
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4.6.2
+        with:
+          name: coverage-xml-report
+          path: coverage.xml
+          retention-days: 30
+
+  sonarcloud:
+    name: SonarCloud
+    needs: test
+    runs-on: uipath-ubuntu-latest
+    if: always() && needs.test.result != 'failure'
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803  # v6.1.0
+        with:
+          fetch-depth: 0
+
+      - name: Download coverage
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093  # v4.3.0
+        continue-on-error: true
+        with:
+          name: coverage-xml-report
+
+      # SONAR_TOKEN is provisioned once by a repo admin. Skip with a warning rather
+      # than failing, so a missing or rotated secret never blocks every PR.
+      - name: Check for SonarCloud token
+        id: token
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          if [ -n "$SONAR_TOKEN" ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::SONAR_TOKEN is not configured; skipping the SonarCloud scan."
+          fi
+
+      - name: SonarCloud Scan
+        if: steps.token.outputs.present == 'true'
+        uses: SonarSource/sonarqube-scan-action@2f77a1ec69fb1d595b06f35ab27e97605bdef703  # v5
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}

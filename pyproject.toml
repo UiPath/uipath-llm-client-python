@@ -42,6 +42,7 @@ dev = [
     "pytest>=9.0.3,<10.0.0",
     "pytest-asyncio>=1.3.0,<2.0.0",
     "pytest-recording>=0.13.4,<1.0.0",
+    "pytest-cov>=7.0.0,<8.0.0",
     "pyright>=1.1.408,<2.0.0",
     "ruff>=0.15.11,<1.0.0",
     "uipath-llm-client[all]",
@@ -120,3 +121,20 @@ reportImportCycles = true
 [tool.pytest.ini_options]
 asyncio_default_fixture_loop_scope = "function"
 asyncio_mode = "auto"
+
+[tool.coverage.run]
+relative_files = true
+source = ["src", "packages"]
+omit = ["*/tests/*", "*/conftest.py"]
+
+[tool.coverage.report]
+show_missing = true
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+    "@abstractmethod",
+]

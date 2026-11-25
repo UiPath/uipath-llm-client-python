@@ -442,6 +442,24 @@ class TestLegacyParityEndToEnd:
         assert calls["n"] == 3
         assert response.status_code == 524
 
+    @pytest.mark.parametrize(("retry_after", "expected_sleep"), [("600", 600.0), ("900", 600.0)])
+    def test_default_config_waits_retry_after_up_to_600_seconds(
+        self, retry_after: str, expected_sleep: float
+    ):
+        calls, handler = self._counting_handler(429, headers={"Retry-After": retry_after})
+        client = UiPathHttpxClient(base_url="https://example.com", max_retries=2)
+        try:
+            with (
+                patch.object(httpx.HTTPTransport, "handle_request", handler),
+                patch("tenacity.nap.time.sleep") as sleep,
+            ):
+                client.post("/anything", json={})
+        finally:
+            client.close()
+
+        assert calls["n"] == 2
+        sleep.assert_called_once_with(expected_sleep)
+
     def test_connect_error_is_retried_then_raised(self):
         calls = {"n": 0}
 

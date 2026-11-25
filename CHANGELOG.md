@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_llm_client` (core package) will be documented in this file.
 
+## [1.23.3] - 2026-11-25
+
+### Changed
+- The default retry waits as long as a Retry-After header asks, up to 600 seconds instead of 120 (`_DEFAULT_MAX_DELAY`). LLM Gateway rate-limit 429s can ask for up to 600 seconds, and retrying earlier gets another 429 and uses up an attempt. The exponential backoff without Retry-After is unchanged with the default 5 attempts (5/10/20/40 seconds).
+
 ## [1.23.2] - 2026-11-23
 
 ### Fixed

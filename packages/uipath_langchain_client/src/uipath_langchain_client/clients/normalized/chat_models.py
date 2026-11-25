@@ -493,7 +493,9 @@ class UiPathChat(UiPathBaseChatModel):
                         {
                             "id": tool_call["id"],
                             "name": tool_call["name"],
-                            "args": tool_call["arguments"],
+                            # The gateway sends null for a call with no arguments;
+                            # AIMessage only accepts a dict.
+                            "args": tool_call.get("arguments") or {},
                         }
                         for tool_call in message.get("tool_calls", [])
                     ],

@@ -91,7 +91,7 @@ _DEFAULT_RETRY_ON_EXCEPTIONS: tuple[type[Exception], ...] = (
     RemoteProtocolError,
 )
 _DEFAULT_INITIAL_DELAY: float = 5.0
-_DEFAULT_MAX_DELAY: float = 120.0
+_DEFAULT_MAX_DELAY: float = 600.0
 _DEFAULT_EXP_BASE: float = 2.0
 _DEFAULT_JITTER: float = 1.0
 
@@ -168,7 +168,7 @@ class RetryConfig(TypedDict):
         initial_delay: Initial delay in seconds before first retry.
             Defaults to 5.0.
         max_delay: Maximum delay in seconds between retries.
-            Defaults to 120.0.
+            Defaults to 600.0.
         exp_base: Exponential backoff base multiplier.
             Defaults to 2.0.
         jitter: Random jitter in seconds to add to delay.

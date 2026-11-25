@@ -2,6 +2,11 @@
 
 All notable changes to `uipath_langchain_client` will be documented in this file.
 
+## [1.23.4] - 2026-11-25
+
+### Changed
+- Bumped the `uipath-llm-client` floor to `>=1.23.3`, whose default retry waits as long as a Retry-After header asks, up to 600 seconds instead of 120.
+
 ## [1.23.3] - 2026-11-23
 
 ### Changed
